@@ -1,73 +1,21 @@
-import { lerpBinding } from "@rbxts/pretty-react-hooks";
-import { composeBindings } from "@rbxts/pretty-react-hooks";
+import { composeBindings, lerpBinding } from "@rbxts/pretty-react-hooks";
 import React, { useEffect, useMemo } from "@rbxts/react";
-import { useSelector, useSelectorCreator } from "@rbxts/react-reflex";
-import { sendAlert } from "client/alerts";
 import { PrimaryButton } from "client/components/ui/primary-button";
 import { Shadow } from "client/components/ui/shadow";
 import { Text } from "client/components/ui/text";
 import { fonts } from "client/constants/fonts";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
-import { selectMenuCurrentSkin } from "client/store/menu";
-import { formatInteger } from "client/utils/format-integer";
-import { sounds } from "shared/assets";
-import { USER_NAME } from "shared/constants/core";
 import { palette } from "shared/constants/palette";
-import { findSnakeSkin } from "shared/constants/skins";
-import { darken } from "shared/utils/color-utils";
 
-interface Status {
-	readonly variant: "buy" | "not-enough-money" | "wear" | "wearing" | "none";
-	readonly price?: number;
-}
-
-const darkGreen = darken(palette.green, 0.5, 0.5);
-const darkRed = darken(palette.red, 0.25, 0.5);
-const darkBlue = darken(palette.blue, 0.25, 0.5);
-const darkPeach = darken(palette.peach, 0.25, 0.5);
-
-function stylize(text: unknown, color: Color3) {
-	if (text === `"__random__"`) {
-		text = '"random"';
-	}
-
-	return `<font color="#${color.ToHex()}">${text}</font>`;
-}
-
-function getStatus(equipped: string, current: string, inventory: readonly string[] = [], balance = 0): Status {
-	const equippedSkin = findSnakeSkin(equipped);
-	const currentSkin = findSnakeSkin(current);
-	const ownsCurrentSkin = inventory.includes(current);
-
-	if (equippedSkin === currentSkin) {
-		return { variant: "wearing" };
-	} else if (!ownsCurrentSkin && currentSkin) {
-		return {
-			variant: balance >= currentSkin.price ? "buy" : "not-enough-money",
-			price: currentSkin.price,
-		};
-	} else if (ownsCurrentSkin) {
-		return { variant: "wear" };
-	} else {
-		return { variant: "none" };
-	}
-}
-
-const RANDOM_SKIN = "__random__";
 export function ActButton() {
-	const rem = useRem();
-	const equippedSkin = RANDOM_SKIN;
-	const currentSkin = RANDOM_SKIN;
-	const inventory: string[] = [];
-	const balance = 0;
-	const status = getStatus(equippedSkin, currentSkin, inventory, balance);
-
-	const [primary, primaryMotion] = useMotion(new Color3());
-	const [secondary, secondaryMotion] = useMotion(new Color3());
 	const [textWidth, textWidthMotion] = useMotion(0);
 	const [gradientSpin, gradientSpinMotion] = useMotion(0);
 	const [hover, hoverMotion] = useMotion(0);
+
+	const [primary, primaryMotion] = useMotion(new Color3());
+	const [secondary, secondaryMotion] = useMotion(new Color3());
+	const rem = useRem();
 
 	const { size, gradient } = useMemo(() => {
 		const size = textWidth.map((width) => {
@@ -81,76 +29,16 @@ export function ActButton() {
 		return { size, gradient };
 	}, [rem]);
 
-	const onClick = () => {
-		gradientSpinMotion.spring(gradientSpin.getValue() + 180, springs.molasses);
-
-		if (status.variant === "buy") {
-			/* empty */
-		} else if (status.variant === "wear") {
-			/* empty */
-		} else if (status.variant === "not-enough-money") {
-			sendAlert({
-				emoji: "🚨",
-				color: palette.red,
-				message: `Sorry, you cannot afford the ${stylize(currentSkin, palette.white)} skin yet.`,
-				sound: sounds.alert_bad,
-			});
-		}
-	};
-
 	useEffect(() => {
-		switch (status.variant) {
-			case "wearing":
-				primaryMotion.spring(palette.red);
-				secondaryMotion.spring(palette.peach);
-				break;
-
-			case "wear":
-				primaryMotion.spring(palette.blue);
-				secondaryMotion.spring(palette.mauve);
-				break;
-
-			case "buy":
-				primaryMotion.spring(palette.teal);
-				secondaryMotion.spring(palette.green);
-				break;
-
-			case "not-enough-money":
-			case "none":
-				primaryMotion.spring(palette.red);
-				secondaryMotion.spring(palette.red);
-				break;
-		}
-	}, [status.variant]);
-
-	const text = useMemo(() => {
-		switch (status.variant) {
-			case "buy":
-				return `💵  Buy ${stylize(`"${currentSkin}"`, darkGreen)} for ${stylize(
-					"$" + formatInteger(status.price),
-					darkGreen,
-				)}`;
-
-			case "wear":
-				return `🎨  Wear ${stylize(`"${currentSkin}"`, darkBlue)}`;
-
-			case "wearing":
-				return `🎨  Wearing ${stylize(`"${currentSkin}"`, darkPeach)}`;
-
-			case "not-enough-money":
-				return `🔒  ${stylize(`"${currentSkin}"`, darkRed)} costs ${stylize(
-					"$" + formatInteger(status.price),
-					darkRed,
-				)}`;
-
-			default:
-				return "🔒  Locked";
-		}
-	}, [status, currentSkin]);
+		primaryMotion.spring(palette.red);
+		secondaryMotion.spring(palette.peach);
+	});
 
 	return (
 		<PrimaryButton
-			onClick={onClick}
+			onClick={() => {
+				gradientSpinMotion.spring(gradientSpin.getValue() + 180, springs.molasses);
+			}}
 			onHover={(hovered) => hoverMotion.spring(hovered ? 1 : 0)}
 			overlayGradient={gradient}
 			overlayRotation={gradientSpin}
@@ -176,7 +64,7 @@ export function ActButton() {
 				}}
 				richText
 				font={fonts.inter.medium}
-				text={text}
+				text={"🎨  Equip"}
 				textColor={palette.base}
 				textSize={rem(1.5)}
 				size={new UDim2(1, 0, 1, 0)}
