@@ -1,0 +1,53 @@
+{
+	"name": "slither",
+	"version": "1.5.0",
+	"license": "MIT",
+	"scripts": {
+		"lint": "eslint src && prettier --check src",
+		"compile": "rbxtsc --verbose",
+		"watch": "rbxtsc -w",
+		"tarmac": "tarmac sync --target roblox",
+		"serve": "rojo serve",
+		"dev": "concurrently \"rojo serve\" \"rbxtsc -w\"",
+		"build": "rm -rf out && pnpm compile && rojo build --output place.rbxlx",
+		"deploy:dev": "pnpm build && mantle deploy --environment canary",
+		"deploy:prod": "pnpm build && mantle deploy --environment production",
+		"output:dev": "mantle outputs --environment canary > mantle-output.json",
+		"output:prod": "mantle outputs --environment production > mantle-output.json"
+	},
+	"devDependencies": {
+		"@rbxts/compiler-types": "3.0.0-types.0",
+		"@rbxts/types": "^1.0.852",
+		"@typescript-eslint/eslint-plugin": "^8.32.1",
+		"@typescript-eslint/parser": "^8.32.1",
+		"cross-env": "^7.0.3",
+		"eslint": "^8.57.1",
+		"eslint-config-prettier": "^9.1.0",
+		"eslint-plugin-prettier": "^5.4.0",
+		"eslint-plugin-roblox-ts": "^0.0.36",
+		"eslint-plugin-simple-import-sort": "^12.1.1",
+		"eslint-plugin-unused-imports": "^4.1.4",
+		"prettier": "^3.5.3",
+		"roblox-ts": "3.0.0",
+		"typescript": "^5.8.3",
+		"concurrently": "^8.2.0"
+	},
+	"dependencies": {
+		"@rbxts/bitbuffer2": "1.0.0-ts.0",
+		"@rbxts/flipper": "^2.0.1",
+		"@rbxts/lapis": "^0.3.8",
+		"@rbxts/object-utils": "^1.0.4",
+		"@rbxts/pretty-react-hooks": "^0.6.3",
+		"@rbxts/react": "^17.3.0-alpha.1",
+		"@rbxts/react-reflex": "^0.3.7",
+		"@rbxts/react-roblox": "^17.3.0-alpha.1",
+		"@rbxts/reflex": "^4.3.1",
+		"@rbxts/remo": "^1.5.2",
+		"@rbxts/ripple": "^0.9.3",
+		"@rbxts/services": "^1.5.5",
+		"@rbxts/set-timeout": "^1.1.2",
+		"@rbxts/t": "^3.2.1",
+		"@rbxts/testez": "0.4.2-ts.0",
+		"@rbxts/validate-tree": "^2.0.2"
+	}
+}
