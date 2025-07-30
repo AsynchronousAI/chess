@@ -15,7 +15,6 @@ import { sounds } from "shared/assets";
 import { USER_NAME } from "shared/constants/core";
 import { palette } from "shared/constants/palette";
 import { findSnakeSkin } from "shared/constants/skins";
-import { RANDOM_SKIN, selectCurrentPlayerSkin, selectPlayerBalance, selectPlayerSkins } from "shared/store/saves";
 import { darken } from "shared/utils/color-utils";
 
 interface Status {
@@ -29,7 +28,7 @@ const darkBlue = darken(palette.blue, 0.25, 0.5);
 const darkPeach = darken(palette.peach, 0.25, 0.5);
 
 function stylize(text: unknown, color: Color3) {
-	if (text === `"${RANDOM_SKIN}"`) {
+	if (text === `"__random__"`) {
 		text = '"random"';
 	}
 
@@ -55,12 +54,13 @@ function getStatus(equipped: string, current: string, inventory: readonly string
 	}
 }
 
+const RANDOM_SKIN = "__random__";
 export function ActButton() {
 	const rem = useRem();
-	const equippedSkin = useSelectorCreator(selectCurrentPlayerSkin, USER_NAME) ?? RANDOM_SKIN;
-	const currentSkin = useSelector(selectMenuCurrentSkin);
-	const inventory = useSelectorCreator(selectPlayerSkins, USER_NAME);
-	const balance = useSelectorCreator(selectPlayerBalance, USER_NAME);
+	const equippedSkin = RANDOM_SKIN;
+	const currentSkin = RANDOM_SKIN;
+	const inventory: string[] = [];
+	const balance = 0;
 	const status = getStatus(equippedSkin, currentSkin, inventory, balance);
 
 	const [primary, primaryMotion] = useMotion(new Color3());

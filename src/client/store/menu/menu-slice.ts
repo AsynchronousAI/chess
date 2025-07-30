@@ -1,5 +1,4 @@
 import { createProducer } from "@rbxts/reflex";
-import { RANDOM_SKIN } from "shared/store/saves";
 
 import { getMenuDirection } from "./menu-utils";
 
@@ -27,7 +26,7 @@ const initialState: MenuState = {
 		counter: 0,
 	},
 	skins: {
-		current: RANDOM_SKIN,
+		current: "__random__",
 	},
 };
 

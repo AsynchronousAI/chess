@@ -1,7 +1,5 @@
 import React, { useEffect } from "@rbxts/react";
-import { useSelector } from "@rbxts/react-reflex";
 import { useStore } from "client/hooks";
-import { selectHasLocalSnake } from "shared/store/snakes";
 
 import { Home } from "./home";
 import { MenuContainer } from "./menu-container";
@@ -12,11 +10,9 @@ import { Support } from "./support";
 
 export function Menu() {
 	const store = useStore();
-	const spawned = useSelector(selectHasLocalSnake);
-
 	useEffect(() => {
-		store.setMenuOpen(!spawned);
-	}, [spawned]);
+		store.setMenuOpen(true);
+	}, []);
 
 	return (
 		<>

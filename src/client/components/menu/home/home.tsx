@@ -7,7 +7,6 @@ import { HomeTitle } from "./home-title";
 import { HomeVersion } from "./home-version";
 import { MuteButton } from "./mute-button";
 import { PlayButton } from "./play-button";
-import { SpectateButton } from "./spectate-button";
 
 export function Home() {
 	const rem = useRem();
@@ -31,7 +30,6 @@ export function Home() {
 					HorizontalAlignment="Right"
 					FillDirection="Horizontal"
 				/>
-				<SpectateButton />
 				<MuteButton />
 			</Group>
 		</>
