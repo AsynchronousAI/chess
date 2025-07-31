@@ -1,8 +1,9 @@
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import React, { useEffect, useState } from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
 import { useSelector } from "@rbxts/react-reflex";
-import { selectMusicEnabled } from "client/store/menu";
 import { createSound } from "shared/assets";
+import Atoms from "shared/atoms";
 import { shuffle } from "shared/utils/object-utils";
 
 const MUSIC = [
@@ -29,7 +30,7 @@ const MUSIC = [
 ];
 
 export function Music() {
-	const enabled = useSelector(selectMusicEnabled);
+	const enabled = useAtom(Atoms.IsMuted);
 
 	const [queue, setQueue] = useState(() => shuffle(MUSIC));
 	const [index, setIndex] = useState(0);

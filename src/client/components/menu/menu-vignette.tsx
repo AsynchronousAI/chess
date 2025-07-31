@@ -1,15 +1,16 @@
 import { lerpBinding } from "@rbxts/pretty-react-hooks";
 import React, { useEffect } from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
 import { useSelector } from "@rbxts/react-reflex";
 import { Image } from "client/components/ui/image";
 import { springs } from "client/constants/springs";
 import { useMotion } from "client/hooks";
-import { selectIsMenuOpen } from "client/store/menu";
 import { images } from "shared/assets";
+import Atoms from "shared/atoms";
 import { palette } from "shared/constants/palette";
 
 export function MenuVignette() {
-	const open = useSelector(selectIsMenuOpen);
+	const open = useAtom(Atoms.IsMenuOpen);
 	const [transition, transitionMotion] = useMotion(0);
 
 	useEffect(() => {

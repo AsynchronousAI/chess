@@ -4,6 +4,7 @@ import { useDefined, useRem, useStore } from "client/hooks";
 import { formatInteger } from "client/utils/format-integer";
 
 import { StatsCard } from "./stats-card";
+import Atoms from "shared/atoms";
 
 export function Stats() {
 	const rem = useRem();
@@ -60,7 +61,7 @@ export function Stats() {
 				onClick={() => {
 					if (score === undefined) {
 						// Only show the support page if the user is not playing
-						store.setMenuPage("support");
+						Atoms.CurrentPage("support");
 					}
 				}}
 				emoji="💵"

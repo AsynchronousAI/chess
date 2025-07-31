@@ -4,11 +4,11 @@ import { hoarcekat, useMountEffect } from "@rbxts/pretty-react-hooks";
 import React from "@rbxts/react";
 import { Menu } from "client/components/menu";
 import { RootProvider } from "client/providers/root-provider";
-import { store } from "client/store";
+import Atoms from "shared/atoms";
 
 export = hoarcekat(() => {
 	useMountEffect(() => {
-		store.setMenuPage("support");
+		Atoms.CurrentPage("support");
 	});
 
 	return (

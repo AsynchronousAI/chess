@@ -1,11 +1,11 @@
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import React, { useBinding, useEffect, useMemo } from "@rbxts/react";
-import { useSelector } from "@rbxts/react-reflex";
+import { useAtom } from "@rbxts/react-charm";
 import { RunService } from "@rbxts/services";
 import { Frame } from "client/components/ui/frame";
 import { Shadow } from "client/components/ui/shadow";
 import { useMotion, useRem } from "client/hooks";
-import { MenuPage, selectCurrentPage } from "client/store/menu";
+import Atoms, { MenuPage } from "shared/atoms";
 import { map } from "shared/utils/math-utils";
 
 interface IndicatorProps {
@@ -16,7 +16,7 @@ interface IndicatorProps {
 export function Indicator({ colors, order }: IndicatorProps) {
 	const rem = useRem();
 
-	const page = useSelector(selectCurrentPage);
+	const page = useAtom(Atoms.CurrentPage);
 	const currentIndex = order.indexOf(page);
 	const currentColor = colors[currentIndex];
 

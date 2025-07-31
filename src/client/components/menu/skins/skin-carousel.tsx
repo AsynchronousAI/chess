@@ -2,11 +2,12 @@ import React, { useEffect } from "@rbxts/react";
 import { useSelector } from "@rbxts/react-reflex";
 import { Group } from "client/components/ui/group";
 import { useRem, useStore } from "client/hooks";
-import { selectMenuCurrentSkin } from "client/store/menu";
 import { snakeSkins } from "shared/constants/skins";
 
 import { SkinCard } from "./skin-card";
 import { DIRECTIONS } from "./utils";
+import Atoms from "shared/atoms";
+import { useAtom } from "@rbxts/react-charm";
 
 const RANDOM_SKIN = "__random__";
 
@@ -15,17 +16,16 @@ const SKIN_LENGTH = SKIN_LIST.size();
 
 export function SkinCarousel() {
 	const rem = useRem();
-	const store = useStore();
 
 	const skinInventory: string[] = [];
 	const equippedSkin = RANDOM_SKIN;
-	const currentSkin = useSelector(selectMenuCurrentSkin);
+	const currentSkin = useAtom(Atoms.FocusedSkin);
 
 	const currentIndex = SKIN_LIST.indexOf(currentSkin);
 
 	useEffect(() => {
 		if (currentSkin === RANDOM_SKIN) {
-			store.setMenuSkin(equippedSkin);
+			Atoms.FocusedSkin(equippedSkin);
 		}
 	}, []);
 
@@ -43,7 +43,7 @@ export function SkinCarousel() {
 						active={skin === currentSkin}
 						shuffle={skin === RANDOM_SKIN ? skinInventory : undefined}
 						onClick={() => {
-							store.setMenuSkin(skin);
+							Atoms.FocusedSkin(skin);
 						}}
 					/>
 				);

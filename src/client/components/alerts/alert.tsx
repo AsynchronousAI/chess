@@ -13,13 +13,14 @@ import { fonts } from "client/constants/fonts";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
 import { Alert, selectAlertIndex } from "client/store/alert";
-import { selectIsMenuOpen } from "client/store/menu";
 import { images, playSound, sounds } from "shared/assets";
 import { palette } from "shared/constants/palette";
 import { brightenIfDark, darken } from "shared/utils/color-utils";
 import { mapStrict } from "shared/utils/math-utils";
 
 import { AlertTimer } from "./alert-timer";
+import { useAtom } from "@rbxts/react-charm";
+import Atoms from "shared/atoms";
 
 interface AlertProps {
 	readonly alert: Alert;
@@ -34,7 +35,7 @@ const LIST_PADDING = 1;
 
 export function Alert({ alert, index }: AlertProps) {
 	const rem = useRem();
-	const menuOpen = useSelector(selectIsMenuOpen);
+	const menuOpen = useAtom(Atoms.IsMenuOpen);
 	const visibleIndex = useSelectorCreator(selectAlertIndex, alert.id);
 
 	const [transition, transitionMotion] = useMotion(0);
