@@ -25,13 +25,39 @@ export interface PieceProps {
 	playingAs: Color;
 	mousePos: Vector2;
 }
-export function Piece(props: PieceProps) {
-	const [rotation, rotationMotion] = useMotion(0);
-	const holdingPiece = useAtom(Atoms.HoldingPiece);
+export function Square(props: PieceProps) {
+	/* Load data */
+	const location = `${props.letter}${props.number}` as Square;
+	const colored = IsSquareBlack(props.i, props.j);
+	const boardJ = props.playingAs === "white" ? 7 - props.j : props.j;
 
-	/* Track mouse position */
+	return (
+		<frame
+			key={location}
+			Position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), 0)}
+			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+			BackgroundColor3={colored ? props.iconPack.filled : props.iconPack.unfilled}
+			BorderSizePixel={0}
+		>
+			{DISPLAY_SQUARE_LABELS && (
+				<Text
+					textColor={palette.subtext0}
+					textSize={24}
+					font={fonts.inter.bold}
+					text={location}
+					size={new UDim2(1, 0, 1, 0)}
+				/>
+			)}
+		</frame>
+	);
+}
+export function Piece(props: PieceProps) {
+	const holdingPiece = useAtom(Atoms.HoldingPiece);
 	const containerRef = useRef<Frame>();
+
+	const [rotation, rotationMotion] = useMotion(0);
 	const [mouseRelativePosition, setMouseRelativePosition] = useState(new UDim2());
+
 	useEffect(() => {
 		const absolutePosition = containerRef.current?.AbsolutePosition;
 		const absoluteSize = containerRef.current?.AbsoluteSize;
@@ -44,26 +70,12 @@ export function Piece(props: PieceProps) {
 		);
 	}, [props.mousePos]);
 
-	/* Load data */
-	const location = useMemo(() => {
-		return `${props.letter}${props.number}` as Square;
-	}, [props.letter, props.number]);
-
-	const colored = useMemo(() => {
-		return IsSquareBlack(props.i, props.j);
-	}, [props.i, props.j]);
-
-	const pieceAtBoard = useMemo(() => {
-		return props.board[location];
-	}, [props.board, location]);
-
-	const image = useMemo(() => {
-		return pieceAtBoard ? props.iconPack[pieceAtBoard.color][pieceAtBoard.type] : undefined;
-	}, [pieceAtBoard, props.iconPack]);
-
-	/** Get some player/color based data */
-	const boardJ = props.playingAs === "white" ? 7 - props.j : props.j;
+	/* Block data */
+	const location = `${props.letter}${props.number}` as Square;
+	const pieceAtBoard = props.board[location];
+	const image = pieceAtBoard ? props.iconPack[pieceAtBoard.color][pieceAtBoard.type] : undefined;
 	const isMyPiece = props.playingAs === pieceAtBoard?.color;
+	const boardJ = props.playingAs === "white" ? 7 - props.j : props.j;
 
 	/*** Events */
 	const onHover = () => {
@@ -88,8 +100,9 @@ export function Piece(props: PieceProps) {
 			key={location}
 			Position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), 0)}
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-			BackgroundColor3={colored ? props.iconPack.filled : props.iconPack.unfilled}
+			BackgroundTransparency={1}
 			BorderSizePixel={0}
+			ZIndex={2}
 		>
 			<textbutton
 				Size={new UDim2(1, 0, 1, 0)}
@@ -97,15 +110,6 @@ export function Piece(props: PieceProps) {
 				BackgroundTransparency={1}
 				Event={{ MouseEnter: onHover, MouseLeave: onLeave, MouseButton1Down: onDown, MouseButton1Up: onUp }}
 			/>
-			{DISPLAY_SQUARE_LABELS && (
-				<Text
-					textColor={palette.subtext0}
-					textSize={24}
-					font={fonts.inter.bold}
-					text={location}
-					size={new UDim2(1, 0, 1, 0)}
-				/>
-			)}
 			{image ? (
 				<Image
 					rotation={rotation}
