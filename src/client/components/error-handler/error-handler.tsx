@@ -1,4 +1,5 @@
 import React from "@rbxts/react";
+
 import { ErrorBoundary } from "client/components/ui/error-boundary";
 
 import { ErrorPage } from "./error-page";

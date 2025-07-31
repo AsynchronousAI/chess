@@ -2,15 +2,17 @@ import { useEventListener } from "@rbxts/pretty-react-hooks";
 import React, { useBinding, useEffect, useMemo } from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
 import { RunService } from "@rbxts/services";
+
 import { Frame } from "client/components/ui/frame";
 import { Shadow } from "client/components/ui/shadow";
 import { useMotion, useRem } from "client/hooks";
-import Atoms, { MenuPage } from "shared/atoms";
+import type { MenuPage } from "shared/atoms";
+import Atoms from "shared/atoms";
 import { map } from "shared/utils/math-utils";
 
 interface IndicatorProps {
-	readonly colors: readonly Color3[];
-	readonly order: readonly MenuPage[];
+	readonly colors: ReadonlyArray<Color3>;
+	readonly order: ReadonlyArray<MenuPage>;
 }
 
 export function Indicator({ colors, order }: IndicatorProps) {
@@ -26,19 +28,15 @@ export function Indicator({ colors, order }: IndicatorProps) {
 
 	const style = useMemo(() => {
 		return {
-			position: position.map((x) => {
-				return new UDim2(0.5, math.round(rem(x)), 0, 0);
-			}),
+			position: position.map((x) => new UDim2(0.5, math.round(rem(x)), 0, 0)),
 
-			size: velocity.map((x) => {
-				return new UDim2(0, math.round(rem(x + 4)), 0, rem(1));
-			}),
+			size: velocity.map((x) => new UDim2(0, math.round(rem(x + 4)), 0, rem(1))),
 		};
 	}, [rem]);
 
 	useEffect(() => {
 		const x = map(currentIndex, 0, 2, -8, 8);
-		positionMotion.spring(x, { tension: 240, friction: 25, mass: 1.5 });
+		positionMotion.spring(x, { friction: 25, mass: 1.5, tension: 240 });
 	}, [page, rem]);
 
 	useEffect(() => {
@@ -58,7 +56,12 @@ export function Indicator({ colors, order }: IndicatorProps) {
 			size={style.size}
 			position={style.position}
 		>
-			<Shadow shadowPosition={rem(0)} shadowSize={rem(0)} shadowColor={color} shadowTransparency={0.8} />
+			<Shadow
+				shadowPosition={rem(0)}
+				shadowSize={rem(0)}
+				shadowColor={color}
+				shadowTransparency={0.8}
+			/>
 		</Frame>
 	);
 }

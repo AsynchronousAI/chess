@@ -1,4 +1,6 @@
-import React, { Component, ErrorInfo, ReactComponent } from "@rbxts/react";
+import type { ErrorInfo } from "@rbxts/react";
+import type React from "@rbxts/react";
+import { Component, ReactComponent } from "@rbxts/react";
 
 interface ErrorBoundaryProps {
 	fallback: (error: unknown) => React.Element;
@@ -27,8 +29,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 	public render() {
 		if (this.state.hasError) {
 			return this.props.fallback(this.state.message);
-		} else {
-			return this.props.children;
 		}
+
+		return this.props.children;
 	}
 }

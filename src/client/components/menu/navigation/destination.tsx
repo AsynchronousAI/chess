@@ -1,6 +1,7 @@
 import { lerpBinding } from "@rbxts/pretty-react-hooks";
 import React, { useEffect } from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
+
 import { Frame } from "client/components/ui/frame";
 import { Group } from "client/components/ui/group";
 import { Image } from "client/components/ui/image";
@@ -11,19 +12,20 @@ import { Text } from "client/components/ui/text";
 import { fonts } from "client/constants/fonts";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
-import Atoms, { MenuPage } from "shared/atoms";
+import type { MenuPage } from "shared/atoms";
+import Atoms from "shared/atoms";
 import { palette } from "shared/constants/palette";
 
 interface DestinationProps {
-	readonly page: MenuPage;
-	readonly label: string;
+	readonly color: Color3;
 	readonly icon: string;
 	readonly iconAlt: string;
-	readonly color: Color3;
+	readonly label: string;
 	readonly order: number;
+	readonly page: MenuPage;
 }
 
-export function Destination({ page, label, icon, iconAlt, color, order }: DestinationProps) {
+export function Destination({ color, icon, iconAlt, label, order, page }: DestinationProps) {
 	const rem = useRem();
 	const currentPage = useAtom(Atoms.CurrentPage);
 	const isPage = currentPage === page;
@@ -70,7 +72,11 @@ export function Destination({ page, label, icon, iconAlt, color, order }: Destin
 				imageTransparency={lerpBinding(transition, 0.7, 0)}
 				anchorPoint={new Vector2(0.5, 0.5)}
 				size={new UDim2(0, rem(2.25), 0, rem(2.25))}
-				position={lerpBinding(transition, new UDim2(0.5, 0, 0.5, 0), new UDim2(0.5, 0, 0.5, rem(-0.75)))}
+				position={lerpBinding(
+					transition,
+					new UDim2(0.5, 0, 0.5, 0),
+					new UDim2(0.5, 0, 0.5, rem(-0.75)),
+				)}
 			/>
 
 			<Group clipsDescendants>

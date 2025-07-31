@@ -1,5 +1,5 @@
 import { baseSnakeSkins, snakeSkins } from "./skins";
-import { SnakeSkin } from "./types";
+import type { SnakeSkin } from "./types";
 
 export * from "./skins";
 export * from "./types";
@@ -9,6 +9,7 @@ const snakeSkinsById = new Map(snakeSkins.map((skin) => [skin.id, skin]));
 /**
  * Returns the snake skin with the given id, or a default skin
  * if the id is invalid.
+ * @param id
  */
 export function getSnakeSkin(id: string): SnakeSkin {
 	return snakeSkinsById.get(id) || baseSnakeSkins[0];
@@ -16,6 +17,7 @@ export function getSnakeSkin(id: string): SnakeSkin {
 
 /**
  * Returns the snake skin with the given id, or undefined.
+ * @param id
  */
 export function findSnakeSkin(id: string): SnakeSkin | undefined {
 	return snakeSkinsById.get(id);
@@ -24,17 +26,19 @@ export function findSnakeSkin(id: string): SnakeSkin | undefined {
 /**
  * Returns the texture and tint of a snake tracer at this index.
  * Used to apply repeating patterns to the snake.
+ * @param id
+ * @param index
  */
 export function getSnakeSkinForTracer(
 	id: string,
 	index: number,
-): { readonly texture: string; readonly tint: Color3; readonly boostTint?: Color3 } {
-	const { texture, tint, boostTint } = getSnakeSkin(id);
+): { readonly boostTint?: Color3; readonly texture: string; readonly tint: Color3; } {
+	const { boostTint, texture, tint } = getSnakeSkin(id);
 
 	return {
+		boostTint: boostTint?.[index % boostTint.size()],
 		texture: texture[index % texture.size()],
 		tint: tint[index % tint.size()],
-		boostTint: boostTint && boostTint[index % boostTint.size()],
 	};
 }
 

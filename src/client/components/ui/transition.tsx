@@ -1,41 +1,43 @@
 import { getBindingValue, useEventListener, useUnmountEffect } from "@rbxts/pretty-react-hooks";
-import React, { Binding, useMemo, useState } from "@rbxts/react";
+import type { Binding } from "@rbxts/react";
+import React, { useMemo, useState } from "@rbxts/react";
 import { createPortal } from "@rbxts/react-roblox";
 import { RunService } from "@rbxts/services";
+
 import { palette } from "shared/constants/palette";
 
 interface TransitionProps extends React.PropsWithChildren {
-	groupColor?: Color3 | Binding<Color3>;
-	groupTransparency?: number | Binding<number>;
-	anchorPoint?: Vector2 | Binding<Vector2>;
-	size?: UDim2 | Binding<UDim2>;
-	position?: UDim2 | Binding<UDim2>;
-	rotation?: number | Binding<number>;
-	clipsDescendants?: boolean | Binding<boolean>;
-	layoutOrder?: number | Binding<number>;
-	zIndex?: number | Binding<number>;
-	event?: React.InstanceEvent<Frame | CanvasGroup>;
-	change?: React.InstanceChangeEvent<Frame | CanvasGroup>;
-	directChildren?: React.ReactNode;
+	anchorPoint?: Binding<Vector2> | Vector2;
+	change?: React.InstanceChangeEvent<CanvasGroup | Frame>;
 	children?: React.ReactNode;
+	clipsDescendants?: Binding<boolean> | boolean;
+	directChildren?: React.ReactNode;
+	event?: React.InstanceEvent<CanvasGroup | Frame>;
+	groupColor?: Binding<Color3> | Color3;
+	groupTransparency?: Binding<number> | number;
+	layoutOrder?: Binding<number> | number;
+	position?: Binding<UDim2> | UDim2;
+	rotation?: Binding<number> | number;
+	size?: Binding<UDim2> | UDim2;
+	zIndex?: Binding<number> | number;
 }
 
 const EPSILON = 0.03;
 
 export function Transition({
-	groupColor,
-	groupTransparency,
 	anchorPoint,
-	size = new UDim2(1, 0, 1, 0),
-	position,
-	rotation,
-	clipsDescendants,
-	layoutOrder,
-	zIndex,
-	event,
 	change,
 	children,
+	clipsDescendants,
 	directChildren,
+	event,
+	groupColor,
+	groupTransparency,
+	layoutOrder,
+	position,
+	rotation,
+	size = new UDim2(1, 0, 1, 0),
+	zIndex,
 }: TransitionProps) {
 	const [frame, setFrame] = useState<Frame>();
 	const [canvas, setCanvas] = useState<CanvasGroup>();
@@ -52,11 +54,7 @@ export function Transition({
 		const color = getBindingValue(groupColor) || palette.white;
 
 		pcall(() => {
-			if (transparency > EPSILON || color !== palette.white) {
-				container.Parent = canvas;
-			} else {
-				container.Parent = frame;
-			}
+			container.Parent = transparency > EPSILON || color !== palette.white ? canvas : frame;
 		});
 	});
 

@@ -1,4 +1,5 @@
 import React from "@rbxts/react";
+
 import { RemProvider } from "client/providers/rem-provider";
 
 import { SupportFooter } from "./support-footer";

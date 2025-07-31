@@ -1,7 +1,7 @@
 import "client/app/react-config";
-
 import { hoarcekat } from "@rbxts/pretty-react-hooks";
 import React from "@rbxts/react";
+
 import { sendAlert } from "client/alerts";
 import { Alerts } from "client/components/alerts";
 import { Menu } from "client/components/menu";
@@ -16,26 +16,39 @@ export = hoarcekat(() => {
 		const mode = modes[math.random(0, modes.size() - 1)];
 
 		switch (mode) {
-			case "info":
-				sendAlert({ emoji: "ℹ️", color: palette.blue, message: "This is an info alert." });
-				break;
-			case "success":
-				sendAlert({ emoji: "✅", color: palette.green, message: "This is a success alert." });
-				break;
-			case "warning":
-				sendAlert({ emoji: "⚠️", color: palette.yellow, message: "This is a warning alert." });
-				break;
-			case "error":
-				sendAlert({ emoji: "🚨", color: palette.red, message: "This is an error alert." });
-				break;
-			case "awesome":
+			case "awesome": {
 				sendAlert({
-					emoji: "🎉",
 					color: palette.mauve,
 					colorSecondary: palette.blue,
+					emoji: "🎉",
 					message: "This is an awesome alert.",
 				});
 				break;
+			}
+			case "error": {
+				sendAlert({ color: palette.red, emoji: "🚨", message: "This is an error alert." });
+				break;
+			}
+			case "info": {
+				sendAlert({ color: palette.blue, emoji: "ℹ️", message: "This is an info alert." });
+				break;
+			}
+			case "success": {
+				sendAlert({
+					color: palette.green,
+					emoji: "✅",
+					message: "This is a success alert.",
+				});
+				break;
+			}
+			case "warning": {
+				sendAlert({
+					color: palette.yellow,
+					emoji: "⚠️",
+					message: "This is a warning alert.",
+				});
+				break;
+			}
 		}
 	};
 

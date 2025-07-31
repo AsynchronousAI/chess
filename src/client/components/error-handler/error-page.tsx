@@ -1,5 +1,6 @@
 import React, { useEffect } from "@rbxts/react";
 import { TeleportService } from "@rbxts/services";
+
 import { Frame } from "client/components/ui/frame";
 import { Group } from "client/components/ui/group";
 import { Layer } from "client/components/ui/layer";
@@ -34,7 +35,12 @@ export function ErrorPage({ message }: ErrorPageProps) {
 					SortOrder="LayoutOrder"
 				/>
 
-				<Text text="🐍" textSize={rem(5)} size={new UDim2(0, rem(5), 0, rem(5))} layoutOrder={index++} />
+				<Text
+					text="🐍"
+					textSize={rem(5)}
+					size={new UDim2(0, rem(5), 0, rem(5))}
+					layoutOrder={index++}
+				/>
 
 				<Text
 					font={fonts.inter.bold}
@@ -91,13 +97,20 @@ export function ErrorPage({ message }: ErrorPageProps) {
 						PaddingBottom={new UDim(0, rem(2))}
 					/>
 
-					<uistroke Color={palette.red} Transparency={0.3} Thickness={1} ApplyStrokeMode="Border" />
+					<uistroke
+						Color={palette.red}
+						Transparency={0.3}
+						Thickness={1}
+						ApplyStrokeMode="Border"
+					/>
 				</TextField>
 
 				<Group size={new UDim2(0, 0, 0, rem(2))} layoutOrder={index++} />
 
 				<PrimaryButton
-					onClick={async () => TeleportService.TeleportToPlaceInstance(game.PlaceId, game.JobId)}
+					onClick={async () => {
+						TeleportService.TeleportToPlaceInstance(game.PlaceId, game.JobId);
+					}}
 					overlayGradient={new ColorSequence(palette.blue, palette.mauve)}
 					size={new UDim2(0, rem(12), 0, rem(5))}
 					layoutOrder={index++}

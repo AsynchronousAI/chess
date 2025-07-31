@@ -1,7 +1,7 @@
 import "client/app/react-config";
-
 import { hoarcekat } from "@rbxts/pretty-react-hooks";
 import React from "@rbxts/react";
+
 import { Menu } from "client/components/menu";
 import { Stats } from "client/components/stats";
 import { RootProvider } from "client/providers/root-provider";

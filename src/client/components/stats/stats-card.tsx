@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "@rbxts/react";
+
 import { Frame } from "client/components/ui/frame";
 import { Group } from "client/components/ui/group";
 import { ReactiveButton } from "client/components/ui/reactive-button";
@@ -12,14 +13,14 @@ import { palette } from "shared/constants/palette";
 import { Transition } from "../ui/transition";
 
 interface StatsCardProps {
-	readonly onClick?: () => void;
 	readonly emoji: string;
+	readonly enabled: boolean;
 	readonly label: string;
-	readonly value: string;
+	readonly onClick?: () => void;
+	readonly order: number;
 	readonly primary: Color3;
 	readonly secondary: Color3;
-	readonly enabled: boolean;
-	readonly order: number;
+	readonly value: string;
 }
 
 const CARD_MARGIN = 1;
@@ -28,7 +29,16 @@ const CARD_HEIGHT = 4;
 const CARD_EMOJI_WIDTH = 2;
 const CARD_CANVAS_MARGIN = 3;
 
-export function StatsCard({ onClick, emoji, label, value, primary, secondary, enabled, order }: StatsCardProps) {
+export function StatsCard({
+	emoji,
+	enabled,
+	label,
+	onClick,
+	order,
+	primary,
+	secondary,
+	value,
+}: StatsCardProps) {
 	const primaryDark = primary.Lerp(palette.crust, 0.75);
 	const secondaryDark = secondary.Lerp(palette.crust, 0.75);
 
@@ -49,7 +59,13 @@ export function StatsCard({ onClick, emoji, label, value, primary, secondary, en
 	}, [enabled]);
 
 	return (
-		<ReactiveButton onClick={onClick} soundVariant="alt" backgroundTransparency={1} size={size} layoutOrder={order}>
+		<ReactiveButton
+			onClick={onClick}
+			soundVariant="alt"
+			backgroundTransparency={1}
+			size={size}
+			layoutOrder={order}
+		>
 			<Transition
 				groupTransparency={transparency}
 				size={new UDim2(1, rem(2 * CARD_CANVAS_MARGIN), 1, rem(2 * CARD_CANVAS_MARGIN))}
@@ -102,7 +118,14 @@ export function StatsCard({ onClick, emoji, label, value, primary, secondary, en
 					textSize={rem(1)}
 					textXAlignment="Left"
 					textYAlignment="Bottom"
-					position={new UDim2(0, rem(CARD_MARGIN + CARD_EMOJI_WIDTH + CARD_PADDING), 0.5, -rem(0.25))}
+					position={
+						new UDim2(
+							0,
+							rem(CARD_MARGIN + CARD_EMOJI_WIDTH + CARD_PADDING),
+							0.5,
+							-rem(0.25),
+						)
+					}
 					change={{
 						TextBounds: (rbx) => {
 							textWidthMotion.spring({ label: rbx.TextBounds.X });
@@ -118,7 +141,14 @@ export function StatsCard({ onClick, emoji, label, value, primary, secondary, en
 					textSize={rem(1.5)}
 					textXAlignment="Left"
 					textYAlignment="Top"
-					position={new UDim2(0, rem(CARD_MARGIN + CARD_EMOJI_WIDTH + CARD_PADDING), 0.5, -rem(0.25))}
+					position={
+						new UDim2(
+							0,
+							rem(CARD_MARGIN + CARD_EMOJI_WIDTH + CARD_PADDING),
+							0.5,
+							-rem(0.25),
+						)
+					}
 					change={{
 						TextBounds: (rbx) => {
 							textWidthMotion.spring({ value: rbx.TextBounds.X });

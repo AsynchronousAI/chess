@@ -1,20 +1,21 @@
-import React, { forwardRef, Ref } from "@rbxts/react";
+import type { Ref } from "@rbxts/react";
+import React, { forwardRef } from "@rbxts/react";
 
 export interface FrameProps<T extends Instance = Frame> extends React.PropsWithChildren {
-	ref?: React.Ref<T>;
-	event?: React.InstanceEvent<T>;
-	change?: React.InstanceChangeEvent<T>;
-	size?: UDim2 | React.Binding<UDim2>;
-	position?: UDim2 | React.Binding<UDim2>;
-	anchorPoint?: Vector2 | React.Binding<Vector2>;
-	rotation?: number | React.Binding<number>;
+	anchorPoint?: React.Binding<Vector2> | Vector2;
 	backgroundColor?: Color3 | React.Binding<Color3>;
 	backgroundTransparency?: number | React.Binding<number>;
+	change?: React.InstanceChangeEvent<T>;
 	clipsDescendants?: boolean | React.Binding<boolean>;
+	cornerRadius?: React.Binding<UDim> | UDim;
+	event?: React.InstanceEvent<T>;
+	layoutOrder?: number | React.Binding<number>;
+	position?: React.Binding<UDim2> | UDim2;
+	ref?: React.Ref<T>;
+	rotation?: number | React.Binding<number>;
+	size?: React.Binding<UDim2> | UDim2;
 	visible?: boolean | React.Binding<boolean>;
 	zIndex?: number | React.Binding<number>;
-	layoutOrder?: number | React.Binding<number>;
-	cornerRadius?: UDim | React.Binding<UDim>;
 }
 
 export const Frame = forwardRef((props: FrameProps, ref: Ref<Frame>) => {

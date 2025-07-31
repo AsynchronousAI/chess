@@ -1,17 +1,17 @@
 import React from "@rbxts/react";
 
-import { FrameProps } from "./frame";
+import type { FrameProps } from "./frame";
 
 export interface ImageProps extends FrameProps<ImageLabel> {
 	image: string;
 	imageColor?: Color3 | React.Binding<Color3>;
+	imageRectOffset?: React.Binding<Vector2> | Vector2;
+	imageRectSize?: React.Binding<Vector2> | Vector2;
 	imageTransparency?: number | React.Binding<number>;
-	imageRectOffset?: Vector2 | React.Binding<Vector2>;
-	imageRectSize?: Vector2 | React.Binding<Vector2>;
 	scaleType?: React.InferEnumNames<Enum.ScaleType>;
+	sliceCenter?: React.Binding<Rect> | Rect;
 	sliceScale?: number | React.Binding<number>;
-	sliceCenter?: Rect | React.Binding<Rect>;
-	tileSize?: UDim2 | React.Binding<UDim2>;
+	tileSize?: React.Binding<UDim2> | UDim2;
 }
 
 export function Image(props: ImageProps) {

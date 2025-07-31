@@ -1,5 +1,6 @@
 import { composeBindings, lerpBinding } from "@rbxts/pretty-react-hooks";
 import React, { useEffect, useMemo } from "@rbxts/react";
+
 import { PrimaryButton } from "client/components/ui/primary-button";
 import { Shadow } from "client/components/ui/shadow";
 import { Text } from "client/components/ui/text";
@@ -17,16 +18,16 @@ export function ActButton() {
 	const [secondary, secondaryMotion] = useMotion(new Color3());
 	const rem = useRem();
 
-	const { size, gradient } = useMemo(() => {
-		const size = textWidth.map((width) => {
-			return new UDim2(0, width + rem(3), 0, rem(4.5));
-		});
+	const { gradient, size } = useMemo(() => {
+		const size = textWidth.map((width) => new UDim2(0, width + rem(3), 0, rem(4.5)));
 
-		const gradient = composeBindings(primary, secondary, (primary, secondary) => {
-			return new ColorSequence(primary, secondary);
-		});
+		const gradient = composeBindings(
+			primary,
+			secondary,
+			(primary, secondary) => new ColorSequence(primary, secondary),
+		);
 
-		return { size, gradient };
+		return { gradient, size };
 	}, [rem]);
 
 	useEffect(() => {
@@ -39,7 +40,9 @@ export function ActButton() {
 			onClick={() => {
 				gradientSpinMotion.spring(gradientSpin.getValue() + 180, springs.molasses);
 			}}
-			onHover={(hovered) => hoverMotion.spring(hovered ? 1 : 0)}
+			onHover={(hovered) => {
+				hoverMotion.spring(hovered ? 1 : 0);
+			}}
 			overlayGradient={gradient}
 			overlayRotation={gradientSpin}
 			anchorPoint={new Vector2(0.5, 1)}
@@ -64,7 +67,7 @@ export function ActButton() {
 				}}
 				richText
 				font={fonts.inter.medium}
-				text={"🎨  Equip"}
+				text="🎨  Equip"
 				textColor={palette.base}
 				textSize={rem(1.5)}
 				size={new UDim2(1, 0, 1, 0)}

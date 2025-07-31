@@ -1,5 +1,6 @@
 import { composeBindings } from "@rbxts/pretty-react-hooks";
 import React from "@rbxts/react";
+
 import { images } from "shared/assets";
 
 import { useRem } from "../../hooks";
@@ -7,9 +8,9 @@ import { Image } from "./image";
 
 interface ShadowProps extends React.PropsWithChildren {
 	shadowBlur?: number;
-	shadowPosition?: number | React.Binding<number>;
-	shadowSize?: number | UDim2 | React.Binding<number | UDim2>;
 	shadowColor?: Color3 | React.Binding<Color3>;
+	shadowPosition?: number | React.Binding<number>;
+	shadowSize?: number | React.Binding<number | UDim2> | UDim2;
 	shadowTransparency?: number | React.Binding<number>;
 	zIndex?: number;
 }
@@ -18,13 +19,13 @@ const IMAGE_SIZE = new Vector2(512, 512);
 const BLUR_RADIUS = 80;
 
 export function Shadow({
+	children,
 	shadowBlur = 1,
+	shadowColor = new Color3(),
 	shadowPosition,
 	shadowSize = 0,
-	shadowColor = new Color3(),
 	shadowTransparency = 0.5,
 	zIndex = -1,
-	children,
 }: ShadowProps) {
 	const rem = useRem();
 
@@ -41,9 +42,9 @@ export function Shadow({
 
 				if (typeIs(size, "UDim2")) {
 					return new UDim2(1, sizeOffsetScaled, 1, sizeOffsetScaled).add(size);
-				} else {
-					return new UDim2(1, size + sizeOffsetScaled, 1, size + sizeOffsetScaled);
 				}
+
+				return new UDim2(1, size + sizeOffsetScaled, 1, size + sizeOffsetScaled);
 			})}
 			position={composeBindings(shadowPosition, (offset) => new UDim2(0.5, 0, 0.5, offset))}
 			scaleType="Slice"

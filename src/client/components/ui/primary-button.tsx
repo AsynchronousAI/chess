@@ -1,6 +1,6 @@
-import { blend, lerpBinding } from "@rbxts/pretty-react-hooks";
-import { composeBindings } from "@rbxts/pretty-react-hooks";
+import { blend, composeBindings, lerpBinding } from "@rbxts/pretty-react-hooks";
 import React from "@rbxts/react";
+
 import { images } from "shared/assets";
 import { palette } from "shared/constants/palette";
 
@@ -12,28 +12,28 @@ import { ReactiveButton } from "./reactive-button";
 import { Shadow } from "./shadow";
 
 interface PrimaryButtonProps extends React.PropsWithChildren {
+	readonly anchorPoint?: React.Binding<Vector2> | Vector2;
+	readonly layoutOrder?: number | React.Binding<number>;
 	readonly onClick?: () => void;
 	readonly onHover?: (hovered: boolean) => void;
-	readonly size?: UDim2 | React.Binding<UDim2>;
-	readonly position?: UDim2 | React.Binding<UDim2>;
-	readonly anchorPoint?: Vector2 | React.Binding<Vector2>;
 	readonly overlayGradient?: ColorSequence | React.Binding<ColorSequence>;
-	readonly overlayTransparency?: number | React.Binding<number>;
 	readonly overlayRotation?: number | React.Binding<number>;
-	readonly layoutOrder?: number | React.Binding<number>;
+	readonly overlayTransparency?: number | React.Binding<number>;
+	readonly position?: React.Binding<UDim2> | UDim2;
+	readonly size?: React.Binding<UDim2> | UDim2;
 }
 
 export function PrimaryButton({
+	anchorPoint,
+	children,
+	layoutOrder,
 	onClick,
 	onHover,
-	size,
-	position,
-	anchorPoint,
 	overlayGradient,
-	overlayTransparency = 0,
 	overlayRotation,
-	layoutOrder,
-	children,
+	overlayTransparency = 0,
+	position,
+	size,
 }: PrimaryButtonProps) {
 	const rem = useRem();
 	const [hover, hoverMotion] = useMotion(0);
@@ -58,7 +58,11 @@ export function PrimaryButton({
 				shadowPosition={rem(0.5)}
 			/>
 
-			<Frame backgroundColor={palette.white} cornerRadius={new UDim(0, rem(1))} size={new UDim2(1, 0, 1, 0)}>
+			<Frame
+				backgroundColor={palette.white}
+				cornerRadius={new UDim(0, rem(1))}
+				size={new UDim2(1, 0, 1, 0)}
+			>
 				<uigradient
 					Offset={lerpBinding(hover, new Vector2(), new Vector2(0, 1))}
 					Rotation={90}
@@ -70,7 +74,11 @@ export function PrimaryButton({
 
 			<Image
 				image={images.ui.button_glow_top}
-				imageTransparency={composeBindings(overlayTransparency, lerpBinding(hover, 0.3, 0), blend)}
+				imageTransparency={composeBindings(
+					overlayTransparency,
+					lerpBinding(hover, 0.3, 0),
+					blend,
+				)}
 				cornerRadius={new UDim(0, rem(1))}
 				size={new UDim2(1, 0, 1, 0)}
 			>

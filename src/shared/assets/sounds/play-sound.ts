@@ -1,16 +1,17 @@
 import { SoundService } from "@rbxts/services";
+
 import { IS_EDIT } from "shared/constants/core";
 
 export interface SoundOptions {
-	volume?: number;
-	speed?: number;
 	looped?: boolean;
 	parent?: Instance;
+	speed?: number;
+	volume?: number;
 }
 
 export function createSound(
 	soundId: string,
-	{ volume = 0.5, speed = 1, looped = false, parent = SoundService }: SoundOptions = {},
+	{ looped = false, parent = SoundService, speed = 1, volume = 0.5 }: SoundOptions = {},
 ) {
 	const sound = new Instance("Sound");
 
@@ -30,7 +31,9 @@ export function playSound(soundId: string, options?: SoundOptions) {
 
 	const sound = createSound(soundId, options);
 
-	sound.Ended.Connect(() => sound.Destroy());
+	sound.Ended.Connect(() => {
+		sound.Destroy();
+	});
 	sound.Play();
 
 	return sound;

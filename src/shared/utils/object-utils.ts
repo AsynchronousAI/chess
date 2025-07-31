@@ -1,22 +1,24 @@
 /**
  * Maps an object to a new object with the same keys, but values are
  * mapped using the provided mapper function.
+ * @param object
+ * @param mapper
  */
 export function mapProperties<K extends string, V, T>(
-	object: { readonly [Key in K]: V | undefined },
+	object: Readonly<Record<K, undefined | V>>,
 	mapper: (value: V, key: K) => T | undefined,
-): { readonly [key in K]?: T };
+): Readonly<Partial<Record<K, T>>>;
 
 export function mapProperties<K extends string, V, T>(
-	object: { readonly [Key in K]: V },
+	object: Readonly<Record<K, V>>,
 	mapper: (value: V, key: K) => T,
-): { readonly [key in K]: T };
+): Readonly<Record<K, T>>;
 
 export function mapProperties<K extends string, V, T>(
-	object: { readonly [Key in K]: V | undefined },
+	object: Readonly<Record<K, undefined | V>>,
 	mapper: (value: V, key: K) => T | undefined,
-): { readonly [key in K]?: T } {
-	const result: { [key in K]?: T } = {};
+): Readonly<Partial<Record<K, T>>> {
+	const result: Partial<Record<K, T>> = {};
 
 	for (const [key, value] of object as unknown as Map<K, V>) {
 		result[key] = mapper(value, key);
@@ -28,6 +30,9 @@ export function mapProperties<K extends string, V, T>(
 /**
  * Replaces a property on an object with a new value. Only changes the
  * property if the value is not undefined.
+ * @param object
+ * @param key
+ * @param mapper
  */
 export function mapProperty<T extends object, K extends keyof T>(
 	object: T,
@@ -45,16 +50,20 @@ export function mapProperty<T extends object, K extends keyof T>(
 
 /**
  * Creates a new array of values given a length and a mapper function.
+ * @param length
+ * @param mapper
  */
-export function fillArray<T extends defined>(length: number, mapper: (index: number) => T): T[] {
+export function fillArray<T extends defined>(length: number, mapper: (index: number) => T): Array<T> {
 	return new Array(length, 0).map((_, index) => mapper(index));
 }
 
 /**
  * Clones the first object and merges the second object into it. Useful
  * for creating a new object without iterating over the first object.
+ * @param object
+ * @param patch
  */
-export function assign<K extends string, V>(object: { [key in K]: V }, patch: { [key in K]: V }): { [key in K]: V } {
+export function assign<K extends string, V>(object: Record<K, V>, patch: Record<K, V>): Record<K, V> {
 	const result = table.clone(object);
 
 	for (const [key, value] of patch as unknown as Map<K, V>) {
@@ -66,16 +75,17 @@ export function assign<K extends string, V>(object: { [key in K]: V }, patch: { 
 
 /**
  * Returns a shuffled copy of the given array.
+ * @param array
  */
-export function shuffle<T extends defined>(array: T[]): T[] {
+export function shuffle<T extends defined>(array: Array<T>): Array<T> {
 	const result = table.clone(array);
 	const random = new Random();
 
 	for (const index of $range(result.size() - 1, 1, -1)) {
 		const randomIndex = random.NextInteger(0, index);
-		const temp = result[index];
+		const temporary = result[index];
 		result[index] = result[randomIndex];
-		result[randomIndex] = temp;
+		result[randomIndex] = temporary;
 	}
 
 	return result;

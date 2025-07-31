@@ -7,20 +7,20 @@ import { useInputDevice } from "../../../hooks/use-input-device";
 
 export interface ButtonEvents {
 	onMouseDown: () => void;
-	onMouseUp: () => void;
 	onMouseEnter: () => void;
 	onMouseLeave: () => void;
+	onMouseUp: () => void;
 }
 
 /**
  * Returns the current state of a button based on the events returned.
- * @param enabled Whether the button is enabled or not.
+ * @param enabled - Whether the button is enabled or not.
  * @returns The press state, hover state, and a `ButtonEvents` object.
  */
 export function useButtonState(enabled = true): LuaTuple<[press: boolean, hover: boolean, events: ButtonEvents]> {
-	const [{ press, hover }, setState] = useState({
-		press: false,
+	const [{ hover, press }, setState] = useState({
 		hover: false,
+		press: false,
 	});
 
 	const on = useLatest(enabled);
@@ -28,10 +28,10 @@ export function useButtonState(enabled = true): LuaTuple<[press: boolean, hover:
 
 	const events: ButtonEvents = useMemo(() => {
 		return {
-			onMouseDown: () => setState((state) => ({ ...state, press: on.current })),
-			onMouseUp: () => setState((state) => ({ ...state, press: false })),
-			onMouseEnter: () => setState((state) => ({ ...state, hover: on.current && !touch.current })),
-			onMouseLeave: () => setState({ press: false, hover: false }),
+			onMouseDown: () => { setState((state) => ({ ...state, press: on.current })); },
+			onMouseEnter: () => { setState((state) => ({ ...state, hover: on.current && !touch.current })); },
+			onMouseLeave: () => { setState({ hover: false, press: false }); },
+			onMouseUp: () => { setState((state) => ({ ...state, press: false })); },
 		};
 	}, []);
 
@@ -40,7 +40,7 @@ export function useButtonState(enabled = true): LuaTuple<[press: boolean, hover:
 	useEventListener(UserInputService.InputEnded, (input) => {
 		if (input.UserInputType === Enum.UserInputType.Touch) {
 			setTimeout(() => {
-				setState({ press: false, hover: false });
+				setState({ hover: false, press: false });
 			}, 0);
 		}
 	});

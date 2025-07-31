@@ -1,13 +1,15 @@
+import { effect, subscribe } from "@rbxts/charm";
 import { lerpBinding } from "@rbxts/pretty-react-hooks";
 import React, { useEffect, useMemo, useRef } from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
+
 import { DelayRender } from "client/components/ui/delay-render";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
+import type { MenuPage } from "shared/atoms";
+import Atoms from "shared/atoms";
 
 import { Transition } from "../ui/transition";
-import { useAtom } from "@rbxts/react-charm";
-import Atoms, { MenuPage } from "shared/atoms";
-import { effect, subscribe } from "@rbxts/charm";
 
 interface MenuContainerProps extends React.PropsWithChildren {
 	readonly page?: MenuPage;
@@ -17,7 +19,7 @@ const TRANSITION_DEFAULT = new UDim2(0, 0, 0, -2);
 const TRANSITION_LEFT = new UDim2(0, -2, 0, 0);
 const TRANSITION_RIGHT = new UDim2(0, 2, 0, 0);
 
-const MENU_PAGES: readonly MenuPage[] = ["support", "home", "skins"] as const;
+const MENU_PAGES: ReadonlyArray<MenuPage> = ["support", "home", "skins"] as const;
 function getMenuDirection(from: MenuPage, to: MenuPage) {
 	const fromIndex = MENU_PAGES.indexOf(from);
 	const toIndex = MENU_PAGES.indexOf(to);
@@ -28,7 +30,8 @@ function getMenuDirection(from: MenuPage, to: MenuPage) {
 
 	return fromIndex < toIndex ? "right" : "left";
 }
-export function MenuContainer({ page, children }: MenuContainerProps) {
+
+export function MenuContainer({ children, page }: MenuContainerProps) {
 	const rem = useRem();
 
 	const isOpen = useAtom(Atoms.IsMenuOpen);
@@ -49,10 +52,12 @@ export function MenuContainer({ page, children }: MenuContainerProps) {
 
 		if (visible) {
 			// ease in from menuTransition.direction
-			transitionFrom.current = direction === "left" ? rem(TRANSITION_LEFT) : rem(TRANSITION_RIGHT);
+			transitionFrom.current =
+				direction === "left" ? rem(TRANSITION_LEFT) : rem(TRANSITION_RIGHT);
 		} else {
 			// ease out to menuTransition.direction
-			transitionFrom.current = direction === "left" ? rem(TRANSITION_RIGHT) : rem(TRANSITION_LEFT);
+			transitionFrom.current =
+				direction === "left" ? rem(TRANSITION_RIGHT) : rem(TRANSITION_LEFT);
 		}
 	});
 

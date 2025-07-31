@@ -1,5 +1,6 @@
 import React from "@rbxts/react";
 import { MarketplaceService, Players } from "@rbxts/services";
+
 import { sendAlert } from "client/alerts";
 import { PrimaryButton } from "client/components/ui/primary-button";
 import { Text } from "client/components/ui/text";
@@ -11,11 +12,11 @@ export function SupportPremium() {
 	const promptPremiumPurchase = async () => {
 		if (Players.LocalPlayer?.MembershipType === Enum.MembershipType.Premium) {
 			sendAlert({
+				color: palette.sapphire,
+				colorSecondary: palette.blue,
 				emoji: "💎",
 				message:
 					"You get <font color='#fff'>20% more money</font> because of <font color='#fff'>Premium benefits</font>!",
-				color: palette.sapphire,
-				colorSecondary: palette.blue,
 			});
 		} else {
 			MarketplaceService.PromptPremiumPurchase(Players.LocalPlayer);

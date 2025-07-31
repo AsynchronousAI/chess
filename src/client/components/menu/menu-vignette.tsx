@@ -1,6 +1,7 @@
 import { lerpBinding } from "@rbxts/pretty-react-hooks";
 import React, { useEffect } from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
+
 import { Image } from "client/components/ui/image";
 import { springs } from "client/constants/springs";
 import { useMotion } from "client/hooks";

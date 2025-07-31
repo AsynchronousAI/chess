@@ -1,27 +1,27 @@
 import { atom } from "@rbxts/charm";
 
-export type MenuPage = "support" | "home" | "skins";
+export type MenuPage = "home" | "skins" | "support";
 
-export type AlertScope = "ranking" | "money";
+export type AlertScope = "money" | "ranking";
 export interface Alert {
-	id: number;
-	scope?: AlertScope;
-	emoji: string;
-	message: string;
 	color: Color3;
-	colorSecondary?: Color3;
 	colorMessage?: Color3;
+	colorSecondary?: Color3;
 	duration: number;
-	visible: boolean;
+	emoji: string;
+	id: number;
+	message: string;
+	scope?: AlertScope;
 	sound?: string;
+	visible: boolean;
 }
 
 const Atoms = {
-	IsMuted: atom(false),
-	IsMenuOpen: atom(true),
+	Alerts: atom<Array<Alert>>([]),
 	CurrentPage: atom<MenuPage>("home"),
 	FocusedSkin: atom("__random__"),
-	Alerts: atom<Alert[]>([]),
+	IsMenuOpen: atom(true),
+	IsMuted: atom(false),
 };
 
 export default Atoms;

@@ -37,7 +37,7 @@ target:
     icon: assets/marketing/game_icon.png
     thumbnails: [assets/marketing/game_thumbnail.png]
     socialLinks:
-      - title: "📌・@littensy"
+      - title: 📌・@littensy
         url: https://twitter.com/littensy
       - title: 💬・Chat
         url: https://discord.gg/tyjBaP44sK

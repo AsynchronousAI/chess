@@ -10,7 +10,10 @@ export const WORLD_TICK = 1 / 20;
 export const SNAKE_SPEED = 6;
 export const SNAKE_BOOST_SPEED = 12;
 
-export const REMOTE_TICK = 1 / 20; // Roblox limits
+export /**
+        * Roblox limits.
+        */
+const REMOTE_TICK = 1 / 20; 
 
 export const IS_PROD = game.PlaceId === 14162747150;
 export const IS_CANARY = !IS_PROD;

@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "@rbxts/react";
 
 import { fonts } from "../../constants/fonts";
 import { Group } from "./group";
-import { TextProps } from "./text";
+import type { TextProps } from "./text";
 
 interface TextFieldProps extends TextProps<TextBox> {
-	text?: string;
-	placeholderText?: string | React.Binding<string>;
-	placeholderColor?: Color3 | React.Binding<Color3>;
 	clearTextOnFocus?: boolean | React.Binding<boolean>;
 	multiLine?: boolean | React.Binding<boolean>;
+	placeholderColor?: Color3 | React.Binding<Color3>;
+	placeholderText?: React.Binding<string> | string;
+	text?: string;
 	textEditable?: boolean | React.Binding<boolean>;
 }
 
@@ -17,7 +17,7 @@ export function TextField(props: TextFieldProps) {
 	const [childRef, setChildRef] = useState<Frame | undefined>(undefined);
 
 	useEffect(() => {
-		if (childRef && childRef.Parent?.IsA("TextBox")) {
+		if (childRef?.Parent?.IsA("TextBox")) {
 			childRef.Parent.Text = props.text ?? "";
 		}
 	}, [childRef, props.text]);

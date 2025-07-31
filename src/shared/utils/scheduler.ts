@@ -2,15 +2,15 @@ import { RunService } from "@rbxts/services";
 
 interface SchedulerOptions {
 	readonly name: string;
-	readonly tick: number;
-	readonly phase?: number;
-	readonly onTick?: (deltaTime: number) => void;
 	readonly onRender?: (deltaTime: number, alpha: number) => void;
+	readonly onTick?: (deltaTime: number) => void;
+	readonly phase?: number;
+	readonly tick: number;
 }
 
 const connected = new Set<RBXScriptConnection>();
 
-export function createScheduler({ name, tick, phase, onTick, onRender }: SchedulerOptions) {
+export function createScheduler({ name, onRender, onTick, phase, tick }: SchedulerOptions) {
 	let timer = phase ?? 0;
 
 	const connection = RunService.Heartbeat.Connect((deltaTime) => {

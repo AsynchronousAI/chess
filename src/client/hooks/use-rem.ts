@@ -3,8 +3,8 @@ import { useCallback, useContext } from "@rbxts/react";
 import { DEFAULT_REM, RemContext } from "../providers/rem-provider";
 
 export interface RemOptions {
-	minimum?: number;
 	maximum?: number;
+	minimum?: number;
 }
 
 interface RemFunction {
@@ -17,24 +17,16 @@ interface RemFunction {
 type RemScaleMode = "pixel" | "unit";
 
 const scaleFunctions = {
-	number: (value: number, rem: number): number => {
-		return value * rem;
-	},
-
+	number: (value: number, rem: number): number => value * rem,
+	UDim: (value: UDim, rem: number): UDim => new UDim(value.Scale, value.Offset * rem),
 	UDim2: (value: UDim2, rem: number): UDim2 => {
 		return new UDim2(value.X.Scale, value.X.Offset * rem, value.Y.Scale, value.Y.Offset * rem);
 	},
 
-	UDim: (value: UDim, rem: number): UDim => {
-		return new UDim(value.Scale, value.Offset * rem);
-	},
-
-	Vector2: (value: Vector2, rem: number): Vector2 => {
-		return new Vector2(value.X * rem, value.Y * rem);
-	},
+	Vector2: (value: Vector2, rem: number): Vector2 => new Vector2(value.X * rem, value.Y * rem),
 };
 
-function useRemContext({ minimum = 0, maximum = math.huge }: RemOptions = {}) {
+function useRemContext({ maximum = math.huge, minimum = 0 }: RemOptions = {}) {
 	const rem = useContext(RemContext);
 	return math.clamp(rem, minimum, maximum);
 }
@@ -47,9 +39,9 @@ export function useRem(options?: RemOptions): RemFunction {
 
 		if (scale) {
 			return mode === "unit" ? scale(value, rem) : scale(value, rem / DEFAULT_REM);
-		} else {
-			return value;
 		}
+
+		return value;
 	};
 
 	return useCallback(remFunction, [rem]);

@@ -1,5 +1,6 @@
 import { blend } from "@rbxts/pretty-react-hooks";
 import React, { useEffect } from "@rbxts/react";
+
 import { Image } from "client/components/ui/image";
 import { ReactiveButton } from "client/components/ui/reactive-button";
 import { Shadow } from "client/components/ui/shadow";
@@ -11,11 +12,11 @@ import { SkinThumbnail } from "./skin-thumbnail";
 import { DIRECTIONS_TO_HIDE, usePalette } from "./utils";
 
 interface SkinCardProps {
+	readonly active: boolean;
 	readonly id: string;
 	readonly index: number;
-	readonly active: boolean;
-	readonly shuffle?: readonly string[];
 	readonly onClick: () => void;
+	readonly shuffle?: ReadonlyArray<string>;
 }
 
 const SIZE = 12;
@@ -36,7 +37,7 @@ function getSize(rem: number, active: boolean) {
 	return active ? sizeActive : sizeInactive;
 }
 
-export function SkinCard({ id, index, active, shuffle, onClick }: SkinCardProps) {
+export function SkinCard({ active, id, index, onClick, shuffle }: SkinCardProps) {
 	const hidden = DIRECTIONS_TO_HIDE.includes(index);
 
 	const rem = useRem();
@@ -47,9 +48,9 @@ export function SkinCard({ id, index, active, shuffle, onClick }: SkinCardProps)
 
 	useEffect(() => {
 		positionMotion.spring(getPosition(rem(1), index), {
-			tension: 250,
 			friction: 22,
 			mass: 1 + math.abs(index / 2),
+			tension: 250,
 		});
 		sizeMotion.spring(getSize(rem(1), index === 0));
 		transparencyMotion.spring(hidden ? 1 : 0);

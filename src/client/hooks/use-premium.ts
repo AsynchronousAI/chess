@@ -3,7 +3,9 @@ import { useState } from "@rbxts/react";
 import { Players } from "@rbxts/services";
 
 export function usePremium() {
-	const [isPremium, setIsPremium] = useState(Players.LocalPlayer?.MembershipType === Enum.MembershipType.Premium);
+	const [isPremium, setIsPremium] = useState(
+		Players.LocalPlayer?.MembershipType === Enum.MembershipType.Premium,
+	);
 
 	useEventListener(Players.PlayerMembershipChanged, (player) => {
 		if (player === Players.LocalPlayer) {

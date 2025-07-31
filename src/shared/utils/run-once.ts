@@ -1,8 +1,9 @@
 /**
  * Wraps a function so that it can only be called once.
  * Subsequent calls will not execute the function.
+ * @param callback
  */
-export function runOnce<Args extends unknown[], Result>(callback: (...args: Args) => Result) {
+export function runOnce<Args extends Array<unknown>, Result>(callback: (...args: Args) => Result) {
 	let result: Result;
 	let ran = false;
 

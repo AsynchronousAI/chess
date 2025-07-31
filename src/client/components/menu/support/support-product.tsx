@@ -1,7 +1,7 @@
-import { blend, lerpBinding, useTimeout } from "@rbxts/pretty-react-hooks";
-import { composeBindings } from "@rbxts/pretty-react-hooks";
+import { blend, composeBindings, lerpBinding, useTimeout } from "@rbxts/pretty-react-hooks";
 import React, { useMemo } from "@rbxts/react";
 import { MarketplaceService, Players } from "@rbxts/services";
+
 import { Frame } from "client/components/ui/frame";
 import { Group } from "client/components/ui/group";
 import { Outline } from "client/components/ui/outline";
@@ -17,34 +17,32 @@ import { brighten } from "shared/utils/color-utils";
 
 interface SupportProductProps extends React.PropsWithChildren {
 	readonly index: number;
-	readonly productId: number;
-	readonly productTitle: string;
-	readonly productSubtitle: string;
-	readonly productDiscount?: string;
+	readonly position: UDim2;
 	readonly primaryColor: Color3;
+	readonly productDiscount?: string;
+	readonly productId: number;
+	readonly productSubtitle: string;
+	readonly productTitle: string;
 	readonly secondaryColor: Color3;
 	readonly size: UDim2;
-	readonly position: UDim2;
 }
 
 export function SupportProduct({
+	children,
 	index,
-	productId,
-	productTitle,
-	productSubtitle,
-	productDiscount,
+	position,
 	primaryColor,
+	productDiscount,
+	productId,
+	productSubtitle,
+	productTitle,
 	secondaryColor,
 	size,
-	position,
-	children,
 }: SupportProductProps) {
 	const rem = useRem();
 	const price = useProductPrice(productId);
 
-	const initialRotation = useMemo(() => {
-		return math.random(15, 30) * (math.random() > 0.5 ? 1 : -1);
-	}, []);
+	const initialRotation = useMemo(() => math.random(15, 30) * (math.random() > 0.5 ? 1 : -1), []);
 
 	const [hover, hoverMotion] = useMotion(0);
 	const [transition, transitionMotion] = useMotion(0);
@@ -59,23 +57,23 @@ export function SupportProduct({
 
 	useTimeout(() => {
 		transitionMotion.spring(1, {
-			tension: 180,
 			friction: 20,
 			mass: 2 + 0.3 * index,
 			restingVelocity: 0.0001,
+			tension: 180,
 		});
 
 		visibleMotion.spring(1, {
-			tension: 150,
 			friction: 30,
+			tension: 150,
 		});
 	}, 0.07 * index);
 
 	useTimeout(
 		() => {
 			glowMotion.spring(1, {
-				tension: 50,
 				friction: 20,
+				tension: 50,
 			});
 		},
 		1.5 + 0.07 * index,
@@ -90,13 +88,19 @@ export function SupportProduct({
 		>
 			<ReactiveButton
 				onClick={promptPurchase}
-				onHover={(hovered) => hoverMotion.spring(hovered ? 1 : 0)}
+				onHover={(hovered) => {
+					hoverMotion.spring(hovered ? 1 : 0);
+				}}
 				backgroundTransparency={1}
 				size={new UDim2(1, 0, 1, 0)}
 			>
 				<Shadow
 					shadowColor={palette.white}
-					shadowTransparency={composeBindings(lerpBinding(hover, 0.2, 0), lerpBinding(glow, 1, 0), blend)}
+					shadowTransparency={composeBindings(
+						lerpBinding(hover, 0.2, 0),
+						lerpBinding(glow, 1, 0),
+						blend,
+					)}
 					shadowSize={rem(12)}
 				>
 					<uigradient Color={gradient} Rotation={95} />
@@ -109,7 +113,11 @@ export function SupportProduct({
 					shadowPosition={rem(0.5)}
 				/>
 
-				<Frame backgroundColor={palette.white} cornerRadius={new UDim(0, rem(2))} size={new UDim2(1, 0, 1, 0)}>
+				<Frame
+					backgroundColor={palette.white}
+					cornerRadius={new UDim(0, rem(2))}
+					size={new UDim2(1, 0, 1, 0)}
+				>
 					<uigradient Color={gradient} Rotation={95} />
 
 					<Frame

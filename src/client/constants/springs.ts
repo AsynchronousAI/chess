@@ -1,9 +1,10 @@
-import { config, SpringOptions } from "@rbxts/ripple";
+import type { SpringOptions } from "@rbxts/ripple";
+import { config } from "@rbxts/ripple";
 
 export const springs = {
 	...config.spring,
-	bubbly: { tension: 400, friction: 14 },
+	bubbly: { friction: 14, tension: 400 },
+	gentle: { friction: 30, tension: 250 },
 	responsive: { tension: 400 },
-	gentle: { tension: 250, friction: 30 },
-	world: { tension: 180, friction: 30 },
-} satisfies { [config: string]: SpringOptions };
+	world: { friction: 30, tension: 180 },
+} satisfies Record<string, SpringOptions>;

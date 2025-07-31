@@ -1,9 +1,19 @@
 import { useUpdateEffect } from "@rbxts/pretty-react-hooks";
-import React, { useMemo } from "@rbxts/react";
+import type React from "@rbxts/react";
+import { useMemo } from "@rbxts/react";
+
 import { springs } from "client/constants/springs";
 import { useMotion } from "client/hooks";
 
 export interface ButtonAnimation {
+	/**
+	 * A critically damped spring that is `1` when the button is hovered.
+	 */
+	readonly hover: React.Binding<number>;
+	/**
+	 * Same as `hover`, but `pressed` must be `false`.
+	 */
+	readonly hoverOnly: React.Binding<number>;
 	/**
 	 * An underdamped spring. `-1` is fully hovered, `0` is neutral, and `1` is
 	 * fully pressed. Values outside of this range are possible.
@@ -13,14 +23,6 @@ export interface ButtonAnimation {
 	 * A critically damped spring that is `1` when the button is pressed.
 	 */
 	readonly press: React.Binding<number>;
-	/**
-	 * A critically damped spring that is `1` when the button is hovered.
-	 */
-	readonly hover: React.Binding<number>;
-	/**
-	 * Same as `hover`, but `pressed` must be `false`.
-	 */
-	readonly hoverOnly: React.Binding<number>;
 }
 
 /**
@@ -33,8 +35,8 @@ export interface ButtonAnimation {
  * - `hover`: A critically damped spring that is `1` when the button is hovered.
  * - `hoverExclusive`: Same as `hover`, but `pressed` must also be `false`.
  *
- * @param pressedState Whether the button is pressed.
- * @param hoveredState Whether the button is hovered.
+ * @param pressedState - Whether the button is pressed.
+ * @param hoveredState - Whether the button is hovered.
  * @returns A `ButtonAnimation` object.
  */
 export function useButtonAnimation(pressedState: boolean, hoveredState: boolean): ButtonAnimation {
@@ -77,10 +79,10 @@ export function useButtonAnimation(pressedState: boolean, hoveredState: boolean)
 
 	return useMemo<ButtonAnimation>(() => {
 		return {
-			press,
 			hover: hover.map((t) => math.clamp(t, 0, 1)),
 			hoverOnly: hoverExclusive.map((t) => math.clamp(t, 0, 1)),
 			position,
+			press,
 		};
 	}, []);
 }

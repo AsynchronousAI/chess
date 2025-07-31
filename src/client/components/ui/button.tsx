@@ -1,25 +1,45 @@
 import React from "@rbxts/react";
 
-import { FrameProps } from "./frame";
+import type { FrameProps } from "./frame";
 
 export interface ButtonProps extends FrameProps<TextButton> {
 	active?: boolean | React.Binding<boolean>;
 	onClick?: () => void;
 	onMouseDown?: () => void;
-	onMouseUp?: () => void;
 	onMouseEnter?: () => void;
 	onMouseLeave?: () => void;
+	onMouseUp?: () => void;
 }
 
 export function Button(props: ButtonProps) {
 	const { onClick, onMouseDown, onMouseEnter, onMouseLeave, onMouseUp } = props;
 
 	const event = {
-		Activated: onClick && (() => onClick()),
-		MouseButton1Down: onMouseDown && (() => onMouseDown()),
-		MouseButton1Up: onMouseUp && (() => onMouseUp()),
-		MouseEnter: onMouseEnter && (() => onMouseEnter()),
-		MouseLeave: onMouseLeave && (() => onMouseLeave()),
+		Activated:
+			onClick &&
+			(() => {
+				onClick();
+			}),
+		MouseButton1Down:
+			onMouseDown &&
+			(() => {
+				onMouseDown();
+			}),
+		MouseButton1Up:
+			onMouseUp &&
+			(() => {
+				onMouseUp();
+			}),
+		MouseEnter:
+			onMouseEnter &&
+			(() => {
+				onMouseEnter();
+			}),
+		MouseLeave:
+			onMouseLeave &&
+			(() => {
+				onMouseLeave();
+			}),
 		...props.event,
 	};
 

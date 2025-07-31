@@ -1,6 +1,7 @@
-import { lerpBinding, useMountEffect } from "@rbxts/pretty-react-hooks";
-import { composeBindings } from "@rbxts/pretty-react-hooks";
+import { composeBindings, lerpBinding, useMountEffect } from "@rbxts/pretty-react-hooks";
 import React, { useEffect, useMemo } from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
+
 import { dismissAlert } from "client/alerts";
 import { Frame } from "client/components/ui/frame";
 import { Image } from "client/components/ui/image";
@@ -12,13 +13,13 @@ import { fonts } from "client/constants/fonts";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
 import { images, playSound, sounds } from "shared/assets";
+import type { Alert } from "shared/atoms";
+import Atoms from "shared/atoms";
 import { palette } from "shared/constants/palette";
 import { brightenIfDark, darken } from "shared/utils/color-utils";
 import { mapStrict } from "shared/utils/math-utils";
 
 import { AlertTimer } from "./alert-timer";
-import { useAtom } from "@rbxts/react-charm";
-import Atoms, { Alert } from "shared/atoms";
 
 interface AlertProps {
 	readonly alert: Alert;
@@ -44,10 +45,13 @@ export function Alert({ alert, index }: AlertProps) {
 	const style = useMemo(() => {
 		const highlight = composeBindings(hover, transition, (a, b) => a * b);
 		const background = darken(alert.color.Lerp(palette.base, 0.25), 0.8);
-		const backgroundSecondary = darken(alert.colorSecondary?.Lerp(palette.base, 0.25) || palette.white, 0.8);
+		const backgroundSecondary = darken(
+			alert.colorSecondary?.Lerp(palette.base, 0.25) || palette.white,
+			0.8,
+		);
 		const message = brightenIfDark(alert.colorMessage || alert.color);
 
-		return { highlight, background, backgroundSecondary, message };
+		return { background, backgroundSecondary, highlight, message };
 	}, [alert, hover, transition]);
 
 	const hasGradient = alert.colorSecondary !== undefined;
@@ -68,9 +72,9 @@ export function Alert({ alert, index }: AlertProps) {
 		const offset = menuOpen ? 10 : 5;
 
 		positionMotion.spring(new UDim2(0.5, 0, 0, rem(position + offset)), {
-			tension: 180,
 			friction: 12,
 			mass: mapStrict(index, 0, MAX_VISIBLE_ALERTS, 1, 2),
+			tension: 180,
 		});
 	}, [index, menuOpen, rem]);
 
@@ -93,7 +97,9 @@ export function Alert({ alert, index }: AlertProps) {
 				dismissAlert(alert.id);
 				playSound(sounds.alert_dismiss);
 			}}
-			onHover={(hovered) => hoverMotion.spring(hovered ? 1 : 0, springs.responsive)}
+			onHover={(hovered) => {
+				hoverMotion.spring(hovered ? 1 : 0, springs.responsive);
+			}}
 			soundVariant="none"
 			backgroundTransparency={1}
 			anchorPoint={new Vector2(0.5, 0)}
@@ -101,11 +107,19 @@ export function Alert({ alert, index }: AlertProps) {
 			position={position}
 		>
 			<Shadow
-				shadowColor={hasGradient ? palette.white : lerpBinding(transition, alert.color, style.background)}
+				shadowColor={
+					hasGradient
+						? palette.white
+						: lerpBinding(transition, alert.color, style.background)
+				}
 				shadowTransparency={lerpBinding(transition, 1, 0.3)}
 				shadowSize={rem(3)}
 			>
-				{hasGradient && <uigradient Color={new ColorSequence(style.background, style.backgroundSecondary)} />}
+				{hasGradient && (
+					<uigradient
+						Color={new ColorSequence(style.background, style.backgroundSecondary)}
+					/>
+				)}
 			</Shadow>
 
 			<Frame
@@ -114,7 +128,11 @@ export function Alert({ alert, index }: AlertProps) {
 				cornerRadius={new UDim(0, rem(1))}
 				size={new UDim2(1, 0, 1, 0)}
 			>
-				{hasGradient && <uigradient Color={new ColorSequence(style.background, style.backgroundSecondary)} />}
+				{hasGradient && (
+					<uigradient
+						Color={new ColorSequence(style.background, style.backgroundSecondary)}
+					/>
+				)}
 			</Frame>
 
 			<Frame
@@ -130,7 +148,9 @@ export function Alert({ alert, index }: AlertProps) {
 				outerTransparency={lerpBinding(transition, 1, 0.75)}
 				cornerRadius={new UDim(0, rem(1))}
 			>
-				{hasGradient && <uigradient Color={new ColorSequence(alert.color, alert.colorSecondary!)} />}
+				{hasGradient && (
+					<uigradient Color={new ColorSequence(alert.color, alert.colorSecondary!)} />
+				)}
 			</Outline>
 
 			<Text
@@ -158,13 +178,17 @@ export function Alert({ alert, index }: AlertProps) {
 				position={new UDim2(0, rem(ALERT_PADDING + 3), 0.5, 0)}
 				clipsDescendants
 				change={{
-					TextBounds: (rbx) => updateSize(rbx.TextBounds.X),
+					TextBounds: (rbx) => {
+						updateSize(rbx.TextBounds.X);
+					},
 				}}
 			/>
 
 			<Image
 				image={images.ui.alert_dismiss}
-				imageColor={brightenIfDark(alert.colorSecondary || alert.colorMessage || alert.color)}
+				imageColor={brightenIfDark(
+					alert.colorSecondary || alert.colorMessage || alert.color,
+				)}
 				imageTransparency={lerpBinding(transition, 1, 0)}
 				anchorPoint={new Vector2(1, 0.5)}
 				size={new UDim2(0, rem(1), 0, rem(1))}

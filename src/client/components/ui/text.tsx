@@ -1,24 +1,25 @@
 import React from "@rbxts/react";
+
 import { useRem } from "client/hooks";
 
 import { fonts } from "../../constants/fonts";
-import { FrameProps } from "./frame";
+import type { FrameProps } from "./frame";
 
 export interface TextProps<T extends Instance = TextLabel> extends FrameProps<T> {
 	font?: Font;
-	text?: string | React.Binding<string>;
+	maxVisibleGraphemes?: number | React.Binding<number>;
+	richText?: boolean | React.Binding<boolean>;
+	text?: React.Binding<string> | string;
+	textAutoResize?: "X" | "XY" | "Y";
 	textColor?: Color3 | React.Binding<Color3>;
+	textHeight?: number | React.Binding<number>;
+	textScaled?: boolean | React.Binding<boolean>;
 	textSize?: number | React.Binding<number>;
 	textTransparency?: number | React.Binding<number>;
+	textTruncate?: React.InferEnumNames<Enum.TextTruncate>;
 	textWrapped?: boolean | React.Binding<boolean>;
 	textXAlignment?: React.InferEnumNames<Enum.TextXAlignment>;
 	textYAlignment?: React.InferEnumNames<Enum.TextYAlignment>;
-	textTruncate?: React.InferEnumNames<Enum.TextTruncate>;
-	textScaled?: boolean | React.Binding<boolean>;
-	textHeight?: number | React.Binding<number>;
-	textAutoResize?: "X" | "Y" | "XY";
-	richText?: boolean | React.Binding<boolean>;
-	maxVisibleGraphemes?: number | React.Binding<number>;
 }
 
 export function Text(props: TextProps) {

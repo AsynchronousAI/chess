@@ -1,5 +1,6 @@
 import { lerpBinding, useTimer } from "@rbxts/pretty-react-hooks";
 import React from "@rbxts/react";
+
 import { Outline } from "client/components/ui/outline";
 import { PrimaryButton } from "client/components/ui/primary-button";
 import { Shadow } from "client/components/ui/shadow";
@@ -12,18 +13,18 @@ import { gradient } from "./utils";
 
 interface PlayButtonProps {
 	readonly anchorPoint: Vector2;
-	readonly size: UDim2;
 	readonly position: UDim2;
+	readonly size: UDim2;
 }
 
-export function PlayButton({ anchorPoint, size, position }: PlayButtonProps) {
+export function PlayButton({ anchorPoint, position, size }: PlayButtonProps) {
 	const rem = useRem();
 	const timer = useTimer();
 	const [hover, hoverMotion] = useMotion(0);
 
-	const gradientSpin = timer.value.map((t) => {
-		return 30 * t;
-	});
+	const gradientSpin = timer.value.map((t) => 
+		30 * t
+	);
 
 	const onClick = () => {
 		/* nothing yet */
@@ -32,7 +33,7 @@ export function PlayButton({ anchorPoint, size, position }: PlayButtonProps) {
 	return (
 		<PrimaryButton
 			onClick={onClick}
-			onHover={(hovered) => hoverMotion.spring(hovered ? 1 : 0)}
+			onHover={(hovered) => { hoverMotion.spring(hovered ? 1 : 0); }}
 			overlayGradient={new ColorSequence(palette.mauve, palette.blue)}
 			anchorPoint={anchorPoint}
 			size={size}

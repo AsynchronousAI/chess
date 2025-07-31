@@ -3,34 +3,16 @@
 	"version": "1.5.0",
 	"license": "MIT",
 	"scripts": {
-		"lint": "eslint src && prettier --check src",
-		"compile": "rbxtsc --verbose",
-		"watch": "rbxtsc -w",
-		"tarmac": "tarmac sync --target roblox",
-		"serve": "rojo serve",
-		"dev": "concurrently \"rojo serve\" \"rbxtsc -w\"",
 		"build": "rm -rf out && pnpm compile && rojo build --output place.rbxlx",
+		"compile": "rbxtsc --verbose",
 		"deploy:dev": "pnpm build && mantle deploy --environment canary",
 		"deploy:prod": "pnpm build && mantle deploy --environment production",
+		"dev": "concurrently \"rojo serve\" \"rbxtsc -w\"",
 		"output:dev": "mantle outputs --environment canary > mantle-output.json",
-		"output:prod": "mantle outputs --environment production > mantle-output.json"
-	},
-	"devDependencies": {
-		"@rbxts/compiler-types": "3.0.0-types.0",
-		"@rbxts/types": "^1.0.852",
-		"@typescript-eslint/eslint-plugin": "^8.32.1",
-		"@typescript-eslint/parser": "^8.32.1",
-		"cross-env": "^7.0.3",
-		"eslint": "^8.57.1",
-		"eslint-config-prettier": "^9.1.0",
-		"eslint-plugin-prettier": "^5.4.0",
-		"eslint-plugin-roblox-ts": "^0.0.36",
-		"eslint-plugin-simple-import-sort": "^12.1.1",
-		"eslint-plugin-unused-imports": "^4.1.4",
-		"prettier": "^3.5.3",
-		"roblox-ts": "3.0.0",
-		"typescript": "^5.8.3",
-		"concurrently": "^8.2.0"
+		"output:prod": "mantle outputs --environment production > mantle-output.json",
+		"serve": "rojo serve",
+		"tarmac": "tarmac sync --target roblox",
+		"watch": "rbxtsc -w"
 	},
 	"dependencies": {
 		"@rbxts/bitbuffer2": "1.0.0-ts.0",
@@ -49,5 +31,14 @@
 		"@rbxts/t": "^3.2.1",
 		"@rbxts/testez": "0.4.2-ts.0",
 		"@rbxts/validate-tree": "^2.0.2"
+	},
+	"devDependencies": {
+		"@rbxts/compiler-types": "3.0.0-types.0",
+		"@rbxts/types": "^1.0.852",
+		"concurrently": "^8.2.0",
+		"cross-env": "^7.0.3",
+		"prettier": "^3.5.3",
+		"roblox-ts": "3.0.0",
+		"typescript": "^5.8.3"
 	}
 }

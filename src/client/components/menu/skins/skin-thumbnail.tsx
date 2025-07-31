@@ -1,13 +1,14 @@
 import React, { useEffect } from "@rbxts/react";
+
 import { CanvasGroup } from "client/components/ui/canvas-group";
 import { Image } from "client/components/ui/image";
 import { useMotion, useRem } from "client/hooks";
-import { SnakeSkin } from "shared/constants/skins";
+import type { SnakeSkin } from "shared/constants/skins";
 import { fillArray } from "shared/utils/object-utils";
 
 interface SkinThumbnailProps {
-	readonly skin: SnakeSkin;
 	readonly active: boolean;
+	readonly skin: SnakeSkin;
 	readonly transparency: React.Binding<number>;
 }
 
@@ -30,10 +31,10 @@ const TRACERS = fillArray(TRACER_POINTS, (index) => {
 	const position = from.add(to).div(2);
 	const rotation = math.deg(math.atan2(to.Y - from.Y, to.X - from.X) + math.rad(90));
 
-	return { size, position, rotation };
+	return { position, rotation, size };
 });
 
-export function SkinThumbnail({ skin, active, transparency }: SkinThumbnailProps) {
+export function SkinThumbnail({ active, skin, transparency }: SkinThumbnailProps) {
 	const rem = useRem();
 	const [offset, offsetMotion] = useMotion(new UDim());
 
@@ -75,21 +76,23 @@ export function SkinThumbnail({ skin, active, transparency }: SkinThumbnailProps
 				/>
 			</Image>
 
-			{TRACERS.map(({ size, position, rotation }, index) => (
-				<Image
-					key={`tracer-${index}`}
-					image={skin.texture[(index + 1) % skin.texture.size()]}
-					imageColor={skin.tint[(index + 1) % skin.tint.size()]}
-					scaleType="Slice"
-					sliceCenter={new Rect(skin.size.div(2), skin.size.div(2))}
-					sliceScale={4}
-					anchorPoint={new Vector2(0.5, 0.5)}
-					size={new UDim2(size.X, rem(TRACER_SIZE), size.Y, rem(TRACER_SIZE))}
-					position={new UDim2(position.X, 0, position.Y, 0)}
-					rotation={rotation}
-					zIndex={-index - 1}
-				/>
-			))}
+			{TRACERS.map(({ position, rotation, size }, index) => {
+				return (
+					<Image
+						key={`tracer-${index}`}
+						image={skin.texture[(index + 1) % skin.texture.size()]}
+						imageColor={skin.tint[(index + 1) % skin.tint.size()]}
+						scaleType="Slice"
+						sliceCenter={new Rect(skin.size.div(2), skin.size.div(2))}
+						sliceScale={4}
+						anchorPoint={new Vector2(0.5, 0.5)}
+						size={new UDim2(size.X, rem(TRACER_SIZE), size.Y, rem(TRACER_SIZE))}
+						position={new UDim2(position.X, 0, position.Y, 0)}
+						rotation={rotation}
+						zIndex={-index - 1}
+					/>
+				);
+			})}
 		</CanvasGroup>
 	);
 }

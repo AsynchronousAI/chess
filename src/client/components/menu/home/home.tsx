@@ -1,4 +1,5 @@
 import React from "@rbxts/react";
+
 import { Group } from "client/components/ui/group";
 import { useRem } from "client/hooks";
 
@@ -23,7 +24,11 @@ export function Home() {
 				position={new UDim2(0.5, 0, 0.5, rem(2))}
 			/>
 
-			<Group anchorPoint={new Vector2(1, 1)} size={new UDim2()} position={new UDim2(1, rem(-3), 1, rem(-3))}>
+			<Group
+				anchorPoint={new Vector2(1, 1)}
+				size={new UDim2()}
+				position={new UDim2(1, rem(-3), 1, rem(-3))}
+			>
 				<uilistlayout
 					Padding={new UDim(0, rem(1))}
 					VerticalAlignment="Bottom"

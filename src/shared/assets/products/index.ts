@@ -1,6 +1,6 @@
 import { IS_PROD } from "shared/constants/core";
 
-export enum DevProduct {
+export enum DevelopmentProduct {
 	MONEY_100 = IS_PROD ? 1645763196 : 1645608670,
 	MONEY_250 = IS_PROD ? 1645763141 : 1645608591,
 	MONEY_500 = IS_PROD ? 1645763105 : 1645608558,

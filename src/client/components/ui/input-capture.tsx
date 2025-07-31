@@ -1,26 +1,27 @@
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import React, { useState } from "@rbxts/react";
 import { UserInputService } from "@rbxts/services";
+
 import { IS_EDIT } from "shared/constants/core";
 
 import { Group } from "./group";
 
 interface InputCaptureProps {
+	readonly anchorPoint?: Vector2;
 	readonly onInputBegan?: (rbx: Frame, input: InputObject) => void;
 	readonly onInputChanged?: (rbx: Frame, input: InputObject) => void;
 	readonly onInputEnded?: (rbx: Frame, input: InputObject) => void;
-	readonly size?: UDim2;
 	readonly position?: UDim2;
-	readonly anchorPoint?: Vector2;
+	readonly size?: UDim2;
 }
 
 export function InputCapture({
+	anchorPoint,
 	onInputBegan,
 	onInputChanged,
 	onInputEnded,
-	size,
 	position,
-	anchorPoint,
+	size,
 }: InputCaptureProps) {
 	const [frame, frameRef] = useState<Frame>();
 

@@ -3,18 +3,18 @@ import { promiseTree } from "@rbxts/validate-tree";
 
 const characterSchema = {
 	$className: "Model",
-	HumanoidRootPart: "BasePart",
 	Humanoid: {
 		$className: "Humanoid",
 		Animator: "Animator",
 	},
+	HumanoidRootPart: "BasePart",
 } as const;
 
 export interface Character extends Model {
-	HumanoidRootPart: BasePart;
 	Humanoid: Humanoid & {
 		Animator: Animator;
 	};
+	HumanoidRootPart: BasePart;
 }
 
 export async function promiseCharacter(character: Model): Promise<Character> {
@@ -44,5 +44,7 @@ export function onPlayerAdded(callback: (player: Player) => void) {
 		callback(player);
 	}
 
-	return () => connection.Disconnect();
+	return () => {
+		connection.Disconnect();
+	};
 }

@@ -1,10 +1,11 @@
 import React from "@rbxts/react";
+
 import { Group } from "client/components/ui/group";
 import { useDefined, useRem } from "client/hooks";
 import { formatInteger } from "client/utils/format-integer";
+import Atoms from "shared/atoms";
 
 import { StatsCard } from "./stats-card";
-import Atoms from "shared/atoms";
 
 export function Stats() {
 	const rem = useRem();
@@ -29,7 +30,7 @@ export function Stats() {
 			<StatsCard
 				emoji="☠️"
 				label="KOs"
-				value={`${formatInteger(eliminations)}`}
+				value={formatInteger(eliminations)}
 				primary={Color3.fromRGB(161, 163, 194)}
 				secondary={Color3.fromRGB(97, 97, 138)}
 				enabled={eliminations !== undefined}
@@ -49,7 +50,7 @@ export function Stats() {
 			<StatsCard
 				emoji="💯"
 				label="Score"
-				value={`${formatInteger(score)}`}
+				value={formatInteger(score)}
 				primary={Color3.fromRGB(181, 64, 64)}
 				secondary={Color3.fromRGB(150, 59, 84)}
 				enabled={score !== undefined}

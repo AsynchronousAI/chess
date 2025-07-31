@@ -1,4 +1,5 @@
 import React from "@rbxts/react";
+
 import { Text } from "client/components/ui/text";
 import { fonts } from "client/constants/fonts";
 import { useRem } from "client/hooks";
@@ -9,7 +10,7 @@ interface HomeVersionProps {
 	readonly position: UDim2;
 }
 
-const DIVIDER = `  <font transparency="0.75">—</font>  `;
+const DIVIDER = '  <font transparency="0.75">—</font>  ';
 const REPO = "littensy/slither";
 const MODE = IS_PROD ? "production" : "development";
 

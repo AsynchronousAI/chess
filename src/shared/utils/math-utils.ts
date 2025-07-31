@@ -10,6 +10,7 @@ export function map(value: number, min: number, max: number, newMin: number, new
 	if (min === max) {
 		return newMin;
 	}
+
 	return lerp(newMin, newMax, (value - min) / (max - min));
 }
 
@@ -17,6 +18,7 @@ export function mapStrict(value: number, min: number, max: number, newMin: numbe
 	if (min === max) {
 		return newMin;
 	}
+
 	return lerpStrict(newMin, newMax, (value - min) / (max - min));
 }
 

@@ -1,14 +1,16 @@
 import { peek } from "@rbxts/charm";
 import { throttle } from "@rbxts/set-timeout";
-import Atoms, { Alert, AlertScope } from "shared/atoms";
+
+import type { Alert, AlertScope } from "shared/atoms";
+import Atoms from "shared/atoms";
 import { palette } from "shared/constants/palette";
 
 const defaultAlert: Alert = {
-	id: 0,
-	emoji: "✅",
-	message: "Alert",
 	color: palette.green,
 	duration: 5,
+	emoji: "✅",
+	id: 0,
+	message: "Alert",
 	visible: true,
 };
 
@@ -44,9 +46,9 @@ export function sendAlert(patch: Partial<Alert>) {
 		return sendAlertImmediate(patch);
 	}
 
-	return scopedThrottles[patch.scope](() => {
-		return sendAlertImmediate(patch);
-	});
+	return scopedThrottles[patch.scope](() => 
+		sendAlertImmediate(patch)
+	);
 }
 
 export async function dismissAlert(id: number) {

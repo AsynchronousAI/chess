@@ -1,15 +1,15 @@
 import React, { forwardRef } from "@rbxts/react";
 
 interface GroupProps extends React.PropsWithChildren {
-	ref?: React.Ref<Frame>;
-	event?: React.InstanceEvent<Frame>;
+	anchorPoint?: React.Binding<Vector2> | Vector2;
 	change?: React.InstanceChangeEvent<Frame>;
-	size?: UDim2 | React.Binding<UDim2>;
-	position?: UDim2 | React.Binding<UDim2>;
-	anchorPoint?: Vector2 | React.Binding<Vector2>;
-	rotation?: number | React.Binding<number>;
 	clipsDescendants?: boolean | React.Binding<boolean>;
+	event?: React.InstanceEvent<Frame>;
 	layoutOrder?: number | React.Binding<number>;
+	position?: React.Binding<UDim2> | UDim2;
+	ref?: React.Ref<Frame>;
+	rotation?: number | React.Binding<number>;
+	size?: React.Binding<UDim2> | UDim2;
 	visible?: boolean | React.Binding<boolean>;
 	zIndex?: number | React.Binding<number>;
 }

@@ -1,6 +1,7 @@
 import { lerpBinding, useInterval } from "@rbxts/pretty-react-hooks";
 import React, { useEffect } from "@rbxts/react";
 import { setTimeout } from "@rbxts/set-timeout";
+
 import { Image } from "client/components/ui/image";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
@@ -44,14 +45,22 @@ export function SupportHeart() {
 				image={images.ui.heart_glow}
 				imageTransparency={lerpBinding(pulse, 0, 1)}
 				anchorPoint={new Vector2(0.5, 0.5)}
-				size={lerpBinding(pulse, new UDim2(0, rem(6), 0, rem(6)), new UDim2(0, rem(28), 0, rem(28)))}
+				size={lerpBinding(
+					pulse,
+					new UDim2(0, rem(6), 0, rem(6)),
+					new UDim2(0, rem(28), 0, rem(28)),
+				)}
 				position={new UDim2(0.5, 0, 0.5, 0)}
 			/>
 
 			<Image
 				image={images.ui.heart}
 				anchorPoint={new Vector2(0.5, 0.5)}
-				size={lerpBinding(transition, new UDim2(0, rem(16), 0, rem(16)), new UDim2(0, rem(18), 0, rem(18)))}
+				size={lerpBinding(
+					transition,
+					new UDim2(0, rem(16), 0, rem(16)),
+					new UDim2(0, rem(18), 0, rem(18)),
+				)}
 				position={new UDim2(0.5, 0, 0.5, 0)}
 			/>
 		</>

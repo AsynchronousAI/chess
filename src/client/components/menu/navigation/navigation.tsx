@@ -1,4 +1,5 @@
 import React from "@rbxts/react";
+
 import { Group } from "client/components/ui/group";
 import { useRem } from "client/hooks";
 import { images } from "shared/assets";
@@ -14,7 +15,10 @@ export function Navigation() {
 
 	return (
 		<Group size={new UDim2(1, 0, 0, rem(7.5))}>
-			<Indicator colors={[palette.red, palette.mauve, palette.blue]} order={["support", "home", "skins"]} />
+			<Indicator
+				colors={[palette.red, palette.mauve, palette.blue]}
+				order={["support", "home", "skins"]}
+			/>
 
 			<Group size={new UDim2(1, 0, 0, rem(5))} position={new UDim2(0, 0, 0, rem(3))}>
 				<uilistlayout

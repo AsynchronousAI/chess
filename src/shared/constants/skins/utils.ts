@@ -10,10 +10,18 @@ export function lerpColor(from: Color3, to: Color3, alpha: number) {
 	const [fromH, fromS, fromV] = Color3.toHSV(from);
 	const [toH, toS, toV] = Color3.toHSV(to);
 
-	return Color3.fromHSV(lerpHue(fromH, toH, alpha), lerp(fromS, toS, alpha), lerp(fromV, toV, alpha));
+	return Color3.fromHSV(
+		lerpHue(fromH, toH, alpha),
+		lerp(fromS, toS, alpha),
+		lerp(fromV, toV, alpha),
+	);
 }
 
-export function blendColorSequence(colors: Color3[], length: number, looped = true): Color3[] {
+export function blendColorSequence(
+	colors: Array<Color3>,
+	length: number,
+	looped = true,
+): Array<Color3> {
 	if (looped) {
 		colors = [...colors, colors[0]];
 	}
@@ -34,8 +42,8 @@ export function blendColorSequence(colors: Color3[], length: number, looped = tr
 	return pattern;
 }
 
-export function duplicate<T extends defined>(sequence: T[], repeatCount: number): T[] {
-	const pattern: T[] = [];
+export function duplicate<T extends defined>(sequence: Array<T>, repeatCount: number): Array<T> {
+	const pattern: Array<T> = [];
 
 	for (const _ of $range(0, repeatCount - 1)) {
 		for (const value of sequence) {

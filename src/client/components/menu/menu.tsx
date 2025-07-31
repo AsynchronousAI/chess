@@ -1,12 +1,13 @@
 import React, { useEffect } from "@rbxts/react";
 
+import Atoms from "shared/atoms";
+
 import { Home } from "./home";
 import { MenuContainer } from "./menu-container";
 import { MenuVignette } from "./menu-vignette";
 import { Navigation } from "./navigation";
 import { Skins } from "./skins";
 import { Support } from "./support";
-import Atoms from "shared/atoms";
 
 export function Menu() {
 	useEffect(() => {

@@ -1,12 +1,13 @@
 import React from "@rbxts/react";
+
 import { Text } from "client/components/ui/text";
 import { fonts } from "client/constants/fonts";
 import { useRem } from "client/hooks";
 import { palette } from "shared/constants/palette";
 
-const colorize = (text: string, color: Color3) => {
+function colorize(text: string, color: Color3) {
 	return `<font transparency="0" color="#${color.ToHex()}">${text}</font>`;
-};
+}
 
 export function SupportFooter() {
 	const rem = useRem();

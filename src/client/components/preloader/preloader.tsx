@@ -1,20 +1,21 @@
 import { useAsyncEffect, useDeferState } from "@rbxts/pretty-react-hooks";
 import React, { useMemo } from "@rbxts/react";
 import { ContentProvider } from "@rbxts/services";
+
 import { images, sounds } from "shared/assets";
 
 import { useRem } from "../../hooks";
 import { Text } from "../ui/text";
 
 interface Assets {
-	[key: string]: string | Assets;
+	[key: string]: Assets | string;
 }
 
 export function Preloader() {
 	const rem = useRem();
 
 	const [contentIds, contentNamesById] = useMemo(() => {
-		const contentIds: string[] = [];
+		const contentIds: Array<string> = [];
 		const contentNamesById = new Map<string, string>();
 
 		const scan = (assets: Assets, prefix = "") => {

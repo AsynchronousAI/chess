@@ -1,10 +1,11 @@
-import { sendAlert } from "./alert-factory";
 import { palette } from "shared/constants/palette";
 
+import { sendAlert } from "./alert-factory";
+
 sendAlert({
-	scope: "ranking",
-	emoji: "🏆",
 	color: palette.yellow,
 	colorSecondary: palette.peach,
+	emoji: "🏆",
 	message: "hi!",
+	scope: "ranking",
 });

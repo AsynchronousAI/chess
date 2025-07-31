@@ -1,12 +1,13 @@
 import React, { useEffect } from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
+
 import { Group } from "client/components/ui/group";
 import { useRem } from "client/hooks";
+import Atoms from "shared/atoms";
 import { snakeSkins } from "shared/constants/skins";
 
 import { SkinCard } from "./skin-card";
 import { DIRECTIONS } from "./utils";
-import Atoms from "shared/atoms";
-import { useAtom } from "@rbxts/react-charm";
 
 const RANDOM_SKIN = "__random__";
 
@@ -16,7 +17,7 @@ const SKIN_LENGTH = SKIN_LIST.size();
 export function SkinCarousel() {
 	const rem = useRem();
 
-	const skinInventory: string[] = [];
+	const skinInventory: Array<string> = [];
 	const equippedSkin = RANDOM_SKIN;
 	const currentSkin = useAtom(Atoms.FocusedSkin);
 

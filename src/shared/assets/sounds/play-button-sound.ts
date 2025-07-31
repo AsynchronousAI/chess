@@ -3,14 +3,17 @@ import { throttle } from "@rbxts/set-timeout";
 import { playSound } from "./play-sound";
 import { sounds } from "./sounds";
 
-export type ButtonSoundVariant = "default" | "alt" | "none";
+export type ButtonSoundVariant = "alt" | "default" | "none";
 
 const BUTTON_DELAY = 0.1;
 
 let lastPressed: number | undefined;
 
 export const playButtonDown = throttle((variant: ButtonSoundVariant = "default") => {
-	if (variant === "none" || (lastPressed !== undefined && os.clock() - lastPressed < 2 * BUTTON_DELAY)) {
+	if (
+		variant === "none" ||
+		(lastPressed !== undefined && os.clock() - lastPressed < 2 * BUTTON_DELAY)
+	) {
 		return;
 	}
 

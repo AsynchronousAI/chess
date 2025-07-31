@@ -1,4 +1,5 @@
 import React, { useEffect } from "@rbxts/react";
+
 import { Image } from "client/components/ui/image";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
@@ -22,7 +23,10 @@ export function SkinIndicator({ id, primary, transparency }: SkinIndicatorProps)
 	const [indicator, indicatorMotion] = useMotion(new UDim2());
 
 	useEffect(() => {
-		const padding = rem(12, "pixel") + 4; // 6px - 2px
+		/**
+		 * 6px - 2px.
+		 */
+	 const padding = rem(12, "pixel") + 4; 
 
 		indicatorMotion.spring(
 			equipped ? new UDim2(0, rem(2) - padding, 0, rem(2) - padding) : new UDim2(),
