@@ -1,16 +1,16 @@
 import Object from "@rbxts/object-utils";
 import { palette } from "shared/constants/palette";
 
-function generate(colors: Array<Color3>) {
-	const sequence: Array<ColorSequenceKeypoint> = [];
+const generate = (colors: Color3[]) => {
+	const sequence: ColorSequenceKeypoint[] = [];
 	const length = colors.size();
 
-	for (const [index, color] of Object.entries(colors)) {
+	colors.forEach((color, index) => {
 		sequence.push(new ColorSequenceKeypoint(index / (length - 1), color));
-	}
+	});
 
 	return new ColorSequence(sequence);
-}
+};
 
 export const gradient = generate([palette.red, palette.yellow, palette.teal, palette.blue, palette.mauve]);
 

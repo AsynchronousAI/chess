@@ -30,7 +30,7 @@ const MUSIC = [
 ];
 
 export function Music() {
-	const enabled = useAtom(Atoms.IsMuted);
+	const muted = useAtom(Atoms.IsMuted);
 
 	const [queue, setQueue] = useState(() => shuffle(MUSIC));
 	const [index, setIndex] = useState(0);
@@ -62,12 +62,12 @@ export function Music() {
 	// Pause/resume the sound when the enabled state changes
 	// or when the sound changes
 	useEffect(() => {
-		if (enabled) {
+		if (!muted) {
 			sound?.Resume();
 		} else {
 			sound?.Pause();
 		}
-	}, [enabled, sound]);
+	}, [muted, sound]);
 
 	// Destroy sounds not in use
 	useEffect(() => {
