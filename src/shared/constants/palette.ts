@@ -1,4 +1,4 @@
-import Object from "@rbxts/object-utils";
+import { Object } from "@rbxts/luau-polyfill";
 
 /**
  * Catppuccin Mocha Accents.
