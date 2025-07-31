@@ -4,7 +4,7 @@ import React from "@rbxts/react";
 import { Group } from "client/components/ui/group";
 import { useOrientation, usePremium, useRem } from "client/hooks";
 import { formatInteger } from "client/utils/format-integer";
-import { DevProduct } from "shared/assets";
+import { DevelopmentProduct } from "shared/assets";
 import { PREMIUM_BENEFIT } from "shared/constants/core";
 import { palette } from "shared/constants/palette";
 
@@ -57,7 +57,7 @@ export function SupportProducts() {
 			<Group size={new UDim2(0.6, -padding / 2, 1, 0)}>
 				<SupportProduct
 					index={index++}
-					productId={DevProduct.MONEY_100}
+					productId={DevelopmentProduct.MONEY_100}
 					productTitle={getProductTitle(100)}
 					productSubtitle="🍑  PEACH"
 					productDiscount={getProductDiscount(100)}
@@ -68,7 +68,7 @@ export function SupportProducts() {
 				/>
 				<SupportProduct
 					index={index++}
-					productId={DevProduct.MONEY_250}
+					productId={DevelopmentProduct.MONEY_250}
 					productTitle={getProductTitle(250)}
 					productSubtitle="🍒  MAROON"
 					productDiscount={getProductDiscount(250, "20% OFF")}
@@ -79,7 +79,7 @@ export function SupportProducts() {
 				/>
 				<SupportProduct
 					index={index++}
-					productId={DevProduct.MONEY_500}
+					productId={DevelopmentProduct.MONEY_500}
 					productTitle={getProductTitle(500)}
 					productSubtitle="🍐  GREEN"
 					productDiscount={getProductDiscount(500, "20% OFF")}
@@ -90,7 +90,7 @@ export function SupportProducts() {
 				/>
 				<SupportProduct
 					index={index++}
-					productId={DevProduct.MONEY_1000}
+					productId={DevelopmentProduct.MONEY_1000}
 					productTitle={getProductTitle(1000)}
 					productSubtitle="💎  SAPPHIRE"
 					productDiscount={getProductDiscount(1000, "20% OFF")}
@@ -103,7 +103,7 @@ export function SupportProducts() {
 
 			<SupportProduct
 				index={index++}
-				productId={DevProduct.MONEY_5000}
+				productId={DevelopmentProduct.MONEY_5000}
 				productTitle={getProductTitle(5000)}
 				productSubtitle="💜  MAUVE"
 				productDiscount={getProductDiscount(5000, "25% OFF")}
