@@ -9,7 +9,6 @@ import { RootProvider } from "client/providers/root-provider";
 export = hoarcekat(() => {
 	return (
 		<RootProvider>
-			<Menu />
 			<Stats />
 		</RootProvider>
 	);
