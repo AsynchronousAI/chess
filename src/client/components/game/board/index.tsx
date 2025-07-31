@@ -2,8 +2,15 @@ import React, { useMemo, useState } from "@rbxts/react";
 import { BOARD_LETTERS, BOARD_NUMBERS, IsSquareBlack, Square } from "shared/board";
 import { palette } from "shared/constants/palette";
 import { Piece } from "./piece";
+import { useAtom } from "@rbxts/react-charm";
+import Atoms from "shared/atoms";
+import { Vector, Flat, Wood } from "./images";
 
 export default function Board() {
+	const board = useAtom(Atoms.Board);
+	const playingAs = useAtom(Atoms.PlayingAs);
+	const iconPack = Wood;
+
 	return (
 		<frame
 			Size={new UDim2(1, 0, 1, 0)}
@@ -15,7 +22,17 @@ export default function Board() {
 			<uiaspectratioconstraint />
 
 			{BOARD_LETTERS.map((letter, i) =>
-				BOARD_NUMBERS.map((number, j) => <Piece letter={letter} number={number} i={i} j={j} />),
+				BOARD_NUMBERS.map((number, j) => (
+					<Piece
+						letter={letter}
+						number={number}
+						i={i}
+						j={j}
+						playingAs={playingAs}
+						board={board}
+						iconPack={iconPack}
+					/>
+				)),
 			)}
 		</frame>
 	);

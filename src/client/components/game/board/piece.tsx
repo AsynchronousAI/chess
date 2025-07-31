@@ -1,6 +1,5 @@
 import React from "@rbxts/react";
 
-import { Vector, Flat, Wood } from "./images";
 import { Image } from "client/components/ui/image";
 import { Text } from "client/components/ui/text";
 import { fonts } from "client/constants/fonts";
@@ -8,18 +7,23 @@ import { useMotion } from "client/hooks";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "shared/atoms";
 import { useMemo } from "@rbxts/react";
-import { IsSquareBlack, Square } from "shared/board";
+import { Board, Color, IsSquareBlack, Square } from "shared/board";
 import { palette } from "shared/constants/palette";
+import { IconPack } from "./images";
 
 const DISPLAY_SQUARE_LABELS = false;
-export function Piece(props: { letter: string; number: string; i: number; j: number }) {
-	const [rotation, rotationMotion] = useMotion(0);
 
-	/*** Get piece data */
-	/** Get board data */
-	const board = useAtom(Atoms.Board);
-	const playingAs = useAtom(Atoms.PlayingAs);
-	const iconPack = Wood;
+export interface PieceProps {
+	letter: string;
+	number: string;
+	i: number;
+	j: number;
+	board: Board;
+	iconPack: IconPack;
+	playingAs: Color;
+}
+export function Piece(props: PieceProps) {
+	const [rotation, rotationMotion] = useMotion(0);
 
 	/* Load data */
 	const location = useMemo(() => {
@@ -31,16 +35,16 @@ export function Piece(props: { letter: string; number: string; i: number; j: num
 	}, [props.i, props.j]);
 
 	const pieceAtBoard = useMemo(() => {
-		return board[location];
-	}, [board, location]);
+		return props.board[location];
+	}, [props.board, location]);
 
 	const image = useMemo(() => {
-		return pieceAtBoard ? iconPack[pieceAtBoard.color][pieceAtBoard.type] : undefined;
-	}, [pieceAtBoard, iconPack]);
+		return pieceAtBoard ? props.iconPack[pieceAtBoard.color][pieceAtBoard.type] : undefined;
+	}, [pieceAtBoard, props.iconPack]);
 
 	/** Get some player/color based data */
-	const boardJ = playingAs === "white" ? 7 - props.j : props.j;
-	const isMyPiece = playingAs === pieceAtBoard?.color;
+	const boardJ = props.playingAs === "white" ? 7 - props.j : props.j;
+	const isMyPiece = props.playingAs === pieceAtBoard?.color;
 
 	/*** Events */
 	const onHover = () => {
@@ -64,7 +68,7 @@ export function Piece(props: { letter: string; number: string; i: number; j: num
 			key={location}
 			Position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), 0)}
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-			BackgroundColor3={colored ? palette.base : palette.black}
+			BackgroundColor3={colored ? props.iconPack.filled : props.iconPack.unfilled}
 			BorderSizePixel={0}
 		>
 			<textbutton
@@ -82,7 +86,19 @@ export function Piece(props: { letter: string; number: string; i: number; j: num
 					size={new UDim2(1, 0, 1, 0)}
 				/>
 			)}
-			{image ? <Image rotation={rotation} image={image} size={new UDim2(1, 0, 1, 0)} /> : <></>}
+			{image ? (
+				<Image
+					rotation={rotation}
+					image={image}
+					size={new UDim2(1, 0, 1, 0)}
+					outlinePrecision={30}
+					outlineThickness={6}
+					outlineStartAngle={40}
+					outlineColor={new Color3(0.35, 0.35, 0.35)}
+				/>
+			) : (
+				<></>
+			)}
 		</frame>
 	);
 }

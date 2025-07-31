@@ -1,6 +1,6 @@
 import { Color, Piece } from "shared/board";
 
-type IconPack = Record<Color, Record<Piece, string>>;
+export type IconPack = Record<Color, Record<Piece, string>> & Record<"filled" | "unfilled", Color3>;
 
 export const Vector: IconPack = {
 	black: {
@@ -19,6 +19,8 @@ export const Vector: IconPack = {
 		queen: "rbxassetid://131559723456580",
 		rook: "rbxassetid://111571822588564",
 	},
+	filled: new Color3(1, 1, 1),
+	unfilled: new Color3(0, 0, 0),
 };
 export const Wood: IconPack = {
 	black: {
@@ -37,6 +39,8 @@ export const Wood: IconPack = {
 		queen: "rbxassetid://85854632266679",
 		rook: "rbxassetid://77981604292493",
 	},
+	filled: Color3.fromHex("#B58863"),
+	unfilled: Color3.fromHex("#F0D9B5"),
 };
 export const Flat: IconPack = {
 	black: {
@@ -55,4 +59,6 @@ export const Flat: IconPack = {
 		queen: "rbxassetid://133499444299396",
 		rook: "rbxassetid://131053145085973",
 	},
+	filled: new Color3(0.5, 0.5, 0.5),
+	unfilled: new Color3(0, 0, 0),
 };
