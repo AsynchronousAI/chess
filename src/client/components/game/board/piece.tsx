@@ -6,13 +6,12 @@ import { fonts } from "client/constants/fonts";
 import { useMotion } from "client/hooks";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "shared/atoms";
-import { useMemo } from "@rbxts/react";
 import { Board, Color, IsSquareBlack, Square } from "shared/board";
-import { palette } from "shared/constants/palette";
 import { IconPack } from "./images";
 import { useBindingListener, useBindingState } from "@rbxts/pretty-react-hooks";
 import useMouse from "client/hooks/use-mouse";
 import { darken } from "shared/utils/color-utils";
+import GetLegalMoves from "shared/engine/legalMoves";
 
 const DISPLAY_SQUARE_LABELS = true;
 
@@ -57,6 +56,7 @@ export function Square(props: PieceProps) {
 export function Piece(props: PieceProps) {
 	const holdingPiece = useAtom(Atoms.HoldingPiece);
 	const containerRef = useRef<Frame>();
+	const possibleMoves = useAtom(Atoms.PossibleMoves);
 	const mousePos = useMouse();
 
 	const [rotation, rotationMotion] = useMotion(0);
@@ -81,11 +81,11 @@ export function Piece(props: PieceProps) {
 
 		// based on the current mouseRelativePosition, set rotationMotion to a different value
 		const difference = mouseRelativePosition.sub(newOffset).X.Offset;
-		const intensity = difference;
+		const intensity = difference * 1.5;
 		if (holdingPiece !== location) {
-			rotationMotion.spring(0);
+			rotationMotion.spring(0, { damping: 0.3 });
 		} else {
-			rotationMotion.spring(intensity);
+			rotationMotion.spring(intensity, { damping: 0.3 });
 		}
 	});
 
@@ -101,13 +101,18 @@ export function Piece(props: PieceProps) {
 		offsetYMotion.spring(isMyPiece ? -10 : 5);
 	};
 	const onDown = () => {
-		if (holdingPiece === location) Atoms.HoldingPiece(undefined); /* already holding this piece, revert */
-		else if (isMyPiece) Atoms.HoldingPiece(location); /* pick up piece */
-		else if (pieceAtBoard === undefined && holdingPiece) {
+		if (holdingPiece === location) {
+			Atoms.HoldingPiece(undefined); /* already holding this piece, revert */
+			Atoms.PossibleMoves([]);
+		} else if (isMyPiece) {
+			Atoms.HoldingPiece(location); /* pick up piece */
+			Atoms.PossibleMoves(GetLegalMoves(props.board, location));
+		} else if (possibleMoves.includes(location) && holdingPiece) {
 			/* drop here */
 			Atoms.Board((currentBoard) => {
 				return { ...currentBoard, [location]: currentBoard[holdingPiece], [holdingPiece]: undefined };
 			});
+			Atoms.PossibleMoves([]);
 		}
 	};
 	const onLeave = () => {
@@ -130,6 +135,17 @@ export function Piece(props: PieceProps) {
 				BackgroundTransparency={1}
 				Event={{ MouseEnter: onHover, MouseLeave: onLeave, MouseButton1Down: onDown }}
 			/>
+			{possibleMoves.includes(location) && (
+				<frame
+					Size={new UDim2(0.35, 0, 0.35, 0)}
+					Position={new UDim2(0.5, 0, 0.5, 0)}
+					AnchorPoint={new Vector2(0.5, 0.5)}
+					BackgroundColor3={new Color3(0, 0, 0)}
+					BackgroundTransparency={0.75}
+				>
+					<uicorner CornerRadius={new UDim(1, 0)} />
+				</frame>
+			)}
 			{image ? (
 				<Image
 					rotation={rotation}

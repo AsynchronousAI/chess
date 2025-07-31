@@ -20,14 +20,20 @@ export interface Alert {
 }
 
 const Atoms = {
-	Alerts: atom<Array<Alert>>([]),
-	CurrentPage: atom<MenuPage>("home"),
+	/* Skin Picker */
 	FocusedSkin: atom("__random__"),
+
+	/* Menu (ported from littensy/slither) */
+	Alerts: atom<Array<Alert>>([]),
 	IsMenuOpen: atom(true),
 	IsMuted: atom(false),
+	CurrentPage: atom<MenuPage>("home"),
+
+	/* Board */
 	Board: atom<Board>(DefaultBoard),
 	PlayingAs: atom<Color>("black"),
 	HoldingPiece: atom<Square | undefined>(undefined),
+	PossibleMoves: atom<Square[]>([]),
 };
 
 export default Atoms;
