@@ -1,6 +1,6 @@
 import "client/app/react-config";
 import { hoarcekat } from "@rbxts/pretty-react-hooks";
-import React from "@rbxts/react";
+import React, { useEffect } from "@rbxts/react";
 
 import { sendAlert } from "client/alerts";
 import { Alerts } from "client/components/alerts";
@@ -52,13 +52,15 @@ export = hoarcekat(() => {
 		}
 	};
 
+	useEffect(() => alert());
+
 	return (
 		<RootProvider>
 			<Alerts />
 			<Menu />
 			<InputCapture
 				onInputBegan={(_, input) => {
-					if (input.KeyCode === Enum.KeyCode.F) {
+					if (input.KeyCode === Enum.KeyCode.G) {
 						alert();
 					}
 				}}
