@@ -98,16 +98,17 @@ export function Piece(props: PieceProps) {
 
 	/*** Events */
 	const onHover = () => {
-		if (!isMyPiece) return;
-		offsetYMotion.spring(-10);
+		offsetYMotion.spring(isMyPiece ? -10 : 5);
 	};
 	const onDown = () => {
-		if (!isMyPiece) return;
-		Atoms.HoldingPiece(location);
-	};
-	const onUp = () => {
-		if (!isMyPiece) return;
-		Atoms.HoldingPiece(undefined);
+		if (holdingPiece === location) Atoms.HoldingPiece(undefined); /* already holding this piece, revert */
+		else if (isMyPiece) Atoms.HoldingPiece(location); /* pick up piece */
+		else if (pieceAtBoard === undefined && holdingPiece) {
+			/* drop here */
+			Atoms.Board((currentBoard) => {
+				return { ...currentBoard, [location]: currentBoard[holdingPiece], [holdingPiece]: undefined };
+			});
+		}
 	};
 	const onLeave = () => {
 		offsetYMotion.spring(0);
@@ -127,7 +128,7 @@ export function Piece(props: PieceProps) {
 				Size={new UDim2(1, 0, 1, 0)}
 				Text={""}
 				BackgroundTransparency={1}
-				Event={{ MouseEnter: onHover, MouseLeave: onLeave, MouseButton1Down: onDown, MouseButton1Up: onUp }}
+				Event={{ MouseEnter: onHover, MouseLeave: onLeave, MouseButton1Down: onDown }}
 			/>
 			{image ? (
 				<Image
