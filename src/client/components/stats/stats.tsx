@@ -1,6 +1,6 @@
 import React from "@rbxts/react";
 import { Group } from "client/components/ui/group";
-import { useDefined, useRem, useStore } from "client/hooks";
+import { useDefined, useRem } from "client/hooks";
 import { formatInteger } from "client/utils/format-integer";
 
 import { StatsCard } from "./stats-card";
@@ -8,7 +8,6 @@ import Atoms from "shared/atoms";
 
 export function Stats() {
 	const rem = useRem();
-	const store = useStore();
 
 	const eliminations = "N/A";
 	const score = "N/A";

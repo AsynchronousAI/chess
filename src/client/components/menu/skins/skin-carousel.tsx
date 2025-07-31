@@ -1,7 +1,6 @@
 import React, { useEffect } from "@rbxts/react";
-import { useSelector } from "@rbxts/react-reflex";
 import { Group } from "client/components/ui/group";
-import { useRem, useStore } from "client/hooks";
+import { useRem } from "client/hooks";
 import { snakeSkins } from "shared/constants/skins";
 
 import { SkinCard } from "./skin-card";

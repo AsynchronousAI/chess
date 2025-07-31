@@ -1,7 +1,6 @@
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import React, { useEffect, useState } from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
-import { useSelector } from "@rbxts/react-reflex";
 import { createSound } from "shared/assets";
 import Atoms from "shared/atoms";
 import { shuffle } from "shared/utils/object-utils";

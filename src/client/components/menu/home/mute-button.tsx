@@ -1,10 +1,9 @@
 import React from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
-import { useSelector } from "@rbxts/react-reflex";
 import { PrimaryButton } from "client/components/ui/primary-button";
 import { Text } from "client/components/ui/text";
 import { fonts } from "client/constants/fonts";
-import { useRem, useStore } from "client/hooks";
+import { useRem } from "client/hooks";
 import Atoms from "shared/atoms";
 import { palette } from "shared/constants/palette";
 

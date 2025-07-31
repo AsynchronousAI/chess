@@ -1,7 +1,5 @@
 import { peek } from "@rbxts/charm";
-import Object from "@rbxts/object-utils";
 import { throttle } from "@rbxts/set-timeout";
-import { store } from "client/store";
 import Atoms, { Alert, AlertScope } from "shared/atoms";
 import { palette } from "shared/constants/palette";
 
