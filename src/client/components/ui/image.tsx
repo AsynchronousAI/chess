@@ -38,8 +38,8 @@ export function Image(props: ImageProps) {
 				<imagelabel
 					key={`Stroke${i}`}
 					Image={props.image}
-					Size={props.size}
-					Position={props.position ? useBindingState(props.position).add(offset) : offset}
+					Size={new UDim2(1, 0, 1, 0)}
+					Position={offset}
 					ZIndex={props.zIndex ? useBindingState(props.zIndex) - 1 : -1}
 					ImageColor3={props.outlineColor}
 					BackgroundTransparency={1}
@@ -62,7 +62,7 @@ export function Image(props: ImageProps) {
 	}
 
 	return (
-		<>
+		<frame Size={props.size} Position={props.position} BackgroundTransparency={1}>
 			{elements}
 			<imagelabel
 				Image={props.image}
@@ -74,8 +74,7 @@ export function Image(props: ImageProps) {
 				SliceScale={props.sliceScale}
 				SliceCenter={props.sliceCenter}
 				TileSize={props.tileSize}
-				Size={props.size}
-				Position={props.position}
+				Size={new UDim2(1, 0, 1, 0)}
 				AnchorPoint={props.anchorPoint}
 				Rotation={props.rotation}
 				BackgroundColor3={props.backgroundColor}
@@ -91,6 +90,6 @@ export function Image(props: ImageProps) {
 				{props.children}
 				{props.cornerRadius && <uicorner CornerRadius={props.cornerRadius} />}
 			</imagelabel>
-		</>
+		</frame>
 	);
 }

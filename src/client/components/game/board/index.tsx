@@ -5,10 +5,12 @@ import { Piece } from "./piece";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "shared/atoms";
 import { Vector, Flat, Wood } from "./images";
+import useMouse from "client/hooks/use-mouse";
 
 export default function Board() {
 	const board = useAtom(Atoms.Board);
 	const playingAs = useAtom(Atoms.PlayingAs);
+	const mousePos = useMouse();
 	const iconPack = Wood;
 
 	return (
@@ -31,6 +33,7 @@ export default function Board() {
 						playingAs={playingAs}
 						board={board}
 						iconPack={iconPack}
+						mousePos={mousePos}
 					/>
 				)),
 			)}

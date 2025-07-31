@@ -1,4 +1,4 @@
-import React from "@rbxts/react";
+import React, { useEffect, useRef, useState } from "@rbxts/react";
 
 import { Image } from "client/components/ui/image";
 import { Text } from "client/components/ui/text";
@@ -10,6 +10,8 @@ import { useMemo } from "@rbxts/react";
 import { Board, Color, IsSquareBlack, Square } from "shared/board";
 import { palette } from "shared/constants/palette";
 import { IconPack } from "./images";
+import { useBindingListener } from "@rbxts/pretty-react-hooks";
+import useMouse from "client/hooks/use-mouse";
 
 const DISPLAY_SQUARE_LABELS = false;
 
@@ -21,9 +23,26 @@ export interface PieceProps {
 	board: Board;
 	iconPack: IconPack;
 	playingAs: Color;
+	mousePos: Vector2;
 }
 export function Piece(props: PieceProps) {
 	const [rotation, rotationMotion] = useMotion(0);
+	const holdingPiece = useAtom(Atoms.HoldingPiece);
+
+	/* Track mouse position */
+	const containerRef = useRef<Frame>();
+	const [mouseRelativePosition, setMouseRelativePosition] = useState(new UDim2());
+	useEffect(() => {
+		const absolutePosition = containerRef.current?.AbsolutePosition;
+		const absoluteSize = containerRef.current?.AbsoluteSize;
+		if (!absolutePosition || !absoluteSize) return;
+		setMouseRelativePosition(
+			UDim2.fromOffset(
+				props.mousePos.X - absolutePosition.X - absoluteSize.X / 2,
+				props.mousePos.Y - absolutePosition.Y - absoluteSize.Y / 2,
+			),
+		);
+	}, [props.mousePos]);
 
 	/* Load data */
 	const location = useMemo(() => {
@@ -65,6 +84,7 @@ export function Piece(props: PieceProps) {
 
 	return (
 		<frame
+			ref={containerRef}
 			key={location}
 			Position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), 0)}
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
@@ -90,6 +110,7 @@ export function Piece(props: PieceProps) {
 				<Image
 					rotation={rotation}
 					image={image}
+					position={holdingPiece === location ? mouseRelativePosition : undefined}
 					size={new UDim2(1, 0, 1, 0)}
 					outlinePrecision={30}
 					outlineThickness={6}
