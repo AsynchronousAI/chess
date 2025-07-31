@@ -1,11 +1,11 @@
 import React from "@rbxts/react";
-import { useSelector } from "@rbxts/react-reflex";
-import { selectAlerts } from "client/store/alert";
 
 import { Alert } from "./alert";
+import Atoms from "shared/atoms";
+import { useAtom } from "@rbxts/react-charm";
 
 export function Alerts() {
-	const alerts = useSelector(selectAlerts);
+	const alerts = useAtom(Atoms.Alerts);
 
 	return (
 		<>

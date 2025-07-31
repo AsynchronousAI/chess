@@ -1,6 +1,8 @@
+import { peek } from "@rbxts/charm";
+import Object from "@rbxts/object-utils";
 import { throttle } from "@rbxts/set-timeout";
 import { store } from "client/store";
-import { Alert, AlertScope, selectAlerts } from "client/store/alert";
+import Atoms, { Alert, AlertScope } from "shared/atoms";
 import { palette } from "shared/constants/palette";
 
 const defaultAlert: Alert = {
@@ -30,7 +32,7 @@ function sendAlertImmediate(patch: Partial<Alert>) {
 		dismissAlertsOfScope(alert.scope);
 	}
 
-	store.addAlert(alert);
+	Atoms.Alerts((current) => [...current, alert]);
 
 	Promise.delay(alert.duration).then(() => {
 		dismissAlert(alert.id);
@@ -50,16 +52,18 @@ export function sendAlert(patch: Partial<Alert>) {
 }
 
 export async function dismissAlert(id: number) {
-	store.setAlertVisible(id, false);
+	const visible = false;
+	Atoms.Alerts((current) => current.map((alert) => (alert.id === id ? { ...alert, visible } : alert)));
 
 	return Promise.delay(0.25).then(() => {
-		store.removeAlert(id);
+		/* filter it out */
+		Atoms.Alerts((current) => current.filter((alert) => alert.id !== id));
 		return id;
 	});
 }
 
 function dismissAlertsOfScope(scope: string) {
-	for (const alert of store.getState(selectAlerts)) {
+	for (const alert of peek(Atoms.Alerts)) {
 		if (alert.scope === scope) {
 			dismissAlert(alert.id);
 		}

@@ -1,7 +1,6 @@
 import { lerpBinding, useMountEffect } from "@rbxts/pretty-react-hooks";
 import { composeBindings } from "@rbxts/pretty-react-hooks";
 import React, { useEffect, useMemo } from "@rbxts/react";
-import { useSelector, useSelectorCreator } from "@rbxts/react-reflex";
 import { dismissAlert } from "client/alerts";
 import { Frame } from "client/components/ui/frame";
 import { Image } from "client/components/ui/image";
@@ -12,7 +11,6 @@ import { Text } from "client/components/ui/text";
 import { fonts } from "client/constants/fonts";
 import { springs } from "client/constants/springs";
 import { useMotion, useRem } from "client/hooks";
-import { Alert, selectAlertIndex } from "client/store/alert";
 import { images, playSound, sounds } from "shared/assets";
 import { palette } from "shared/constants/palette";
 import { brightenIfDark, darken } from "shared/utils/color-utils";
@@ -20,7 +18,7 @@ import { mapStrict } from "shared/utils/math-utils";
 
 import { AlertTimer } from "./alert-timer";
 import { useAtom } from "@rbxts/react-charm";
-import Atoms from "shared/atoms";
+import Atoms, { Alert } from "shared/atoms";
 
 interface AlertProps {
 	readonly alert: Alert;
@@ -36,7 +34,7 @@ const LIST_PADDING = 1;
 export function Alert({ alert, index }: AlertProps) {
 	const rem = useRem();
 	const menuOpen = useAtom(Atoms.IsMenuOpen);
-	const visibleIndex = useSelectorCreator(selectAlertIndex, alert.id);
+	const allAlerts = useAtom(Atoms.Alerts);
 
 	const [transition, transitionMotion] = useMotion(0);
 	const [hover, hoverMotion] = useMotion(0);
@@ -80,10 +78,10 @@ export function Alert({ alert, index }: AlertProps) {
 		// Alerts that are dismissed are still in the list, but are invisible.
 		// Do not count them towards the index of this alert to prevent it from
 		// being dismissed early.
-		if (visibleIndex >= MAX_VISIBLE_ALERTS) {
+		if (allAlerts.size() >= MAX_VISIBLE_ALERTS) {
 			dismissAlert(alert.id);
 		}
-	}, [visibleIndex]);
+	}, [allAlerts]);
 
 	useMountEffect(() => {
 		playSound(alert.sound ?? sounds.alert_neutral);
@@ -132,7 +130,7 @@ export function Alert({ alert, index }: AlertProps) {
 				outerTransparency={lerpBinding(transition, 1, 0.75)}
 				cornerRadius={new UDim(0, rem(1))}
 			>
-				{hasGradient && <uigradient Color={new ColorSequence(alert.color, alert.colorSecondary)} />}
+				{hasGradient && <uigradient Color={new ColorSequence(alert.color, alert.colorSecondary!)} />}
 			</Outline>
 
 			<Text

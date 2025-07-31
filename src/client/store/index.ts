@@ -1,14 +1,12 @@
 import { combineProducers, InferState } from "@rbxts/reflex";
 
-import { alertSlice } from "./alert";
-
 export type RootStore = typeof store;
 
 export type RootState = InferState<RootStore>;
 
 export function createStore() {
 	const store = combineProducers({
-		alert: alertSlice,
+		//alert: alertSlice,
 	});
 
 	return store;
