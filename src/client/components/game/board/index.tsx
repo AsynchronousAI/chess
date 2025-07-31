@@ -21,6 +21,13 @@ export default function Board() {
 			AnchorPoint={new Vector2(0.5, 0.5)}
 			BorderSizePixel={0}
 		>
+			<textbutton
+				Size={new UDim2(1, 0, 1, 0)}
+				BackgroundTransparency={1}
+				Event={{
+					MouseButton1Up: () => Atoms.HoldingPiece(undefined),
+				}}
+			/>
 			<uiaspectratioconstraint />
 
 			{BOARD_LETTERS.map((letter, i) =>

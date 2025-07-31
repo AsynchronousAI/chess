@@ -10,10 +10,11 @@ import { useMemo } from "@rbxts/react";
 import { Board, Color, IsSquareBlack, Square } from "shared/board";
 import { palette } from "shared/constants/palette";
 import { IconPack } from "./images";
-import { useBindingListener } from "@rbxts/pretty-react-hooks";
+import { useBindingListener, useBindingState } from "@rbxts/pretty-react-hooks";
 import useMouse from "client/hooks/use-mouse";
+import { darken } from "shared/utils/color-utils";
 
-const DISPLAY_SQUARE_LABELS = false;
+const DISPLAY_SQUARE_LABELS = true;
 
 export interface PieceProps {
 	letter: string;
@@ -33,7 +34,7 @@ export function Square(props: PieceProps) {
 
 	return (
 		<frame
-			key={location}
+			key={`${location} square`}
 			Position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), 0)}
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
 			BackgroundColor3={colored ? props.iconPack.filled : props.iconPack.unfilled}
@@ -42,11 +43,13 @@ export function Square(props: PieceProps) {
 		>
 			{DISPLAY_SQUARE_LABELS && (
 				<Text
-					textColor={palette.subtext0}
+					textColor={darken(colored ? props.iconPack.filled : props.iconPack.unfilled, 0.3)}
 					textSize={24}
 					font={fonts.inter.bold}
 					text={location}
 					size={new UDim2(1, 0, 1, 0)}
+					textYAlignment="Bottom"
+					textXAlignment="Left"
 				/>
 			)}
 		</frame>
@@ -57,18 +60,28 @@ export function Piece(props: PieceProps) {
 	const containerRef = useRef<Frame>();
 
 	const [rotation, rotationMotion] = useMotion(0);
+	const [offsetY, offsetYMotion] = useMotion(0);
 	const [mouseRelativePosition, setMouseRelativePosition] = useState(new UDim2());
 
 	useEffect(() => {
 		const absolutePosition = containerRef.current?.AbsolutePosition;
 		const absoluteSize = containerRef.current?.AbsoluteSize;
 		if (!absolutePosition || !absoluteSize) return;
-		setMouseRelativePosition(
-			UDim2.fromOffset(
-				props.mousePos.X - absolutePosition.X - absoluteSize.X / 2,
-				props.mousePos.Y - absolutePosition.Y - absoluteSize.Y / 2,
-			),
+
+		const newOffset = UDim2.fromOffset(
+			props.mousePos.X - absolutePosition.X - absoluteSize.X / 2,
+			props.mousePos.Y - absolutePosition.Y - absoluteSize.Y / 2,
 		);
+		setMouseRelativePosition(newOffset);
+
+		/* based on the current mouseRelativePosition, set rotationMotion to a different value */
+		const difference = mouseRelativePosition.sub(newOffset).X.Offset;
+		const intensity = difference / 2;
+		if (holdingPiece !== location) {
+			rotationMotion.spring(0);
+		} else {
+			rotationMotion.spring(intensity);
+		}
 	}, [props.mousePos]);
 
 	/* Block data */
@@ -81,7 +94,7 @@ export function Piece(props: PieceProps) {
 	/*** Events */
 	const onHover = () => {
 		if (!isMyPiece) return;
-		rotationMotion.spring(7);
+		offsetYMotion.spring(-10);
 	};
 	const onDown = () => {
 		if (!isMyPiece) return;
@@ -92,14 +105,14 @@ export function Piece(props: PieceProps) {
 		Atoms.HoldingPiece(undefined);
 	};
 	const onLeave = () => {
-		rotationMotion.spring(0);
+		offsetYMotion.spring(0);
 	};
 
 	return (
 		<frame
 			ref={containerRef}
 			key={location}
-			Position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), 0)}
+			Position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), useBindingState(offsetY))}
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
 			BackgroundTransparency={1}
 			BorderSizePixel={0}
