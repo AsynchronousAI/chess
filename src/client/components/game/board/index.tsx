@@ -10,7 +10,6 @@ import useMouse from "client/hooks/use-mouse";
 export default function Board() {
 	const board = useAtom(Atoms.Board);
 	const playingAs = useAtom(Atoms.PlayingAs);
-	const mousePos = useMouse();
 	const iconPack = Wood;
 
 	return (
@@ -41,7 +40,6 @@ export default function Board() {
 							playingAs={playingAs}
 							board={board}
 							iconPack={iconPack}
-							mousePos={mousePos}
 						/>
 						<Piece
 							letter={letter}
@@ -51,7 +49,6 @@ export default function Board() {
 							playingAs={playingAs}
 							board={board}
 							iconPack={iconPack}
-							mousePos={mousePos}
 						/>
 					</>
 				)),

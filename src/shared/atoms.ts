@@ -26,7 +26,7 @@ const Atoms = {
 	IsMenuOpen: atom(true),
 	IsMuted: atom(false),
 	Board: atom<Board>(DefaultBoard),
-	PlayingAs: atom<Color>("white"),
+	PlayingAs: atom<Color>("black"),
 	HoldingPiece: atom<Square | undefined>(undefined),
 };
 

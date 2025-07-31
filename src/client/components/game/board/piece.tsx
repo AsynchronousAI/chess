@@ -24,7 +24,6 @@ export interface PieceProps {
 	board: Board;
 	iconPack: IconPack;
 	playingAs: Color;
-	mousePos: Vector2;
 }
 export function Square(props: PieceProps) {
 	/* Load data */
@@ -58,31 +57,37 @@ export function Square(props: PieceProps) {
 export function Piece(props: PieceProps) {
 	const holdingPiece = useAtom(Atoms.HoldingPiece);
 	const containerRef = useRef<Frame>();
+	const mousePos = useMouse();
 
 	const [rotation, rotationMotion] = useMotion(0);
 	const [offsetY, offsetYMotion] = useMotion(0);
 	const [mouseRelativePosition, setMouseRelativePosition] = useState(new UDim2());
 
-	useEffect(() => {
+	useBindingListener(mousePos, (position) => {
+		if (holdingPiece !== location || !containerRef.current) {
+			rotationMotion.spring(0);
+			return;
+		}
+
 		const absolutePosition = containerRef.current?.AbsolutePosition;
 		const absoluteSize = containerRef.current?.AbsoluteSize;
 		if (!absolutePosition || !absoluteSize) return;
 
 		const newOffset = UDim2.fromOffset(
-			props.mousePos.X - absolutePosition.X - absoluteSize.X / 2,
-			props.mousePos.Y - absolutePosition.Y - absoluteSize.Y / 2,
+			position.X - absolutePosition.X - absoluteSize.X / 2,
+			position.Y - absolutePosition.Y - absoluteSize.Y / 2,
 		);
 		setMouseRelativePosition(newOffset);
 
-		/* based on the current mouseRelativePosition, set rotationMotion to a different value */
+		// based on the current mouseRelativePosition, set rotationMotion to a different value
 		const difference = mouseRelativePosition.sub(newOffset).X.Offset;
-		const intensity = difference / 2;
+		const intensity = difference;
 		if (holdingPiece !== location) {
 			rotationMotion.spring(0);
 		} else {
 			rotationMotion.spring(intensity);
 		}
-	}, [props.mousePos]);
+	});
 
 	/* Block data */
 	const location = `${props.letter}${props.number}` as Square;
