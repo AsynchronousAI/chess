@@ -38,6 +38,7 @@ export function Square(props: PieceProps) {
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
 			BackgroundColor3={colored ? props.iconPack.filled : props.iconPack.unfilled}
 			BorderSizePixel={0}
+			ZIndex={1}
 		>
 			{DISPLAY_SQUARE_LABELS && (
 				<Text
@@ -102,7 +103,7 @@ export function Piece(props: PieceProps) {
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
 			BackgroundTransparency={1}
 			BorderSizePixel={0}
-			ZIndex={2}
+			ZIndex={holdingPiece === location ? 100 : 2}
 		>
 			<textbutton
 				Size={new UDim2(1, 0, 1, 0)}
