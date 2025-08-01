@@ -10,6 +10,7 @@ import { useMotion, useRem } from "client/hooks";
 import { palette } from "shared/constants/palette";
 
 import { gradient } from "./utils";
+import Atoms from "shared/atoms";
 
 interface PlayButtonProps {
 	readonly anchorPoint: Vector2;
@@ -22,18 +23,18 @@ export function PlayButton({ anchorPoint, position, size }: PlayButtonProps) {
 	const timer = useTimer();
 	const [hover, hoverMotion] = useMotion(0);
 
-	const gradientSpin = timer.value.map((t) => 
-		30 * t
-	);
+	const gradientSpin = timer.value.map((t) => 30 * t);
 
 	const onClick = () => {
-		/* nothing yet */
+		Atoms.IsMenuOpen(false);
 	};
 
 	return (
 		<PrimaryButton
 			onClick={onClick}
-			onHover={(hovered) => { hoverMotion.spring(hovered ? 1 : 0); }}
+			onHover={(hovered) => {
+				hoverMotion.spring(hovered ? 1 : 0);
+			}}
 			overlayGradient={new ColorSequence(palette.mauve, palette.blue)}
 			anchorPoint={anchorPoint}
 			size={size}

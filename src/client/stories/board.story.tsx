@@ -10,6 +10,9 @@ import { InputCapture } from "client/components/ui/input-capture";
 import Atoms from "shared/atoms";
 
 export = hoarcekat(() => {
+	useEffect(() => {
+		Atoms.IsMenuOpen(false);
+	});
 	return (
 		<RootProvider>
 			<InputCapture

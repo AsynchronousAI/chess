@@ -19,10 +19,11 @@
 		"module": "commonjs",
 		"moduleResolution": "Node",
 		"resolveJsonModule": true,
-		"typeRoots": ["node_modules/@rbxts"],
+		"typeRoots": ["node_modules/@rbxts", "node_modules/@flamework"],
 		"strict": true,
 		"forceConsistentCasingInFileNames": true,
 		"outDir": "out",
-		"esModuleInterop": true
+		"esModuleInterop": true,
+		"plugins": [{ "transform": "rbxts-transformer-flamework" }]
 	}
 }

@@ -7,10 +7,12 @@ import { Music } from "../components/music";
 import { Preloader } from "../components/preloader";
 import { Stats } from "../components/stats";
 import { Layer } from "../components/ui/layer";
+import Board from "client/components/game/board";
 
 export function App() {
 	return (
 		<ErrorHandler>
+			<Board />
 			<Music />
 			<Preloader />
 

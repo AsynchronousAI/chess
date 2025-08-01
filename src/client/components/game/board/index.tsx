@@ -10,49 +10,53 @@ import useMouse from "client/hooks/use-mouse";
 export default function Board() {
 	const board = useAtom(Atoms.Board);
 	const playingAs = useAtom(Atoms.PlayingAs);
+	const menuOpen = useAtom(Atoms.IsMenuOpen);
 	const iconPack = Wood;
 
 	return (
-		<frame
-			Size={new UDim2(1, 0, 1, 0)}
-			BackgroundColor3={palette.base}
-			Position={new UDim2(0.5, 0, 0.5, 0)}
-			AnchorPoint={new Vector2(0.5, 0.5)}
-			BorderSizePixel={0}
-		>
-			<textbutton
+		<screengui ZIndexBehavior={"Global"}>
+			<frame
 				Size={new UDim2(1, 0, 1, 0)}
-				BackgroundTransparency={1}
-				Event={{
-					MouseButton1Up: () => Atoms.HoldingPiece(undefined),
-				}}
-			/>
-			<uiaspectratioconstraint />
+				BackgroundColor3={palette.base}
+				Position={new UDim2(0.5, 0, 0.5, 0)}
+				AnchorPoint={new Vector2(0.5, 0.5)}
+				BorderSizePixel={0}
+				Visible={!menuOpen}
+			>
+				<textbutton
+					Size={new UDim2(1, 0, 1, 0)}
+					BackgroundTransparency={1}
+					Event={{
+						MouseButton1Up: () => Atoms.HoldingPiece(undefined),
+					}}
+				/>
+				<uiaspectratioconstraint />
 
-			{BOARD_LETTERS.map((letter, i) =>
-				BOARD_NUMBERS.map((number, j) => (
-					<>
-						<Square
-							letter={letter}
-							number={number}
-							i={i}
-							j={j}
-							playingAs={playingAs}
-							board={board}
-							iconPack={iconPack}
-						/>
-						<Piece
-							letter={letter}
-							number={number}
-							i={i}
-							j={j}
-							playingAs={playingAs}
-							board={board}
-							iconPack={iconPack}
-						/>
-					</>
-				)),
-			)}
-		</frame>
+				{BOARD_LETTERS.map((letter, i) =>
+					BOARD_NUMBERS.map((number, j) => (
+						<>
+							<Square
+								letter={letter}
+								number={number}
+								i={i}
+								j={j}
+								playingAs={playingAs}
+								board={board}
+								iconPack={iconPack}
+							/>
+							<Piece
+								letter={letter}
+								number={number}
+								i={i}
+								j={j}
+								playingAs={playingAs}
+								board={board}
+								iconPack={iconPack}
+							/>
+						</>
+					)),
+				)}
+			</frame>
+		</screengui>
 	);
 }

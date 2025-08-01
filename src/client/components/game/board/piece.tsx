@@ -12,6 +12,9 @@ import { useBindingListener, useBindingState } from "@rbxts/pretty-react-hooks";
 import useMouse from "client/hooks/use-mouse";
 import { darken } from "shared/utils/color-utils";
 import GetLegalMoves from "shared/engine/legalMoves";
+import { Events, Functions } from "client/networking";
+import { sendAlert } from "client/alerts";
+import { palette } from "shared/constants/palette";
 
 const DISPLAY_SQUARE_LABELS = true;
 
@@ -100,9 +103,11 @@ export function Piece(props: PieceProps) {
 	const onHover = () => {
 		offsetYMotion.spring(isMyPiece ? -10 : 5);
 	};
-	const onDown = () => {
+	const onDown = async () => {
+		/* TODO: move this to a dedicated file */
 		if (holdingPiece === location) {
-			Atoms.HoldingPiece(undefined); /* already holding this piece, revert */
+			/* already holding this piece, revert */
+			Atoms.HoldingPiece(undefined);
 			Atoms.PossibleMoves([]);
 		} else if (isMyPiece) {
 			Atoms.HoldingPiece(location); /* pick up piece */
@@ -113,6 +118,27 @@ export function Piece(props: PieceProps) {
 				return { ...currentBoard, [location]: currentBoard[holdingPiece], [holdingPiece]: undefined };
 			});
 			Atoms.PossibleMoves([]);
+			Atoms.HoldingPiece(undefined);
+
+			const botResult = await Functions.BotMovement.invoke(props.board);
+			if (botResult.success) {
+				Atoms.Board((currentBoard) => {
+					return {
+						...currentBoard,
+						[botResult.endingSquare!]: currentBoard[botResult.startingSquare!],
+						[botResult.startingSquare!]: undefined,
+					};
+				});
+			} else {
+				sendAlert({
+					color: palette.red,
+					duration: 5,
+					emoji: "❌",
+					id: 0,
+					message: "Failed to get Stockfish response.",
+					visible: true,
+				});
+			}
 		}
 	};
 	const onLeave = () => {
@@ -127,7 +153,7 @@ export function Piece(props: PieceProps) {
 			Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
 			BackgroundTransparency={1}
 			BorderSizePixel={0}
-			ZIndex={holdingPiece === location ? 100 : 2}
+			ZIndex={holdingPiece === location ? 100 : 3}
 		>
 			<textbutton
 				Size={new UDim2(1, 0, 1, 0)}
@@ -156,6 +182,7 @@ export function Piece(props: PieceProps) {
 					outlineThickness={6}
 					outlineStartAngle={40}
 					outlineColor={new Color3(0.35, 0.35, 0.35)}
+					zIndex={holdingPiece === location ? 100 : 3}
 				/>
 			) : (
 				<></>

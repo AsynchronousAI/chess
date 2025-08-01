@@ -20,6 +20,9 @@
 					},
 					"@rbxts-js": {
 						"$path": "node_modules/@rbxts-js"
+					},
+					"@flamework": {
+						"$path": "node_modules/@flamework"
 					}
 				}
 			},
