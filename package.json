@@ -41,8 +41,8 @@
 	"devDependencies": {
 		"@rbxts/compiler-types": "3.0.0-types.0",
 		"@rbxts/types": "^1.0.852",
-		"concurrently": "^8.2.0",
-		"cross-env": "^7.0.3",
+		"concurrently": "^9.2.0",
+		"cross-env": "^10.0.0",
 		"prettier": "^3.5.3",
 		"roblox-ts": "3.0.0",
 		"typescript": "^5.8.3"
