@@ -12,11 +12,11 @@ import Board from "client/components/game/board";
 export function App() {
 	return (
 		<ErrorHandler>
-			<Board />
 			<Music />
 			<Preloader />
 
 			<Layer>
+				<Board />
 				<Menu />
 				<Stats />
 			</Layer>

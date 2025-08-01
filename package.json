@@ -7,7 +7,7 @@
 		"compile": "rbxtsc --verbose",
 		"deploy:dev": "pnpm build && mantle deploy --environment canary",
 		"deploy:prod": "pnpm build && mantle deploy --environment production",
-		"dev": "concurrently \"rojo serve\" \"rbxtsc -w\"",
+		"dev": "concurrently \"rojo serve --port 34873\" \"rbxtsc -w\"",
 		"output:dev": "mantle outputs --environment canary > mantle-output.json",
 		"output:prod": "mantle outputs --environment production > mantle-output.json",
 		"serve": "rojo serve",

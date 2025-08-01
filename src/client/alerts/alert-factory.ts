@@ -46,9 +46,7 @@ export function sendAlert(patch: Partial<Alert>) {
 		return sendAlertImmediate(patch);
 	}
 
-	return scopedThrottles[patch.scope](() => 
-		sendAlertImmediate(patch)
-	);
+	return scopedThrottles[patch.scope](() => sendAlertImmediate(patch));
 }
 
 export async function dismissAlert(id: number) {

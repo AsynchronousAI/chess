@@ -120,7 +120,7 @@ export function Piece(props: PieceProps) {
 			Atoms.PossibleMoves([]);
 			Atoms.HoldingPiece(undefined);
 
-			const botResult = await Functions.BotMovement.invoke(props.board);
+			/*const botResult = await Functions.BotMovement.invoke(props.board);
 			if (botResult.success) {
 				Atoms.Board((currentBoard) => {
 					return {
@@ -138,7 +138,7 @@ export function Piece(props: PieceProps) {
 					message: "Failed to get Stockfish response.",
 					visible: true,
 				});
-			}
+				}*/
 		}
 	};
 	const onLeave = () => {
