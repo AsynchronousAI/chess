@@ -101,28 +101,70 @@ const CUSTOM_DIRECTIONS: Partial<
 };
 
 /* Export */
-export default function GetLegalMoves(board: BitBoard, from: Square): Square[] {
+export default function GetLegalMoves(
+  board: BitBoard,
+  from: Square,
+  checkForColor?: Color,
+): Square[] {
   const piece = board.getPiece(from[0], from[1]);
   if (!piece) return [];
 
   const [fx, fy] = from;
   let moves: Square[] = [];
 
-  const addMove = (x: number, y: number) => {
-    if (x < 0 || y < 0 || x >= 8 || y >= 8) return;
-    const target = board.getPiece(x, y);
-
-    if (target[0] === 0 || target[1] !== piece[1]) {
-      moves.push([x, y]);
+  let kingPosition = undefined;
+  if (checkForColor) {
+    for (const [location, [piece, color]] of board.getAllPieces()) {
+      if (piece === Piece.king && color === checkForColor) {
+        kingPosition = location;
+      }
     }
+  }
+
+  const pushMove = (x: number, y: number) => {
+    // check for checks
+    if (kingPosition) {
+      const newBoard = board.branch();
+      newBoard.movePiece(from, [x, y]);
+
+      let localKingPos = kingPosition;
+      if (from[0] === localKingPos[0] && from[1] === localKingPos[1]) {
+        /* moving the king, track this position */
+        localKingPos = [x, y];
+      }
+
+      for (const [followingMoveStart, followingMoveEnd] of GetAllLegalMoves(
+        newBoard,
+        1 - piece[1],
+      )) {
+        /* check if they can take the king */
+        if (
+          followingMoveEnd[0] === localKingPos[0] &&
+          followingMoveEnd[1] === localKingPos[1]
+        ) {
+          return;
+        }
+      }
+    }
+    moves.push([x, y]);
   };
 
   if (CUSTOM_DIRECTIONS[piece[0]]) {
     const customMoves = CUSTOM_DIRECTIONS[piece[0]]!(piece, fy, fx, board);
-    moves = [...moves, ...customMoves];
+    for (const [x, y] of customMoves) {
+      pushMove(x, y);
+    }
   } else if (FIXED_DIRECTIONS[piece[0]] !== undefined) {
     for (const [dx, dy] of FIXED_DIRECTIONS[piece[0]]!) {
-      addMove(fx + dx, fy + dy);
+      const x = fx + dx;
+      const y = fy + dy;
+
+      if (x < 0 || y < 0 || x >= 8 || y >= 8) continue;
+      const target = board.getPiece(x, y);
+
+      if (target[0] === 0 || target[1] !== piece[1]) {
+        pushMove(x, y);
+      }
     }
   } else if (SLIDE_DIRECTIONS[piece[0]] !== undefined) {
     for (const [dx, dy] of SLIDE_DIRECTIONS[piece[0]]!) {
@@ -131,16 +173,30 @@ export default function GetLegalMoves(board: BitBoard, from: Square): Square[] {
       while (x >= 0 && y >= 0 && x < 8 && y < 8) {
         const target = board.getPiece(x, y);
         if (target[0] === 0) {
-          moves.push([x, y]);
+          pushMove(x, y);
         } else {
           if (target[1] !== piece[1]) {
-            moves.push([x, y]);
+            pushMove(x, y);
           }
           break;
         }
         x += dx;
         y += dy;
       }
+    }
+  }
+
+  return moves;
+}
+export function GetAllLegalMoves(
+  board: BitBoard,
+  turn: Color,
+): [Square, Square][] {
+  const moves: [Square, Square][] = [];
+  for (const [location, [piece, color]] of board.getAllPieces()) {
+    if (color !== turn) continue;
+    for (const nextLocation of GetLegalMoves(board, location)) {
+      moves.push([location, nextLocation]);
     }
   }
 

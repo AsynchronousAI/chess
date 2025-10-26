@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "@rbxts/react";
-import { FILES, RANKS } from "shared/board";
+import { Color, FILES, RANKS } from "shared/board";
 import { Piece } from "./piece";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
-import { Vector, Flat, Wood } from "./images";
+import { Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
 import { Square } from "./square";
 

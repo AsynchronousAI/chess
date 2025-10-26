@@ -59,14 +59,13 @@ export function Piece(props: PieceProps) {
     } else if (pieceAtBoard[0] !== 0 && isMyPiece) {
       // pick up
       Atoms.HoldingPiece(location);
-      Atoms.PossibleMoves(GetLegalMoves(props.board, location));
+      Atoms.PossibleMoves(
+        GetLegalMoves(props.board, location, props.playingAs),
+      );
     } else if (canMoveHere && holdingPiece) {
       // move
       Atoms.Board((currentBoard) => {
-        const holding = currentBoard.getPiece(holdingPiece[0], holdingPiece[1]);
-        currentBoard.setPiece(location[0], location[1], holding[0], holding[1]);
-        currentBoard.setPiece(holdingPiece[0], holdingPiece[1], 0, 0);
-
+        currentBoard.movePiece(holdingPiece, location);
         return currentBoard;
       });
       Atoms.PossibleMoves([]);

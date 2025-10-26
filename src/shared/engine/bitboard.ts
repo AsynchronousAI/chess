@@ -1,4 +1,4 @@
-import { Color, Piece } from "shared/board";
+import { Color, Piece, Square } from "shared/board";
 
 const fenLookup: Record<string, Piece> = {
   P: Piece.pawn,
@@ -37,7 +37,7 @@ export class BitBoard {
     return [pieceType, color];
   }
 
-  /* set & get */
+  /* base methods */
   public setPiece(file: number, rank: number, pieceType: Piece, color: Color) {
     const index = this.getSquareIndex(file, rank);
     const piece = this.getPieceBinary(pieceType, color);
@@ -50,6 +50,40 @@ export class BitBoard {
   public hasPiece(file: number, rank: number): boolean {
     const index = this.getSquareIndex(file, rank);
     return buffer.readu8(this.board, index) !== 0;
+  }
+  public getAllPieces(): [Square, [Piece, Color]][] {
+    const pieces: [Square, [Piece, Color]][] = [];
+    for (let rank = 0; rank < 8; rank++) {
+      for (let file = 0; file < 8; file++) {
+        const index = this.getSquareIndex(file, rank);
+        const piece = buffer.readu8(this.board, index);
+        if (piece !== 0) {
+          const [pieceType, color] = this.binaryToPiece(piece);
+          pieces.push([
+            [file, rank],
+            [pieceType, color],
+          ]);
+        }
+      }
+    }
+    return pieces;
+  }
+  public movePiece(from: Square, to: Square) {
+    const [fromFile, fromRank] = from;
+    const [toFile, toRank] = to;
+
+    const indexFrom = this.getSquareIndex(fromFile, fromRank);
+    const indexTo = this.getSquareIndex(toFile, toRank);
+
+    const piece = buffer.readu8(this.board, indexFrom);
+    buffer.writeu8(this.board, indexFrom, 0);
+    buffer.writeu8(this.board, indexTo, piece);
+  }
+  public branch() {
+    const branch = new BitBoard();
+    branch.board = buffer.create(buffer.len(this.board));
+    buffer.copy(branch.board, 0, this.board);
+    return branch;
   }
 
   /* FEN */
@@ -108,6 +142,6 @@ export class BitBoard {
       if (rank > 0) fen += "/";
     }
 
-    return fen;
+    return fen + " w KQkq - 0 2";
   }
 }
