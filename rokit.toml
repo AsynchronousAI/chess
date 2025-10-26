@@ -4,6 +4,4 @@
 # New tools can be added by running `rokit add <tool>` in a terminal.
 
 [tools]
-rojo = "rojo-rbx/rojo@7.5.1"
-tarmac = "rojo-rbx/tarmac@0.7.5"
-mantle = "blake-mealey/mantle@0.11.18"
+rojo = "rojo-rbx/rojo@7.6.0"

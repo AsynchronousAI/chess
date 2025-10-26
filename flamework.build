@@ -1,13 +1,10 @@
 {
 	"version": 1,
-	"flameworkVersion": "1.3.1",
+	"flameworkVersion": "1.3.2",
 	"identifiers": {
-		"slither:out/client/components/ui/error-boundary@ErrorBoundary": "client/components/ui/error-boundary@ErrorBoundary",
-		"slither:out/shared/utils/grid@Grid": "shared/utils/grid@Grid",
-		"slither:out/shared/networking@GlobalEvents": "shared/networking@GlobalEvents",
-		"slither:out/shared/networking@GlobalFunctions": "shared/networking@GlobalFunctions",
-		"slither:out/server/stockfish.server@Stockfish": "server/stockfish.server@Stockfish",
-		"slither:out/server/services/stockfish@Stockfish": "server/services/stockfish@Stockfish"
+		"chess:out/client/controllers/GuiController@GuiController": "client/controllers/GuiController@GuiController",
+		"chess:out/shared/network@GlobalEvents": "shared/network@GlobalEvents",
+		"chess:out/shared/network@GlobalFunctions": "shared/network@GlobalFunctions"
 	},
 	"metadata": {}
 }

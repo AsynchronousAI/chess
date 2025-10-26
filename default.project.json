@@ -1,97 +1,58 @@
 {
-	"name": "slither",
-	"globIgnorePaths": ["**/package.json", "**/tsconfig.json"],
-	"tree": {
-		"$className": "DataModel",
-		"ServerScriptService": {
-			"$className": "ServerScriptService",
-			"TS": {
-				"$path": "out/server"
-			}
-		},
-		"ReplicatedStorage": {
-			"$className": "ReplicatedStorage",
-			"rbxts_include": {
-				"$path": "include",
-				"node_modules": {
-					"$className": "Folder",
-					"@rbxts": {
-						"$path": "node_modules/@rbxts"
-					},
-					"@rbxts-js": {
-						"$path": "node_modules/@rbxts-js"
-					},
-					"@flamework": {
-						"$path": "node_modules/@flamework"
-					}
-				}
-			},
-			"TS": {
-				"$path": "out/shared"
-			}
-		},
-		"StarterPlayer": {
-			"$className": "StarterPlayer",
-			"$properties": {
-				"CameraMinZoomDistance": 10,
-				"DevTouchMovementMode": {
-					"Enum": 6
-				},
-				"EnableMouseLockOption": false,
-				"AutoJumpEnabled": false
-			},
-			"StarterPlayerScripts": {
-				"$className": "StarterPlayerScripts",
-				"TS": {
-					"$path": "out/client"
-				}
-			}
-		},
-		"StarterGui": {
-			"$className": "StarterGui",
-			"$properties": {
-				"ScreenOrientation": {
-					"Enum": 4
-				},
-				"VirtualCursorMode": {
-					"Enum": 2
-				}
-			}
-		},
-		"Lighting": {
-			"$className": "Lighting",
-			"$path": "assets/lighting",
-			"$properties": {
-				"Technology": {
-					"Enum": 2
-				},
-				"GlobalShadows": false
-			}
-		},
-		"Workspace": {
-			"$className": "Workspace",
-			"$properties": {
-				"SignalBehavior2": {
-					"Enum": 2
-				}
-			}
-		},
-		"TextChatService": {
-			"$className": "TextChatService",
-			"$properties": {
-				"ChatVersion": {
-					"Enum": 1
-				}
-			}
-		},
-		"TestService": {
-			"$className": "TestService",
-			"$properties": {
-				"ExecuteWithStudioRun": true
-			},
-			"TS": {
-				"$path": "scripts/run-tests.server.lua"
-			}
-		}
-	}
+  "name": "Roblox-TS-Template",
+  "globIgnorePaths": ["**/package.json", "**/tsconfig.json"],
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "TS": {
+        "$path": "out/server"
+      }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "rbxts_include": {
+        "$path": "include",
+        "node_modules": {
+          "$className": "Folder",
+          "@rbxts": {
+            "$path": "node_modules/@rbxts"
+          },
+          "@flamework": {
+            "$path": "node_modules/@flamework"
+          }
+        }
+      },
+      "TS": {
+        "$path": "out/shared"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "TS": {
+          "$path": "out/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "FilteringEnabled": true
+      }
+    },
+    "HttpService": {
+      "$className": "HttpService",
+      "$properties": {
+        "HttpEnabled": true
+      }
+    },
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    }
+  }
 }
