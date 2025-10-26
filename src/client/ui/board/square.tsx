@@ -6,9 +6,9 @@ import { Frame, Text } from "@rbxts/better-react-components";
 const DISPLAY_SQUARE_LABELS = true;
 
 export function Square(props: PieceProps) {
-  const location = `${props.letter}${props.number}` as Square;
+  const location = `${props.letter}${props.number}`;
   const colored = IsSquareBlack(props.i, props.j);
-  const boardJ = props.playingAs === "white" ? 7 - props.j : props.j;
+  const boardJ = props.playingAs === 0 ? 7 - props.j : props.j;
 
   return (
     <Frame
@@ -23,6 +23,7 @@ export function Square(props: PieceProps) {
           textColor={!colored ? props.iconPack.filled : props.iconPack.unfilled}
           textSize={24}
           text={location}
+          font={"SourceSansBold"}
           backgroundTransparency={1}
           size={new UDim2(1, 0, 1, 0)}
           verticalTextAlign="Bottom"

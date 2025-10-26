@@ -4,7 +4,8 @@
 	"identifiers": {
 		"chess:out/client/controllers/GuiController@GuiController": "client/controllers/GuiController@GuiController",
 		"chess:out/shared/network@GlobalEvents": "shared/network@GlobalEvents",
-		"chess:out/shared/network@GlobalFunctions": "shared/network@GlobalFunctions"
+		"chess:out/shared/network@GlobalFunctions": "shared/network@GlobalFunctions",
+		"chess:out/shared/engine/bitboard@BitBoard": "shared/engine/bitboard@BitBoard"
 	},
 	"metadata": {}
 }

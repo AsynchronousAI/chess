@@ -1,29 +1,26 @@
-import {
-  Board,
-  Color,
-  File,
-  FILES,
-  Piece,
-  Rank,
-  RANKS,
-  Square,
-} from "shared/board";
+import { Color, FILES, Piece, RANKS, Square } from "shared/board";
+import { BitBoard } from "./bitboard";
+
+/* Utility functions */
+function isOnBoard(file: number, rank: number): boolean {
+  return file >= 0 && file < FILES.size() && rank >= 0 && rank < RANKS.size();
+}
 
 /* Direction Rules */
 const SLIDE_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
-  rook: [
+  [Piece.rook]: [
     [1, 0],
     [-1, 0],
     [0, 1],
     [0, -1],
   ],
-  bishop: [
+  [Piece.bishop]: [
     [1, 1],
     [1, -1],
     [-1, 1],
     [-1, -1],
   ],
-  queen: [
+  [Piece.queen]: [
     [1, 0],
     [-1, 0],
     [0, 1],
@@ -35,17 +32,7 @@ const SLIDE_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
   ],
 };
 const FIXED_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
-  king: [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-    [1, 1],
-    [1, -1],
-    [-1, 1],
-    [-1, -1],
-  ],
-  knight: [
+  [Piece.knight]: [
     [1, 2],
     [2, 1],
     [-1, 2],
@@ -59,32 +46,24 @@ const FIXED_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
 const CUSTOM_DIRECTIONS: Partial<
   Record<
     Piece,
-    (
-      piece: { color: Color; type: Piece },
-      fy: number,
-      fx: number,
-      board: Board,
-    ) => Square[]
+    (piece: [Piece, Color], fy: number, fx: number, board: BitBoard) => Square[]
   >
 > = {
-  pawn: (piece, fy, fx, board) => {
+  [Piece.pawn]: (piece, fy, fx, board) => {
     const moves: Square[] = [];
 
-    const dir = piece.color === "white" ? 1 : -1;
-    const startRank = piece.color === "white" ? 1 : 6;
+    const dir = piece[1] === 0 ? 1 : -1;
+    const startRank = piece[1] === 0 ? 1 : 6;
 
     // Forward move
     const oneStep = fy + dir;
-    if (
-      isOnBoard(FILES[fx], RANKS[oneStep]) &&
-      !board[coordsToSquare(fx, oneStep)]
-    ) {
-      moves.push(coordsToSquare(fx, oneStep));
+    if (isOnBoard(fx, oneStep) && !board.hasPiece(fx, oneStep)) {
+      moves.push([fx, oneStep]);
 
       // Two steps from start
       const twoStep = fy + dir * 2;
-      if (fy === startRank && !board[coordsToSquare(fx, twoStep)]) {
-        moves.push(coordsToSquare(fx, twoStep));
+      if (fy === startRank && !board.hasPiece(fx, twoStep)) {
+        moves.push([fx, twoStep]);
       }
     }
 
@@ -92,10 +71,28 @@ const CUSTOM_DIRECTIONS: Partial<
     for (const dx of [-1, 1]) {
       const nx = fx + dx;
       if (nx < 0 || nx > 7) continue;
-      const captureSquare = coordsToSquare(nx, fy + dir);
-      const target = board[captureSquare];
-      if (target && target.color !== piece.color) {
+      const captureSquare: Square = [nx, fy + dir];
+      const target = board.getPiece(nx, fy + dir);
+      if (target[0] !== 0 && target[1] !== piece[1]) {
         moves.push(captureSquare);
+      }
+    }
+
+    return moves;
+  },
+  [Piece.king]: (piece, fy, fx, board) => {
+    const moves: Square[] = [];
+
+    /* base movement */
+    for (const dx of [-1, 0, 1]) {
+      for (const dy of [-1, 0, 1]) {
+        const nx = fx + dx;
+        const ny = fy + dy;
+        if (!isOnBoard(nx, ny)) continue;
+        const target = board.getPiece(nx, ny);
+        if (target[0] === 0 || target[1] !== piece[1]) {
+          moves.push([nx, ny]);
+        }
       }
     }
 
@@ -103,55 +100,41 @@ const CUSTOM_DIRECTIONS: Partial<
   },
 };
 
-/* Utility functions */
-function isOnBoard(file: File, rank: Rank): boolean {
-  return FILES.includes(file) && RANKS.includes(rank);
-}
-function squareToCoords(square: Square): [number, number] {
-  const sChars = square.split("");
-  const file = sChars[0];
-  const rank = sChars[1];
-  return [FILES.indexOf(file as File), RANKS.indexOf(rank as Rank)];
-}
-function coordsToSquare(file: number, rank: number) {
-  return `${FILES[file]}${RANKS[rank]}` as Square;
-}
-
-export default function GetLegalMoves(board: Board, from: Square): Square[] {
-  const piece = board[from];
+/* Export */
+export default function GetLegalMoves(board: BitBoard, from: Square): Square[] {
+  const piece = board.getPiece(from[0], from[1]);
   if (!piece) return [];
 
-  const [fx, fy] = squareToCoords(from);
+  const [fx, fy] = from;
   let moves: Square[] = [];
 
   const addMove = (x: number, y: number) => {
     if (x < 0 || y < 0 || x >= 8 || y >= 8) return;
-    const to = coordsToSquare(x, y);
-    const target = board[to];
-    if (!target || target.color !== piece.color) {
-      moves.push(to);
+    const target = board.getPiece(x, y);
+
+    if (target[0] === 0 || target[1] !== piece[1]) {
+      moves.push([x, y]);
     }
   };
 
-  if (CUSTOM_DIRECTIONS[piece.type]) {
-    const customMoves = CUSTOM_DIRECTIONS[piece.type]!(piece, fy, fx, board);
+  if (CUSTOM_DIRECTIONS[piece[0]]) {
+    const customMoves = CUSTOM_DIRECTIONS[piece[0]]!(piece, fy, fx, board);
     moves = [...moves, ...customMoves];
-  } else if (FIXED_DIRECTIONS[piece.type] !== undefined) {
-    for (const [dx, dy] of FIXED_DIRECTIONS[piece.type]!) {
+  } else if (FIXED_DIRECTIONS[piece[0]] !== undefined) {
+    for (const [dx, dy] of FIXED_DIRECTIONS[piece[0]]!) {
       addMove(fx + dx, fy + dy);
     }
-  } else if (SLIDE_DIRECTIONS[piece.type] !== undefined) {
-    for (const [dx, dy] of SLIDE_DIRECTIONS[piece.type]!) {
+  } else if (SLIDE_DIRECTIONS[piece[0]] !== undefined) {
+    for (const [dx, dy] of SLIDE_DIRECTIONS[piece[0]]!) {
       let x = fx + dx;
       let y = fy + dy;
       while (x >= 0 && y >= 0 && x < 8 && y < 8) {
-        const to = coordsToSquare(x, y);
-        const target = board[to];
-        if (!target) {
-          moves.push(to);
+        const target = board.getPiece(x, y);
+        if (target[0] === 0) {
+          moves.push([x, y]);
         } else {
-          if (target.color !== piece.color) {
-            moves.push(to);
+          if (target[1] !== piece[1]) {
+            moves.push([x, y]);
           }
           break;
         }

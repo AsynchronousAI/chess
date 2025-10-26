@@ -4,7 +4,7 @@ import { Piece } from "./piece";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Vector, Flat, Wood } from "./images";
-import { Button, Frame } from "@rbxts/better-react-components";
+import { Frame } from "@rbxts/better-react-components";
 import { Square } from "./square";
 
 export default function Board() {

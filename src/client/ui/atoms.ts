@@ -1,10 +1,10 @@
 import { atom } from "@rbxts/charm";
-import { Board, Color, DefaultBoard, Square } from "shared/board";
+import { Color, DefaultFEN, Square } from "shared/board";
+import { BitBoard } from "shared/engine/bitboard";
 
 const Atoms = {
-  /* Board */
-  Board: atom<Board>(DefaultBoard),
-  PlayingAs: atom<Color>("black"),
+  Board: atom<BitBoard>(new BitBoard(DefaultFEN)),
+  PlayingAs: atom<Color>(0),
   HoldingPiece: atom<Square | undefined>(undefined),
   PossibleMoves: atom<Square[]>([]),
 };
