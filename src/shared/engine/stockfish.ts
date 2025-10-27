@@ -18,6 +18,6 @@ export function GetBestMove(board: BitBoard): [Square, Square] | undefined {
     text: string;
     eval: number;
   };
-  print(bestMove.text);
+  print(bestMove);
   return bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined;
 }

@@ -30,15 +30,13 @@ export namespace BitBoard {
 
   /* internal */
   function getSquareIndex(file: number, rank: number): number {
-    return file * 8 + rank;
-  }
-  function getPieceBinary(pieceType: Piece, color: Color): number {
-    return color | (pieceType << 3);
+    return rank * 8 + file;
   }
   function binaryToPiece(piece: number): [Piece, Color] {
-    const color = piece & 7;
-    const pieceType = piece >> 3;
-    return [pieceType, color];
+    return [piece >> 1, piece & 1];
+  }
+  function getPieceBinary(pieceType: Piece, color: Color): number {
+    return (pieceType << 1) | color;
   }
 
   /* base methods */
@@ -63,8 +61,8 @@ export namespace BitBoard {
   export function getAllPieces(board: BitBoard): [Square, [Piece, Color]][] {
     const pieces: [Square, [Piece, Color]][] = [];
     for (let rank = 0; rank < 8; rank++) {
-      for (let file = 0; file < 8; file++) {
-        const index = getSquareIndex(file, rank);
+      let index = rank * 8;
+      for (let file = 0; file < 8; file++, index++) {
         const piece = buffer.readu8(board, index);
         if (piece !== 0) {
           const [pieceType, color] = binaryToPiece(piece);
