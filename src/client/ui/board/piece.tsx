@@ -68,26 +68,16 @@ export function Piece(props: PieceProps) {
       Atoms.PossibleMoves(GetLegalMoves(board, location));
     } else if (canMoveHere && holdingPiece) {
       // move
-      Atoms.Board((currentBoard) => {
-        BitBoard.movePiece(currentBoard, holdingPiece, location);
-        BitBoard.flipTurn(currentBoard);
-        Atoms.PGN((pgn) =>
-          pgn.move(currentBoard, location, AnalyzeMates(currentBoard)),
-        );
-        return BitBoard.branch(currentBoard);
-      });
+      BitBoard.movePiece(board, holdingPiece, location);
+      BitBoard.flipTurn(board);
+      Atoms.Board(BitBoard.branch(board));
       Atoms.PossibleMoves([]);
 
-      Atoms.Board((currentBoard) => {
-        const best = GetBestMove(currentBoard);
-        if (!best) return currentBoard;
-        BitBoard.movePiece(currentBoard, best[0], best[1]);
-        BitBoard.flipTurn(currentBoard);
-        Atoms.PGN((pgn) =>
-          pgn.move(currentBoard, best[1], AnalyzeMates(currentBoard)),
-        );
-        return BitBoard.branch(currentBoard);
-      });
+      const best = GetBestMove(board);
+      if (!best) return;
+      BitBoard.movePiece(board, best[0], best[1]);
+      BitBoard.flipTurn(board);
+      Atoms.Board(BitBoard.branch(board));
     }
   };
   const onLeave = () => {
