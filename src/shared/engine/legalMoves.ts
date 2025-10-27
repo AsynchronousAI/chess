@@ -113,7 +113,8 @@ export default function GetLegalMoves(
   let moves: Square[] = [];
 
   let kingPosition =
-    checkForColor && board.findPiece(Piece.king, checkForColor)[0];
+    checkForColor !== undefined &&
+    board.findPiece(Piece.king, checkForColor)[0];
 
   const pushMove = (x: number, y: number) => {
     // check for checks
