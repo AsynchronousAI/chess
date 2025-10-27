@@ -6,12 +6,14 @@ import Atoms from "../atoms";
 import { Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
 import { Square } from "./square";
+import { AnalyzeMates } from "shared/engine/legalMoves";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
   const playingAs = useAtom(Atoms.PlayingAs);
   const iconPack = Wood;
 
+  print(AnalyzeMates(board, playingAs));
   return (
     <Frame
       size={new UDim2(1, 0, 1, 0)}

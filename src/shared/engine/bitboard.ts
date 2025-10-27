@@ -85,6 +85,19 @@ export class BitBoard {
     buffer.copy(branch.board, 0, this.board);
     return branch;
   }
+  public findPiece(piece: Piece, color: Color): Square[] {
+    const squares: Square[] = [];
+    for (const [
+      location,
+      [currentPiece, currentColor],
+    ] of this.getAllPieces()) {
+      if (piece === currentPiece && color === currentColor) {
+        squares.push(location);
+      }
+    }
+
+    return squares;
+  }
 
   /* FEN */
   public fromFEN(fen: string) {

@@ -112,14 +112,8 @@ export default function GetLegalMoves(
   const [fx, fy] = from;
   let moves: Square[] = [];
 
-  let kingPosition = undefined;
-  if (checkForColor) {
-    for (const [location, [piece, color]] of board.getAllPieces()) {
-      if (piece === Piece.king && color === checkForColor) {
-        kingPosition = location;
-      }
-    }
-  }
+  let kingPosition =
+    checkForColor && board.findPiece(Piece.king, checkForColor)[0];
 
   const pushMove = (x: number, y: number) => {
     // check for checks
@@ -127,17 +121,16 @@ export default function GetLegalMoves(
       const newBoard = board.branch();
       newBoard.movePiece(from, [x, y]);
 
+      // king moved?
       let localKingPos = kingPosition;
       if (from[0] === localKingPos[0] && from[1] === localKingPos[1]) {
-        /* moving the king, track this position */
         localKingPos = [x, y];
       }
 
-      for (const [followingMoveStart, followingMoveEnd] of GetAllLegalMoves(
+      for (const [_, followingMoveEnd] of GetAllLegalMoves(
         newBoard,
         1 - piece[1],
       )) {
-        /* check if they can take the king */
         if (
           followingMoveEnd[0] === localKingPos[0] &&
           followingMoveEnd[1] === localKingPos[1]
@@ -191,14 +184,44 @@ export default function GetLegalMoves(
 export function GetAllLegalMoves(
   board: BitBoard,
   turn: Color,
+  checks: boolean = false,
 ): [Square, Square][] {
   const moves: [Square, Square][] = [];
   for (const [location, [piece, color]] of board.getAllPieces()) {
     if (color !== turn) continue;
-    for (const nextLocation of GetLegalMoves(board, location)) {
+    for (const nextLocation of GetLegalMoves(
+      board,
+      location,
+      checks ? turn : undefined,
+    )) {
       moves.push([location, nextLocation]);
     }
   }
 
   return moves;
+}
+export function AnalyzeMates(
+  board: BitBoard,
+  turn: Color,
+): "checkmate" | "stalemate" | "none" {
+  const legalMoves = GetAllLegalMoves(board, turn, true);
+  if (legalMoves.size() === 0) {
+    const kingPosition = board.findPiece(Piece.king, turn)[0];
+
+    const otherMoves = GetAllLegalMoves(board, 1 - turn);
+    let inCheck = false;
+    for (const [_, to] of otherMoves) {
+      if (to[0] === kingPosition[0] && to[1] === kingPosition[1]) {
+        inCheck = true;
+        break;
+      }
+    }
+
+    if (inCheck) {
+      return "checkmate";
+    } else {
+      return "stalemate";
+    }
+  }
+  return "none";
 }
