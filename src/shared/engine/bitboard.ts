@@ -17,50 +17,57 @@ const reverseFenLookup: Partial<Record<Piece, string>> = {
   [Piece.king]: "K",
 };
 
-export class BitBoard {
-  public board = buffer.create(8 * 64 + 1);
-  // Layout
-  // ([piece id][color])*64 [currentTurn]
+export type BitBoard = buffer & { readonly brand: unique symbol };
+export namespace BitBoard {
+  export const create = (fen?: string) => {
+    const board = buffer.create(8 * 64 + 1) as BitBoard;
+    // Layout
+    // ([piece id][color])*64 [currentTurn]
 
-  constructor(fen?: string) {
-    if (fen) this.fromFEN(fen);
-  }
+    if (fen) fromFEN(board, fen);
+    return board;
+  };
 
   /* internal */
-  private getSquareIndex(file: number, rank: number): number {
+  function getSquareIndex(file: number, rank: number): number {
     return file * 8 + rank;
   }
-  private getPieceBinary(pieceType: Piece, color: Color): number {
+  function getPieceBinary(pieceType: Piece, color: Color): number {
     return color | (pieceType << 3);
   }
-  private binaryToPiece(piece: number): [Piece, Color] {
+  function binaryToPiece(piece: number): [Piece, Color] {
     const color = piece & 7;
     const pieceType = piece >> 3;
     return [pieceType, color];
   }
 
   /* base methods */
-  public setPiece(file: number, rank: number, pieceType: Piece, color: Color) {
-    const index = this.getSquareIndex(file, rank);
-    const piece = this.getPieceBinary(pieceType, color);
-    buffer.writeu8(this.board, index, piece);
+  export function setPiece(
+    board: BitBoard,
+    location: Square,
+    pieceType: Piece,
+    color: Color,
+  ) {
+    const index = getSquareIndex(location[0], location[1]);
+    const piece = getPieceBinary(pieceType, color);
+    buffer.writeu8(board, index, piece);
   }
-  public getPiece(file: number, rank: number): [Piece, Color] {
-    const index = this.getSquareIndex(file, rank);
-    return this.binaryToPiece(buffer.readu8(this.board, index));
+  export function getPiece(board: BitBoard, location: Square): [Piece, Color] {
+    const index = getSquareIndex(location[0], location[1]);
+    return binaryToPiece(buffer.readu8(board, index));
   }
-  public hasPiece(file: number, rank: number): boolean {
-    const index = this.getSquareIndex(file, rank);
-    return buffer.readu8(this.board, index) !== 0;
+  export function hasPiece(board: BitBoard, location: Square): boolean {
+    const index = getSquareIndex(location[0], location[1]);
+    return buffer.readu8(board, index) !== 0;
   }
-  public getAllPieces(): [Square, [Piece, Color]][] {
+  export function getAllPieces(board: BitBoard): [Square, [Piece, Color]][] {
     const pieces: [Square, [Piece, Color]][] = [];
     for (let rank = 0; rank < 8; rank++) {
       for (let file = 0; file < 8; file++) {
-        const index = this.getSquareIndex(file, rank);
-        const piece = buffer.readu8(this.board, index);
+        const index = getSquareIndex(file, rank);
+        const piece = buffer.readu8(board, index);
         if (piece !== 0) {
-          const [pieceType, color] = this.binaryToPiece(piece);
+          const [pieceType, color] = binaryToPiece(piece);
           pieces.push([
             [file, rank],
             [pieceType, color],
@@ -70,29 +77,31 @@ export class BitBoard {
     }
     return pieces;
   }
-  public movePiece(from: Square, to: Square) {
+  export function movePiece(board: BitBoard, from: Square, to: Square) {
     const [fromFile, fromRank] = from;
     const [toFile, toRank] = to;
 
-    const indexFrom = this.getSquareIndex(fromFile, fromRank);
-    const indexTo = this.getSquareIndex(toFile, toRank);
+    const indexFrom = getSquareIndex(fromFile, fromRank);
+    const indexTo = getSquareIndex(toFile, toRank);
 
-    const piece = buffer.readu8(this.board, indexFrom);
-    buffer.writeu8(this.board, indexFrom, 0);
-    buffer.writeu8(this.board, indexTo, piece);
+    const piece = buffer.readu8(board, indexFrom);
+    buffer.writeu8(board, indexFrom, 0);
+    buffer.writeu8(board, indexTo, piece);
   }
-  public branch() {
-    const branch = new BitBoard();
-    branch.board = buffer.create(buffer.len(this.board));
-    buffer.copy(branch.board, 0, this.board);
+  export function branch(board: BitBoard) {
+    const branch = create();
+    buffer.copy(branch, 0, board);
     return branch;
   }
-  public findPiece(piece: Piece, color: Color): Square[] {
+  export function findPiece(
+    board: BitBoard,
+    piece: Piece,
+    color: Color,
+  ): Square[] {
     const squares: Square[] = [];
-    for (const [
-      location,
-      [currentPiece, currentColor],
-    ] of this.getAllPieces()) {
+    for (const [location, [currentPiece, currentColor]] of getAllPieces(
+      board,
+    )) {
       if (piece === currentPiece && color === currentColor) {
         squares.push(location);
       }
@@ -100,16 +109,16 @@ export class BitBoard {
 
     return squares;
   }
-  public getTurn(): Color {
-    return buffer.readu8(this.board, buffer.len(this.board) - 1);
+  export function getTurn(board: BitBoard): Color {
+    return buffer.readu8(board, buffer.len(board) - 1);
   }
-  public flipTurn() {
-    const currentTurn = this.getTurn();
-    buffer.writeu8(this.board, buffer.len(this.board) - 1, 1 - currentTurn);
+  export function flipTurn(board: BitBoard) {
+    const currentTurn = getTurn(board);
+    buffer.writeu8(board, buffer.len(board) - 1, 1 - currentTurn);
   }
 
   /* FEN */
-  public fromFEN(fen: string) {
+  export function fromFEN(board: BitBoard, fen: string) {
     /* todo: read turn, castle, en passant */
     let file = 0;
     let rank = 7;
@@ -131,18 +140,18 @@ export class BitBoard {
 
         const pieceType = fenLookup[upper];
         const color = upper === char ? 0 : 1;
-        this.setPiece(file, rank, pieceType, color);
+        setPiece(board, [file, rank], pieceType, color);
         file++;
       }
     }
   }
-  public toFEN(): string {
+  export function toFEN(board: BitBoard): string {
     let fen = "";
     let empty = 0;
 
     for (let rank = 7; rank >= 0; rank--) {
       for (let file = 0; file < 8; file++) {
-        const [pieceType, color] = this.getPiece(file, rank);
+        const [pieceType, color] = getPiece(board, [file, rank]);
         if ((pieceType as number) === 0) {
           empty++;
         } else {
@@ -165,19 +174,6 @@ export class BitBoard {
       if (rank > 0) fen += "/";
     }
 
-    return `${fen} ${this.getTurn() === 0 ? "w" : "b"} KQkq - 0 2`;
+    return `${fen} ${getTurn(board) === 0 ? "w" : "b"} KQkq - 0 2`;
   }
-}
-
-export function parseSquare(square: string): Square {
-  const [file, rank] = square.split("");
-  return [FILES.indexOf(file as (typeof FILES)[number]), tonumber(rank)! - 1];
-}
-export function encodeSquare(square: Square): string {
-  const [file, rank] = square;
-  return FILES[file] + tostring(rank + 1);
-}
-export function parseLan(lan: string): [Square, Square] {
-  const [from, to] = [lan.sub(0, 2), lan.sub(3, 4)];
-  return [parseSquare(from), parseSquare(to)];
 }

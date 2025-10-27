@@ -10,6 +10,7 @@ import GetLegalMoves from "shared/engine/legalMoves";
 import { Frame } from "@rbxts/better-react-components";
 import { FLIPPED } from "./square";
 import { GetBestMove } from "shared/engine/stockfish";
+import { BitBoard } from "shared/engine/bitboard";
 
 export interface PieceProps {
   letter: string;
@@ -30,7 +31,7 @@ export function Piece(props: PieceProps) {
 
   /* Block data */
   const location = [props.i, props.j] as Square;
-  const pieceAtBoard = board.getPiece(props.i, props.j);
+  const pieceAtBoard = BitBoard.getPiece(board, location);
   const image = pieceAtBoard
     ? props.iconPack[pieceAtBoard[1]][pieceAtBoard[0]]
     : undefined;
@@ -68,18 +69,18 @@ export function Piece(props: PieceProps) {
     } else if (canMoveHere && holdingPiece) {
       // move
       Atoms.Board((currentBoard) => {
-        currentBoard.movePiece(holdingPiece, location);
-        currentBoard.flipTurn();
-        return currentBoard.branch();
+        BitBoard.movePiece(currentBoard, holdingPiece, location);
+        BitBoard.flipTurn(currentBoard);
+        return BitBoard.branch(currentBoard);
       });
       Atoms.PossibleMoves([]);
 
       Atoms.Board((currentBoard) => {
         const best = GetBestMove(currentBoard);
         if (!best) return currentBoard;
-        currentBoard.movePiece(best[0], best[1]);
-        currentBoard.flipTurn();
-        return currentBoard.branch();
+        BitBoard.movePiece(currentBoard, best[0], best[1]);
+        BitBoard.flipTurn(currentBoard);
+        return BitBoard.branch(currentBoard);
       });
     }
   };

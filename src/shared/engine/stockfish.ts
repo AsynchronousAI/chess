@@ -1,9 +1,10 @@
 import { Color, Square } from "shared/board";
-import { BitBoard, parseLan } from "./bitboard";
+import { BitBoard } from "./bitboard";
 import { HttpService } from "@rbxts/services";
+import { Notation } from "./notation";
 
 export function GetBestMove(board: BitBoard): [Square, Square] | undefined {
-  const fen = board.toFEN();
+  const fen = BitBoard.toFEN(board);
   print(fen);
   const bestMove = HttpService.JSONDecode(
     HttpService.PostAsync(
@@ -18,5 +19,5 @@ export function GetBestMove(board: BitBoard): [Square, Square] | undefined {
     eval: number;
   };
   print(bestMove.text);
-  return bestMove.lan ? parseLan(bestMove.lan) : undefined;
+  return bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined;
 }
