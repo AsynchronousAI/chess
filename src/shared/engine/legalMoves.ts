@@ -57,24 +57,27 @@ const CUSTOM_DIRECTIONS: Partial<
 
     // Forward move
     const oneStep = fy + dir;
-    if (isOnBoard(fx, oneStep) && !BitBoard.hasPiece(board, [fx, oneStep])) {
-      moves.push([fx, oneStep]);
+    const onBoard = isOnBoard(fx, oneStep);
+    if (onBoard) {
+      if (!BitBoard.hasPiece(board, [fx, oneStep])) {
+        moves.push([fx, oneStep]);
 
-      // Two steps from start
-      const twoStep = fy + dir * 2;
-      if (fy === startRank && !BitBoard.hasPiece(board, [fx, twoStep])) {
-        moves.push([fx, twoStep]);
+        // Two steps from start
+        const twoStep = fy + dir * 2;
+        if (fy === startRank && !BitBoard.hasPiece(board, [fx, twoStep])) {
+          moves.push([fx, twoStep]);
+        }
       }
-    }
 
-    // Captures
-    for (const dx of [-1, 1]) {
-      const nx = fx + dx;
-      if (nx < 0 || nx > 7) continue;
-      const captureSquare: Square = [nx, fy + dir];
-      const target = BitBoard.getPiece(board, captureSquare);
-      if (target[0] !== 0 && target[1] !== piece[1]) {
-        moves.push(captureSquare);
+      // Captures
+      for (const dx of [-1, 1]) {
+        const nx = fx + dx;
+        if (nx < 0 || nx > 7) continue;
+        const captureSquare: Square = [nx, fy + dir];
+        const target = BitBoard.getPiece(board, captureSquare);
+        if (target[0] !== 0 && target[1] !== piece[1]) {
+          moves.push(captureSquare);
+        }
       }
     }
 
@@ -130,6 +133,7 @@ export default function GetLegalMoves(
       for (const [_, followingMoveEnd] of GetAllLegalMoves(
         newBoard,
         1 - piece[1],
+        false,
       )) {
         if (
           followingMoveEnd[0] === localKingPos[0] &&
@@ -184,7 +188,7 @@ export default function GetLegalMoves(
 export function GetAllLegalMoves(
   board: BitBoard,
   turn: Color,
-  checks: boolean = false,
+  checks: boolean = true,
 ): [Square, Square][] {
   const moves: [Square, Square][] = [];
   for (const [location, [piece, color]] of BitBoard.getAllPieces(board)) {
@@ -204,7 +208,7 @@ export function AnalyzeMates(
   if (legalMoves.size() === 0) {
     const kingPosition = BitBoard.findPiece(board, Piece.king, turn)[0];
 
-    const otherMoves = GetAllLegalMoves(board, 1 - turn);
+    const otherMoves = GetAllLegalMoves(board, 1 - turn, false);
     let inCheck = false;
     for (const [_, to] of otherMoves) {
       if (to[0] === kingPosition[0] && to[1] === kingPosition[1]) {

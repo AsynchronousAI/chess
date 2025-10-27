@@ -9,7 +9,7 @@ import { useMotion } from "@rbxts/pretty-react-hooks";
 import GetLegalMoves from "shared/engine/legalMoves";
 import { Frame } from "@rbxts/better-react-components";
 import { FLIPPED } from "./square";
-import { GetBestMove } from "shared/engine/stockfish";
+import { GetBestMove } from "shared/engine/bots";
 import { BitBoard } from "shared/engine/bitboard";
 
 export interface PieceProps {
