@@ -104,7 +104,7 @@ const CUSTOM_DIRECTIONS: Partial<
 export default function GetLegalMoves(
   board: BitBoard,
   from: Square,
-  checkForColor?: Color,
+  checks: boolean = false,
 ): Square[] {
   const piece = board.getPiece(from[0], from[1]);
   if (!piece) return [];
@@ -112,9 +112,7 @@ export default function GetLegalMoves(
   const [fx, fy] = from;
   let moves: Square[] = [];
 
-  let kingPosition =
-    checkForColor !== undefined &&
-    board.findPiece(Piece.king, checkForColor)[0];
+  let kingPosition = checks && board.findPiece(Piece.king, board.getTurn())[0];
 
   const pushMove = (x: number, y: number) => {
     // check for checks
@@ -190,11 +188,7 @@ export function GetAllLegalMoves(
   const moves: [Square, Square][] = [];
   for (const [location, [piece, color]] of board.getAllPieces()) {
     if (color !== turn) continue;
-    for (const nextLocation of GetLegalMoves(
-      board,
-      location,
-      checks ? turn : undefined,
-    )) {
+    for (const nextLocation of GetLegalMoves(board, location, checks)) {
       moves.push([location, nextLocation]);
     }
   }
@@ -203,8 +197,8 @@ export function GetAllLegalMoves(
 }
 export function AnalyzeMates(
   board: BitBoard,
-  turn: Color,
 ): "checkmate" | "stalemate" | "none" {
+  const turn = board.getTurn();
   const legalMoves = GetAllLegalMoves(board, turn, true);
   if (legalMoves.size() === 0) {
     const kingPosition = board.findPiece(Piece.king, turn)[0];

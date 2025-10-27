@@ -2,13 +2,19 @@ import { IsSquareBlack, Square } from "shared/board";
 import React from "@rbxts/react";
 import { PieceProps } from "./piece";
 import { Frame, Text } from "@rbxts/better-react-components";
+import { useAtom } from "@rbxts/react-charm";
+import Atoms from "../atoms";
 
 const DISPLAY_SQUARE_LABELS = true;
+export const FLIPPED = false;
 
 export function Square(props: PieceProps) {
+  const board = useAtom(Atoms.Board);
+
   const location = `${props.letter}${props.number}`;
   const colored = IsSquareBlack(props.i, props.j);
-  const boardJ = props.playingAs === 0 ? 7 - props.j : props.j;
+
+  const boardJ = FLIPPED ? props.j : 7 - props.j;
 
   return (
     <Frame

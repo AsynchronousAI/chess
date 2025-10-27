@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "@rbxts/react";
+import React, { useEffect, useMemo, useState } from "@rbxts/react";
 import { Color, FILES, RANKS } from "shared/board";
 import { Piece } from "./piece";
 import { useAtom } from "@rbxts/react-charm";
@@ -10,10 +10,9 @@ import { AnalyzeMates } from "shared/engine/legalMoves";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
-  const playingAs = useAtom(Atoms.PlayingAs);
   const iconPack = Wood;
 
-  print(AnalyzeMates(board, playingAs));
+  print(AnalyzeMates(board));
   return (
     <Frame
       size={new UDim2(1, 0, 1, 0)}
@@ -27,19 +26,17 @@ export default function Board() {
             <Square
               letter={letter}
               number={number}
+              playingAs={Color.white}
               i={i}
               j={j}
-              playingAs={playingAs}
-              board={board}
               iconPack={iconPack}
             />
             <Piece
               letter={letter}
               number={number}
+              playingAs={Color.white}
               i={i}
               j={j}
-              playingAs={playingAs}
-              board={board}
               iconPack={iconPack}
             />
           </>

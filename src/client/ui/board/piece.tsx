@@ -3,41 +3,44 @@ import React, { useEffect, useRef, useState } from "@rbxts/react";
 import { Image } from "../image";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
-import { Color, Square } from "shared/board";
+import { Color, Piece as PieceType, Square } from "shared/board";
 import { IconPack } from "./images";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import GetLegalMoves from "shared/engine/legalMoves";
 import { Frame } from "@rbxts/better-react-components";
-import { BitBoard } from "shared/engine/bitboard";
+import { FLIPPED } from "./square";
+import { GetBestMove } from "shared/engine/stockfish";
 
 export interface PieceProps {
   letter: string;
   number: string;
   i: number;
   j: number;
-  board: BitBoard;
   iconPack: IconPack;
   playingAs: Color;
 }
 export function Piece(props: PieceProps) {
+  const board = useAtom(Atoms.Board);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
-  const containerRef = useRef<Frame>();
   const possibleMoves = useAtom(Atoms.PossibleMoves);
+
+  const containerRef = useRef<Frame>();
 
   const [offsetY, offsetYMotion] = useMotion(0);
 
   /* Block data */
   const location = [props.i, props.j] as Square;
-  const pieceAtBoard = props.board.getPiece(props.i, props.j);
+  const pieceAtBoard = board.getPiece(props.i, props.j);
   const image = pieceAtBoard
     ? props.iconPack[pieceAtBoard[1]][pieceAtBoard[0]]
     : undefined;
-  const isMyPiece = props.playingAs === pieceAtBoard[1];
-  const boardJ = props.playingAs === 0 ? 7 - props.j : props.j;
+  const isMyPiece =
+    props.playingAs === (pieceAtBoard ? pieceAtBoard[1] : undefined);
 
   /* Other */
   const [canMoveHere, setCanMoveHere] = useState(false);
   useEffect(() => {
+    if (!location) return;
     for (const move of possibleMoves) {
       if (move[0] === location[0] && move[1] === location[1]) {
         setCanMoveHere(true);
@@ -52,6 +55,8 @@ export function Piece(props: PieceProps) {
     offsetYMotion.spring(isMyPiece ? -10 : 0);
   };
   const onDown = async () => {
+    if (!location || !pieceAtBoard) return;
+
     if (holdingPiece === location) {
       // drop
       Atoms.HoldingPiece(undefined);
@@ -59,17 +64,23 @@ export function Piece(props: PieceProps) {
     } else if (pieceAtBoard[0] !== 0 && isMyPiece) {
       // pick up
       Atoms.HoldingPiece(location);
-      Atoms.PossibleMoves(
-        GetLegalMoves(props.board, location, props.playingAs),
-      );
+      Atoms.PossibleMoves(GetLegalMoves(board, location));
     } else if (canMoveHere && holdingPiece) {
       // move
       Atoms.Board((currentBoard) => {
         currentBoard.movePiece(holdingPiece, location);
-        return currentBoard;
+        currentBoard.flipTurn();
+        return currentBoard.branch();
       });
       Atoms.PossibleMoves([]);
-      Atoms.PlayingAs(1 - props.playingAs);
+
+      Atoms.Board((currentBoard) => {
+        const best = GetBestMove(currentBoard);
+        if (!best) return currentBoard;
+        currentBoard.movePiece(best[0], best[1]);
+        currentBoard.flipTurn();
+        return currentBoard.branch();
+      });
     }
   };
   const onLeave = () => {
@@ -80,7 +91,14 @@ export function Piece(props: PieceProps) {
     <Frame
       ref={containerRef}
       key={`${props.letter}${props.number}`}
-      position={new UDim2(props.i * (1 / 8), 0, boardJ * (1 / 8), 0)}
+      position={
+        new UDim2(
+          props.i * (1 / 8),
+          0,
+          (FLIPPED ? props.j : 7 - props.j) * (1 / 8),
+          0,
+        )
+      }
       size={new UDim2(1 / 8, 0, 1 / 8, 0)}
       noBackground
       zIndex={holdingPiece === location ? 100 : 3}

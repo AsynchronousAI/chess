@@ -1,4 +1,4 @@
-import { Color, Piece, Square } from "shared/board";
+import { Color, FILES, Piece, Square } from "shared/board";
 
 const fenLookup: Record<string, Piece> = {
   P: Piece.pawn,
@@ -18,7 +18,9 @@ const reverseFenLookup: Partial<Record<Piece, string>> = {
 };
 
 export class BitBoard {
-  public board = buffer.create(8 * 64); // 8 bits per square
+  public board = buffer.create(8 * 64 + 1);
+  // Layout
+  // ([piece id][color])*64 [currentTurn]
 
   constructor(fen?: string) {
     if (fen) this.fromFEN(fen);
@@ -98,9 +100,17 @@ export class BitBoard {
 
     return squares;
   }
+  public getTurn(): Color {
+    return buffer.readu8(this.board, buffer.len(this.board) - 1);
+  }
+  public flipTurn() {
+    const currentTurn = this.getTurn();
+    buffer.writeu8(this.board, buffer.len(this.board) - 1, 1 - currentTurn);
+  }
 
   /* FEN */
   public fromFEN(fen: string) {
+    /* todo: read turn, castle, en passant */
     let file = 0;
     let rank = 7;
 
@@ -155,6 +165,19 @@ export class BitBoard {
       if (rank > 0) fen += "/";
     }
 
-    return fen + " w KQkq - 0 2";
+    return `${fen} ${this.getTurn() === 0 ? "w" : "b"} KQkq - 0 2`;
   }
+}
+
+export function parseSquare(square: string): Square {
+  const [file, rank] = square.split("");
+  return [FILES.indexOf(file as (typeof FILES)[number]), tonumber(rank)! - 1];
+}
+export function encodeSquare(square: Square): string {
+  const [file, rank] = square;
+  return FILES[file] + tostring(rank + 1);
+}
+export function parseLan(lan: string): [Square, Square] {
+  const [from, to] = [lan.sub(0, 2), lan.sub(3, 4)];
+  return [parseSquare(from), parseSquare(to)];
 }
