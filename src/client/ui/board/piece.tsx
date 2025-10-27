@@ -6,7 +6,7 @@ import Atoms from "../atoms";
 import { Color, Piece as PieceType, Square } from "shared/board";
 import { IconPack } from "./images";
 import { useMotion } from "@rbxts/pretty-react-hooks";
-import GetLegalMoves from "shared/engine/legalMoves";
+import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { Frame } from "@rbxts/better-react-components";
 import { FLIPPED } from "./square";
 import { GetBestMove } from "shared/engine/bots";
@@ -71,6 +71,9 @@ export function Piece(props: PieceProps) {
       Atoms.Board((currentBoard) => {
         BitBoard.movePiece(currentBoard, holdingPiece, location);
         BitBoard.flipTurn(currentBoard);
+        Atoms.PGN((pgn) =>
+          pgn.move(currentBoard, location, AnalyzeMates(currentBoard)),
+        );
         return BitBoard.branch(currentBoard);
       });
       Atoms.PossibleMoves([]);
@@ -80,6 +83,9 @@ export function Piece(props: PieceProps) {
         if (!best) return currentBoard;
         BitBoard.movePiece(currentBoard, best[0], best[1]);
         BitBoard.flipTurn(currentBoard);
+        Atoms.PGN((pgn) =>
+          pgn.move(currentBoard, best[1], AnalyzeMates(currentBoard)),
+        );
         return BitBoard.branch(currentBoard);
       });
     }

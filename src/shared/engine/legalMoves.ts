@@ -200,9 +200,7 @@ export function GetAllLegalMoves(
 
   return moves;
 }
-export function AnalyzeMates(
-  board: BitBoard,
-): "checkmate" | "stalemate" | "none" {
+export function AnalyzeMates(board: BitBoard): "checkmate" | "stalemate" | "" {
   const turn = BitBoard.getTurn(board);
   const legalMoves = GetAllLegalMoves(board, turn, true);
   if (legalMoves.size() === 0) {
@@ -223,5 +221,5 @@ export function AnalyzeMates(
       return "stalemate";
     }
   }
-  return "none";
+  return "";
 }

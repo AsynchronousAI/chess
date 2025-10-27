@@ -12,7 +12,6 @@ export default function Board() {
   const board = useAtom(Atoms.Board);
   const iconPack = Wood;
 
-  print(AnalyzeMates(board));
   return (
     <Frame
       size={new UDim2(1, 0, 1, 0)}
