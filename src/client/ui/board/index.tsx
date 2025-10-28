@@ -6,11 +6,13 @@ import Atoms from "../atoms";
 import { Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
 import { Square } from "./square";
-import { AnalyzeMates } from "shared/engine/legalMoves";
+import { EvaluateBoard } from "shared/engine/eval";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
   const iconPack = Wood;
+
+  print(EvaluateBoard(board));
 
   return (
     <Frame
