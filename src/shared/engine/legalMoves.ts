@@ -107,7 +107,7 @@ const CUSTOM_DIRECTIONS: Partial<
 export default function GetLegalMoves(
   board: BitBoard,
   from: Square,
-  checks: boolean = false,
+  checks: boolean = true,
 ): Square[] {
   const piece = BitBoard.getPiece(board, from);
   if (!piece) return [];
