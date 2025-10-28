@@ -26,6 +26,5 @@ export function EvaluateBoard(board: BitBoard) {
     }
   }
 
-  const net = white / (white + black);
-  return net;
+  return white - black;
 }
