@@ -73,7 +73,7 @@ export function Piece(props: PieceProps) {
       Atoms.Board(BitBoard.branch(board));
       Atoms.PossibleMoves([]);
 
-      const best = GetBestMove(board);
+      const best = await GetBestMove(board);
       if (!best) return;
       BitBoard.movePiece(board, best[0], best[1]);
       BitBoard.flipTurn(board);

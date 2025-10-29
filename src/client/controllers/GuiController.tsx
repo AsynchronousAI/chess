@@ -2,6 +2,7 @@ import { Controller, OnStart } from "@flamework/core";
 import React from "@rbxts/react";
 import { createPortal, createRoot } from "@rbxts/react-roblox";
 import { Players } from "@rbxts/services";
+import Board from "client/ui/board";
 
 @Controller({})
 export class GuiController implements OnStart {
@@ -9,6 +10,13 @@ export class GuiController implements OnStart {
 
   onStart() {
     const root = createRoot(new Instance("Folder"));
-    root.render(createPortal(<screengui></screengui>, this.playerGui));
+    root.render(
+      createPortal(
+        <screengui>
+          <Board />
+        </screengui>,
+        this.playerGui,
+      ),
+    );
   }
 }

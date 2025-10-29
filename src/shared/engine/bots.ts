@@ -4,6 +4,7 @@ import { HttpService } from "@rbxts/services";
 import { Notation } from "./notation";
 import { GetAllLegalMoves } from "./legalMoves";
 import { EvaluateBoard } from "./eval";
+import Thread from "@rbxts/luau-thread-fixed";
 
 export function GetBestMoveAPI(board: BitBoard): [Square, Square] | undefined {
   const fen = BitBoard.toFEN(board);
@@ -22,38 +23,11 @@ export function GetBestMoveAPI(board: BitBoard): [Square, Square] | undefined {
   return bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined;
 }
 
-let n = 0;
-function Minimax(
-  board: BitBoard,
-  depth: number,
-  isMaximizing: boolean,
-): number {
-  const moves = GetAllLegalMoves(board, BitBoard.getTurn(board));
-  n++;
+const DEPTH = 3;
 
-  if (depth === 0 || moves.size() === 0) {
-    return EvaluateBoard(board);
-  }
+const [root, parts] = $getModuleTree("shared/engine/minimax");
+const module = Thread.getModuleByTree(root, parts);
 
-  let bestScore = isMaximizing ? -math.huge : math.huge;
-
-  for (const move of moves) {
-    const branch = BitBoard.branch(board);
-    BitBoard.movePiece(branch, move[0], move[1]);
-
-    const score = Minimax(branch, depth - 1, !isMaximizing);
-
-    if (isMaximizing) {
-      bestScore = math.max(bestScore, score);
-    } else {
-      bestScore = math.min(bestScore, score);
-    }
-  }
-
-  return bestScore;
-}
-
-const DEPTH = 2;
 export function GetBestMove(
   board: BitBoard,
   depth = DEPTH,
@@ -62,30 +36,43 @@ export function GetBestMove(
   const moves = GetAllLegalMoves(board, turn);
   if (moves.size() === 0) return;
 
-  let bestScore = turn === 0 ? -math.huge : math.huge;
-  let bestMoves: [Square, Square][] = [];
+  const branches = [];
 
-  const start = tick();
-
-  for (const move of moves) {
-    const branch = BitBoard.branch(board);
-    BitBoard.movePiece(branch, move[0], move[1]);
-
-    const score = Minimax(branch, depth - 1, turn === 0);
-
-    if (
-      (turn === 0 && score > bestScore) ||
-      (turn === 1 && score < bestScore)
-    ) {
-      bestScore = score;
-      bestMoves = [move];
-    } else if (score === bestScore) {
-      bestMoves.push(move);
-    }
-    task.wait();
+  /* Add jobs */
+  const sortedMoves = new SharedTable();
+  for (const [index, move] of pairs(moves)) {
+    branches.push(
+      Thread.spawn(module, board, depth, turn, move, sortedMoves, index),
+    );
   }
 
-  print(n, "boards", bestScore, "best score", tick() - start, "taken");
-  n = 0;
-  return bestMoves[math.floor(math.random() * bestMoves.size())];
+  /* Run in batch */
+  const start = tick();
+  Thread.join(branches);
+  print(tick() - start);
+
+  /* Get best move */
+  const bestMoves = [];
+  let bestScore = turn === 0 ? -math.huge : math.huge;
+
+  let index = 0;
+  for (const score of sortedMoves as unknown as number[]) {
+    const move = moves[index];
+    index++;
+    if (turn === 0) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestMoves.clear();
+      }
+    } else {
+      if (score < bestScore) {
+        bestScore = score;
+        bestMoves.clear();
+      }
+    }
+
+    bestMoves.push(move);
+  }
+
+  return bestMoves[math.random(0, bestMoves.size() - 1)];
 }
