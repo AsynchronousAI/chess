@@ -3,28 +3,39 @@ import { BitBoard } from "./bitboard";
 import { GetAllLegalMoves } from "./legalMoves";
 import { EvaluateBoard } from "./eval";
 
-function Minimax(board: BitBoard, depth: number, isMaximizing: boolean) {
-  const moves = GetAllLegalMoves(board, BitBoard.getTurn(board));
-  let bestScore = isMaximizing ? -math.huge : math.huge;
+function Minimax(
+  board: BitBoard,
+  depth: number,
+  alpha: number,
+  beta: number,
+  isMaximizing: boolean,
+): number {
+  const moves = GetAllLegalMoves(board, BitBoard.getTurn(board), false);
 
   if (depth === 0 || moves.size() === 0) {
     return EvaluateBoard(board);
   }
 
+  let value = isMaximizing ? -math.huge : math.huge;
+
   for (const move of moves) {
     const branch = BitBoard.branch(board);
     BitBoard.movePiece(branch, move[0], move[1]);
 
-    const score = Minimax(branch, depth - 1, !isMaximizing);
+    const score = Minimax(branch, depth - 1, alpha, beta, !isMaximizing);
 
     if (isMaximizing) {
-      bestScore = math.max(bestScore, score);
+      value = math.max(value, score);
+      alpha = math.max(alpha, value);
+      if (beta <= alpha) break; // β cut-off
     } else {
-      bestScore = math.min(bestScore, score);
+      value = math.min(value, score);
+      beta = math.min(beta, value);
+      if (beta <= alpha) break; // α cut-off
     }
   }
 
-  return bestScore;
+  return value;
 }
 
 export = (
@@ -38,6 +49,6 @@ export = (
   const branch = BitBoard.branch(board);
   BitBoard.movePiece(branch, move[0], move[1]);
 
-  const score = Minimax(branch, depth - 1, turn === 0);
+  const score = Minimax(branch, depth - 1, -math.huge, math.huge, turn === 0);
   moves[index] = score;
 };

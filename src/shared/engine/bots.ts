@@ -23,7 +23,7 @@ export function GetBestMoveAPI(board: BitBoard): [Square, Square] | undefined {
   return bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined;
 }
 
-const DEPTH = 3;
+const DEPTH = 4;
 
 const [root, parts] = $getModuleTree("shared/engine/minimax");
 const module = Thread.getModuleByTree(root, parts);

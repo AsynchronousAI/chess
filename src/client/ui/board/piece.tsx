@@ -104,6 +104,7 @@ export function Piece(props: PieceProps) {
         Size={new UDim2(1, 0, 1, 0)}
         Text={""}
         BackgroundTransparency={1}
+        ZIndex={1}
         Event={{
           MouseEnter: onHover,
           MouseLeave: onLeave,
@@ -118,6 +119,7 @@ export function Piece(props: PieceProps) {
           background={new Color3(0, 0, 0)}
           backgroundTransparency={0.75}
           cornerRadius={new UDim(0.5, 0)}
+          zIndex={2}
         />
       )}
       {image ? (
