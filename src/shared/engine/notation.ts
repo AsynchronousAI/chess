@@ -13,10 +13,14 @@ const Shorthand: Record<Piece, string> = {
 export namespace Notation {
   export function parseSquare(square: string): Square {
     const [file, rank] = square.split("");
-    return [FILES.indexOf(file as (typeof FILES)[number]), tonumber(rank)! - 1];
+    return BitBoard.getSquareIndex(
+      FILES.indexOf(file as (typeof FILES)[number]),
+      tonumber(rank)! - 1,
+    );
   }
   export function encodeSquare(square: Square): string {
-    const [file, rank] = square;
+    const file = square % 8;
+    const rank = math.floor(square / 8);
     return FILES[file] + tostring(rank + 1);
   }
   export function encodeSquareFull(

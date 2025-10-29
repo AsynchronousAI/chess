@@ -30,7 +30,7 @@ export function Piece(props: PieceProps) {
   const [offsetY, offsetYMotion] = useMotion(0);
 
   /* Block data */
-  const location = [props.i, props.j] as Square;
+  const location = BitBoard.getSquareIndex(props.i, props.j);
   const pieceAtBoard = BitBoard.getPiece(board, location);
   const image = pieceAtBoard
     ? props.iconPack[pieceAtBoard[1]][pieceAtBoard[0]]
@@ -42,13 +42,7 @@ export function Piece(props: PieceProps) {
   const [canMoveHere, setCanMoveHere] = useState(false);
   useEffect(() => {
     if (!location) return;
-    for (const move of possibleMoves) {
-      if (move[0] === location[0] && move[1] === location[1]) {
-        setCanMoveHere(true);
-        return;
-      }
-    }
-    setCanMoveHere(false);
+    setCanMoveHere(possibleMoves.includes(location));
   }, [possibleMoves, location]);
 
   /* Events */
@@ -119,7 +113,7 @@ export function Piece(props: PieceProps) {
           background={new Color3(0, 0, 0)}
           backgroundTransparency={0.75}
           cornerRadius={new UDim(0.5, 0)}
-          zIndex={2}
+          zIndex={5}
         />
       )}
       {image ? (

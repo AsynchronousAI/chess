@@ -7,10 +7,18 @@ import { Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
 import { Square } from "./square";
 import { EvaluateBoard } from "shared/engine/eval";
+import { GetAllLegalMoves } from "shared/engine/legalMoves";
+import { Notation } from "shared/engine/notation";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
   const iconPack = Wood;
+
+  print(
+    GetAllLegalMoves(board, 0, false).map(
+      ([a, b]) => Notation.encodeSquare(a) + " -> " + Notation.encodeSquare(b),
+    ),
+  );
 
   return (
     <Frame

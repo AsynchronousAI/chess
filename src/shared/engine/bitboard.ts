@@ -29,7 +29,7 @@ export namespace BitBoard {
   };
 
   /* internal */
-  function getSquareIndex(file: number, rank: number): number {
+  export function getSquareIndex(file: number, rank: number): number {
     return rank * 8 + file;
   }
   function binaryToPiece(piece: number): [Piece, Color] {
@@ -46,17 +46,14 @@ export namespace BitBoard {
     pieceType: Piece,
     color: Color,
   ) {
-    const index = getSquareIndex(location[0], location[1]);
     const piece = getPieceBinary(pieceType, color);
-    buffer.writeu8(board, index, piece);
+    buffer.writeu8(board, location, piece);
   }
   export function getPiece(board: BitBoard, location: Square): [Piece, Color] {
-    const index = getSquareIndex(location[0], location[1]);
-    return binaryToPiece(buffer.readu8(board, index));
+    return binaryToPiece(buffer.readu8(board, location));
   }
   export function hasPiece(board: BitBoard, location: Square): boolean {
-    const index = getSquareIndex(location[0], location[1]);
-    return buffer.readu8(board, index) !== 0;
+    return buffer.readu8(board, location) !== 0;
   }
   export function getAllPieces(board: BitBoard): [Square, [Piece, Color]][] {
     const pieces: [Square, [Piece, Color]][] = [];
@@ -66,25 +63,16 @@ export namespace BitBoard {
         const piece = buffer.readu8(board, index);
         if (piece !== 0) {
           const [pieceType, color] = binaryToPiece(piece);
-          pieces.push([
-            [file, rank],
-            [pieceType, color],
-          ]);
+          pieces.push([getSquareIndex(file, rank), [pieceType, color]]);
         }
       }
     }
     return pieces;
   }
   export function movePiece(board: BitBoard, from: Square, to: Square) {
-    const [fromFile, fromRank] = from;
-    const [toFile, toRank] = to;
-
-    const indexFrom = getSquareIndex(fromFile, fromRank);
-    const indexTo = getSquareIndex(toFile, toRank);
-
-    const piece = buffer.readu8(board, indexFrom);
-    buffer.writeu8(board, indexFrom, 0);
-    buffer.writeu8(board, indexTo, piece);
+    const piece = buffer.readu8(board, from);
+    buffer.writeu8(board, from, 0);
+    buffer.writeu8(board, to, piece);
   }
   export function branch(board: BitBoard) {
     const branch = create();
@@ -142,7 +130,7 @@ export namespace BitBoard {
 
         const pieceType = fenLookup[upper];
         const color = upper === char ? 0 : 1;
-        setPiece(board, [file, rank], pieceType, color);
+        setPiece(board, getSquareIndex(file, rank), pieceType, color);
         file++;
       }
     }
@@ -153,7 +141,7 @@ export namespace BitBoard {
 
     for (let rank = 7; rank >= 0; rank--) {
       for (let file = 0; file < 8; file++) {
-        const [pieceType, color] = getPiece(board, [file, rank]);
+        const [pieceType, color] = getPiece(board, getSquareIndex(file, rank));
         if ((pieceType as number) === 0) {
           empty++;
         } else {
