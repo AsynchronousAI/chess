@@ -28,6 +28,7 @@ const DEPTH = 4;
 const [root, parts] = $getModuleTree("shared/engine/minimax");
 const module = Thread.getModuleByTree(root, parts);
 
+const transposition = new SharedTable();
 export function GetBestMove(
   board: BitBoard,
   depth = DEPTH,
@@ -42,7 +43,16 @@ export function GetBestMove(
   const sortedMoves = new SharedTable();
   for (const [index, move] of pairs(moves)) {
     branches.push(
-      Thread.spawn(module, board, depth, turn, move, sortedMoves, index),
+      Thread.spawn(
+        module,
+        board,
+        depth,
+        turn,
+        move,
+        sortedMoves,
+        index,
+        transposition,
+      ),
     );
   }
 

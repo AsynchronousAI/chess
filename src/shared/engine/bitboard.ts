@@ -115,6 +115,10 @@ export namespace BitBoard {
     buffer.writeu8(board, buffer.len(board) - 1, 1 - currentTurn);
   }
 
+  export function hash(board: BitBoard): string {
+    return buffer.tostring(board);
+  }
+
   /* FEN */
   export function fromFEN(board: BitBoard, fen: string) {
     /* todo: read turn, castle, en passant */
