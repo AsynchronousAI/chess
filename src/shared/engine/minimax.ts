@@ -3,6 +3,18 @@ import { BitBoard } from "./bitboard";
 import { GetAllLegalMoves } from "./legalMoves";
 import { EvaluateBoard } from "./eval";
 
+function SortMoves(moves: Array<[Square, Square]>, board: BitBoard) {
+  return moves
+    .map((move) => {
+      const branch = BitBoard.branch(board);
+      BitBoard.movePiece(branch, move[0], move[1]);
+      const score = EvaluateBoard(branch);
+      return [move, score];
+    })
+    .sort(([, a], [, b]) => (a as number) > (b as number))
+    .map(([move, score]) => move) as Array<[Square, Square]>;
+}
+
 function Minimax(
   board: BitBoard,
   depth: number,

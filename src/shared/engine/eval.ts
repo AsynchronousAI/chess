@@ -15,16 +15,51 @@ const PieceValues: Record<Piece, number> = {
 export function EvaluateBoard(board: BitBoard) {
   const pieces = BitBoard.getAllPieces(board);
 
-  let white = 0;
-  let black = 0;
+  let score = 0;
 
+  /* value */
   for (const [square, [piece, color]] of pieces) {
-    if (color === 0) {
-      white += PieceValues[piece];
+    if (color === Color.white) {
+      score += PieceValues[piece];
     } else {
-      black += PieceValues[piece];
+      score -= PieceValues[piece];
     }
   }
 
-  return white - black;
+  const whiteMoves = GetAllLegalMoves(board, Color.white, false);
+  const blackMoves = GetAllLegalMoves(board, Color.black, false);
+
+  /* mobility
+  score += whiteMoves.size() * 0.1;
+  score -= blackMoves.size() * 0.1;*/
+
+  /* king exposure
+  const whiteKingPosition = BitBoard.findPiece(
+    board,
+    Piece.king,
+    Color.white,
+  )[0];
+  const blackKingPosition = BitBoard.findPiece(
+    board,
+    Piece.king,
+    Color.black,
+  )[0];
+
+  const whiteKingDistance = whiteKingPosition
+    ? math.sqrt(
+        math.abs(whiteKingPosition[0] - 4) ** 2 +
+          math.abs(whiteKingPosition[1] - 4) ** 2,
+      )
+    : 2;
+  const blackKingDistance = blackKingPosition
+    ? math.sqrt(
+        math.abs(blackKingPosition[0] - 4) ** 2 +
+          math.abs(blackKingPosition[1] - 4) ** 2,
+      )
+    : 2;
+
+  score += math.max(0, 2 - whiteKingDistance);
+  score -= math.max(0, 2 - blackKingDistance);
+*/
+  return score;
 }

@@ -83,6 +83,7 @@ export function GetBestMove(
 
     bestMoves.push(move);
   }
+  print(bestScore);
 
   return bestMoves[math.random(0, bestMoves.size() - 1)];
 }
