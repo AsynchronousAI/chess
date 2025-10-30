@@ -134,7 +134,7 @@ export default function GetLegalMoves(
 
       const target = BitBoard.getPiece(board, newPosition);
 
-      if (target[0] === 0 || target[1] !== piece[1]) {
+      if (target[0] === Piece.none || target[1] !== piece[1]) {
         pushMove(newPosition);
       }
     }
