@@ -10,10 +10,29 @@ function onEdge(n: Square): boolean {
 }
 
 /* Direction Rules */
-const SLIDE_DIRECTIONS: Partial<Record<Piece, number[]>> = {
-  [Piece.rook]: [1, -1, 8, -8], // right, left, up, down
-  [Piece.bishop]: [9, -9, 7, -7], // up-right, down-left, up-left, down-right
-  [Piece.queen]: [1, -1, 8, -8, 9, -9, 7, -7], // rook + bishop directions
+const SLIDE_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
+  [Piece.rook]: [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ],
+  [Piece.bishop]: [
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1],
+  ],
+  [Piece.queen]: [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1],
+  ],
 };
 const FIXED_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
   [Piece.knight]: [
@@ -139,25 +158,23 @@ export default function GetLegalMoves(
       }
     }
   } else if (SLIDE_DIRECTIONS[piece[0]] !== undefined) {
-    const startsOnEdge = piece[0] !== Piece.rook && onEdge(from);
-    for (const offset of SLIDE_DIRECTIONS[piece[0]]!) {
-      let newPos = from + offset;
-      while (isOnBoard(newPos)) {
-        const currentlyOnEdge = onEdge(newPos);
-        if (startsOnEdge && currentlyOnEdge) break;
-
-        const target = BitBoard.getPiece(board, newPos);
-        if (target[0] === Piece.none) {
-          pushMove(newPos);
+    const [fx, fy] = [from % 8, math.floor(from / 8)];
+    for (const [dx, dy] of SLIDE_DIRECTIONS[piece[0]]!) {
+      let x = fx + dx;
+      let y = fy + dy;
+      while (x >= 0 && y >= 0 && x < 8 && y < 8) {
+        const location = BitBoard.getSquareIndex(x, y);
+        const target = BitBoard.getPiece(board, location);
+        if (target[0] === 0) {
+          pushMove(location);
         } else {
           if (target[1] !== piece[1]) {
-            pushMove(newPos);
+            pushMove(location);
           }
           break;
         }
-
-        if (currentlyOnEdge) break;
-        newPos += offset;
+        x += dx;
+        y += dy;
       }
     }
   }

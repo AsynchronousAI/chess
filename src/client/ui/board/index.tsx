@@ -6,7 +6,6 @@ import Atoms from "../atoms";
 import { Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
 import { Square } from "./square";
-import { EvaluateBoard } from "shared/engine/eval";
 import { GetAllLegalMoves } from "shared/engine/legalMoves";
 import { Notation } from "shared/engine/notation";
 
