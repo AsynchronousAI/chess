@@ -9,8 +9,8 @@ import { useMotion } from "@rbxts/pretty-react-hooks";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { Frame } from "@rbxts/better-react-components";
 import { FLIPPED } from "./square";
-import { GetBestMove } from "shared/engine/bots";
 import { BitBoard } from "shared/engine/bitboard";
+import { GetBestMoveAPI } from "shared/engine/api";
 
 export interface PieceProps {
   letter: string;
@@ -67,7 +67,7 @@ export function Piece(props: PieceProps) {
       Atoms.Board(BitBoard.branch(board));
       Atoms.PossibleMoves([]);
 
-      const best = await GetBestMove(board);
+      const best = GetBestMoveAPI(board);
       if (!best) return;
       BitBoard.movePiece(board, best[0], best[1]);
       BitBoard.flipTurn(board);

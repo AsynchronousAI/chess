@@ -139,7 +139,7 @@ export default function GetLegalMoves(
       }
     }
   } else if (SLIDE_DIRECTIONS[piece[0]] !== undefined) {
-    const startsOnEdge = onEdge(from);
+    const startsOnEdge = piece[0] !== Piece.rook && onEdge(from);
     for (const offset of SLIDE_DIRECTIONS[piece[0]]!) {
       let newPos = from + offset;
       while (isOnBoard(newPos)) {

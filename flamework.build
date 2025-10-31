@@ -6,7 +6,9 @@
 		"chess:out/shared/network@GlobalEvents": "shared/network@GlobalEvents",
 		"chess:out/shared/network@GlobalFunctions": "shared/network@GlobalFunctions",
 		"chess:out/shared/engine/bitboard@BitBoard": "shared/engine/bitboard@BitBoard",
-		"chess:out/shared/engine/pgn@PGN": "shared/engine/pgn@PGN"
+		"chess:out/shared/engine/pgn@PGN": "shared/engine/pgn@PGN",
+		"chess:out/shared/engine/api@API": "shared/engine/api@API",
+		"chess:out/shared/engine/api@ChessAPI": "shared/engine/api@ChessAPI"
 	},
 	"metadata": {}
 }
