@@ -15,6 +15,8 @@ import { Image } from "../image";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { BitBoard } from "shared/engine/bitboard";
 import { GetBestMoveAPI } from "shared/engine/api";
+import { SoundEffects } from "./sfx";
+import { Workspace } from "@rbxts/services";
 
 const DISPLAY_SQUARE_LABELS = true;
 export const FLIPPED = false;
@@ -118,18 +120,33 @@ export default function Board() {
   const iconPack = Wood;
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
+  const playSFX = (sfx: keyof typeof SoundEffects) => {
+    const newAudio = new Instance("Sound", Workspace);
+    newAudio.SoundId = SoundEffects[sfx];
+    newAudio.Play();
+    newAudio.Ended.Connect(() => newAudio.Destroy());
+  };
   const movePieceInternal = (from: number, to: number) => {
     BitBoard.movePiece(board, from, to);
     BitBoard.flipTurn(board);
 
     /* do this so we can maintain indexs from a bitboard */
     setPieces((currentPieces) => {
+      let captured = false;
+
       for (const piece of currentPieces) {
         if (piece[0] === from) {
           piece[0] = to;
         } else if (piece[0] === to) {
           piece[1][0] = PieceType.none;
+          captured = true;
         }
+      }
+
+      if (captured) {
+        playSFX("Capture");
+      } else {
+        playSFX("Move");
       }
       return currentPieces;
     });
