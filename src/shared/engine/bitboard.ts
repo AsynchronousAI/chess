@@ -116,6 +116,25 @@ export namespace BitBoard {
       }
     }
   }
+  export function getCastlingRights(
+    board: BitBoard,
+    color: Color,
+    queenSide: boolean,
+  ): boolean {
+    if (color === 0) {
+      if (queenSide) {
+        return buffer.readu8(board, CASTLE_WQ) === 1;
+      } else {
+        return buffer.readu8(board, CASTLE_WK) === 1;
+      }
+    } else {
+      if (queenSide) {
+        return buffer.readu8(board, CASTLE_BQ) === 1;
+      } else {
+        return buffer.readu8(board, CASTLE_BK) === 1;
+      }
+    }
+  }
   export function branch(board: BitBoard) {
     const branch = create();
     buffer.copy(branch, 0, board);

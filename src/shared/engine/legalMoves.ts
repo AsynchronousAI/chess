@@ -96,6 +96,21 @@ const CUSTOM_DIRECTIONS: Partial<
 
     return moves;
   },
+  [Piece.king]: (piece, pos, board) => {
+    /* TODO: move rook also, and check for interruptions in between which include checks & pieces */
+    /* this just handles castling, movement is in FIXED_DIRECTIONS */
+    const rank = math.floor(pos / 8);
+    const moves: Square[] = [];
+    if (BitBoard.getCastlingRights(board, piece[1], true)) {
+      /* castle queenside, king goes to c file */
+      moves.push(BitBoard.getSquareIndex(2, rank));
+    }
+    if (BitBoard.getCastlingRights(board, piece[1], false)) {
+      /* castle kingside, king goes to g file */
+      moves.push(BitBoard.getSquareIndex(6, rank));
+    }
+    return moves;
+  },
 };
 
 /* Export */
@@ -142,7 +157,8 @@ export default function GetLegalMoves(
     for (const newPos of customMoves) {
       pushMove(newPos);
     }
-  } else if (FIXED_DIRECTIONS[piece[0]] !== undefined) {
+  }
+  if (FIXED_DIRECTIONS[piece[0]] !== undefined) {
     const [xOrigin, yOrigin] = [from % 8, math.floor(from / 8)];
     for (const [x, y] of FIXED_DIRECTIONS[piece[0]]!) {
       const newPosition = from + x + y * 8;
@@ -157,7 +173,8 @@ export default function GetLegalMoves(
         pushMove(newPosition);
       }
     }
-  } else if (SLIDE_DIRECTIONS[piece[0]] !== undefined) {
+  }
+  if (SLIDE_DIRECTIONS[piece[0]] !== undefined) {
     const [fx, fy] = [from % 8, math.floor(from / 8)];
     for (const [dx, dy] of SLIDE_DIRECTIONS[piece[0]]!) {
       let x = fx + dx;
