@@ -3,7 +3,7 @@ import { BitBoard } from "./bitboard";
 import { HttpService } from "@rbxts/services";
 import { Notation } from "./notation";
 
-export function GetBestMoveAPI(board: BitBoard): [Square, Square] | undefined {
+export function GetBestMoveAPI(board: BitBoard) {
   const fen = BitBoard.toFEN(board);
   const bestMove = HttpService.JSONDecode(
     HttpService.PostAsync(
@@ -17,5 +17,9 @@ export function GetBestMoveAPI(board: BitBoard): [Square, Square] | undefined {
     text: string;
     eval: number;
   };
-  return bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined;
+
+  return {
+    move: bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined,
+    eval: bestMove.eval,
+  };
 }
