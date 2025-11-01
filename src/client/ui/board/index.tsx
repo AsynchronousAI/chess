@@ -65,13 +65,13 @@ export function Piece(props: PieceProps) {
 
   /* Events */
   const onDown = () => {
-    if (!props.location || !props.piece) return;
+    if (props.location === undefined || !props.piece) return;
 
     if (holdingPiece === props.location) {
       // drop
       Atoms.HoldingPiece(undefined);
       Atoms.PossibleMoves([]);
-    } else if (props.piece[0] !== 0 && isMyPiece) {
+    } else if (props.piece[0] !== PieceType.none && isMyPiece) {
       // pick up
       Atoms.HoldingPiece(props.location);
       Atoms.PossibleMoves(GetLegalMoves(board, props.location, false));
@@ -173,7 +173,7 @@ export default function Board() {
     Atoms.PossibleMoves([]);
   };
   const movePiece = (location: number) => {
-    if (!possibleMoves.includes(location) || !holdingPiece) return;
+    if (!possibleMoves.includes(location) || holdingPiece === undefined) return;
 
     movePieceInternal(holdingPiece, location);
 
