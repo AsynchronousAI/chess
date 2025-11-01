@@ -10,6 +10,7 @@ export function GetBestMoveAPI(board: BitBoard) {
       "https://chess-api.com/v1",
       HttpService.JSONEncode({
         fen,
+        depth: 5,
       }),
     ),
   ) as unknown as {

@@ -74,45 +74,47 @@ export function Piece(props: PieceProps) {
     } else if (props.piece[0] !== 0 && isMyPiece) {
       // pick up
       Atoms.HoldingPiece(props.location);
-      Atoms.PossibleMoves(GetLegalMoves(board, props.location));
+      Atoms.PossibleMoves(GetLegalMoves(board, props.location, false));
     }
   };
 
   return (
-    <Frame
-      position={pos}
-      size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-      noBackground
-      zIndex={holdingPiece === props.location ? 100 : 3}
-    >
-      <textbutton
-        Size={new UDim2(1, 0, 1, 0)}
-        Text={""}
-        BackgroundTransparency={1}
-        ZIndex={1}
-        Event={{
-          MouseEnter: () => {
-            offsetYMotion.spring(isMyPiece ? -10 : 0);
-          },
-          MouseLeave: () => {
-            offsetYMotion.spring(0);
-          },
-          MouseButton1Down: onDown,
-        }}
-      />
-      {image ? (
-        <Image
-          image={image}
-          position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
-          size={new UDim2(1, 0, 1, 0)}
-          outlinePrecision={30}
-          outlineThickness={px(4)}
-          outlineStartAngle={40}
-          outlineColor={new Color3(0.35, 0.35, 0.35)}
-          zIndex={holdingPiece === props.location ? 100 : 3}
+    props.piece[0] !== PieceType.none && (
+      <Frame
+        position={pos}
+        size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+        noBackground
+        zIndex={holdingPiece === props.location ? 100 : 3}
+      >
+        <textbutton
+          Size={new UDim2(1, 0, 1, 0)}
+          Text={""}
+          BackgroundTransparency={1}
+          ZIndex={1}
+          Event={{
+            MouseEnter: () => {
+              offsetYMotion.spring(isMyPiece ? -10 : 0);
+            },
+            MouseLeave: () => {
+              offsetYMotion.spring(0);
+            },
+            MouseButton1Down: onDown,
+          }}
         />
-      ) : undefined}
-    </Frame>
+        {image ? (
+          <Image
+            image={image}
+            position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
+            size={new UDim2(1, 0, 1, 0)}
+            outlinePrecision={30}
+            outlineThickness={px(4)}
+            outlineStartAngle={40}
+            outlineColor={new Color3(0.35, 0.35, 0.35)}
+            zIndex={holdingPiece === props.location ? 100 : 3}
+          />
+        ) : undefined}
+      </Frame>
+    )
   );
 }
 export default function Board() {
@@ -194,7 +196,7 @@ export default function Board() {
       />
 
       {/* Eval bar */}
-      <Frame size={new UDim2(0, px(25), 1, 0)} background={"#403E39"}>
+      <Frame size={new UDim2(0.025, 0, 1, 0)} background={"#403E39"}>
         <Frame
           size={evalBar.map((value) => new UDim2(1, 0, value, 0))}
           position={evalBar.map((value) => new UDim2(0, 0, 1 - value, 0))}
