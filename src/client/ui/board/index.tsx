@@ -137,6 +137,8 @@ export default function Board() {
 
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
+  print(BitBoard.toFEN(board));
+
   const playSFX = (sfx: keyof typeof SoundEffects) => {
     const newAudio = new Instance("Sound", Workspace);
     newAudio.SoundId = SoundEffects[sfx];
@@ -203,6 +205,7 @@ export default function Board() {
           background={new Color3(1, 1, 1)}
         />
         <Text
+          visible={evaluation !== 0}
           size={new UDim2(1, 0, 0, px(20))}
           text={string.format(
             "%.1f",

@@ -120,7 +120,7 @@ export default function GetLegalMoves(
 
       // king moved?
       let localKingPos = kingPosition;
-      if (from === kingPosition) {
+      if (piece[0] === Piece.king) {
         localKingPos = newPos;
       }
 

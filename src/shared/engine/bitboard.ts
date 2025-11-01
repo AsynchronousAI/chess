@@ -1,4 +1,4 @@
-import { Color, FILES, Piece, Square } from "shared/board";
+import { Color, Piece, Square } from "shared/board";
 
 const fenLookup: Record<string, Piece> = {
   P: Piece.pawn,
@@ -18,11 +18,18 @@ const reverseFenLookup: Partial<Record<Piece, string>> = {
 };
 
 export type BitBoard = buffer & { readonly brand: unique symbol };
+
+const CURRENT_TURN = 8 * 64 + 1;
+const CASTLE_WQ = 8 * 64 + 2;
+const CASTLE_WK = 8 * 64 + 3;
+const CASTLE_BQ = 8 * 64 + 4;
+const CASTLE_BK = 8 * 64 + 5;
+
 export namespace BitBoard {
   export const create = (fen?: string) => {
-    const board = buffer.create(8 * 64 + 1) as BitBoard;
+    const board = buffer.create(8 * 64 + 6) as BitBoard;
     // Layout
-    // ([piece id][color])*64 [currentTurn]
+    // ([piece id][color])*64 [currentTurn] [white queenside castle] [white kingside castle] [black queenside castle] [black kingside castle]
 
     if (fen) fromFEN(board, fen);
     return board;
@@ -73,6 +80,41 @@ export namespace BitBoard {
     const piece = buffer.readu8(board, from);
     buffer.writeu8(board, from, 0);
     buffer.writeu8(board, to, piece);
+
+    /* castling rights */
+    const [pieceType, color] = binaryToPiece(piece);
+    if (pieceType === Piece.king) {
+      BitBoard.breakCastlingRights(board, color, false);
+      BitBoard.breakCastlingRights(board, color, true);
+    }
+    if (pieceType === Piece.rook) {
+      if (from === 0)
+        breakCastlingRights(board, 0, true); // a1 rook
+      else if (from === 7)
+        breakCastlingRights(board, 0, false); // h1 rook
+      else if (from === 56)
+        breakCastlingRights(board, 1, true); // a8 rook
+      else if (from === 63) breakCastlingRights(board, 1, false); // h8 rook
+    }
+  }
+  export function breakCastlingRights(
+    board: BitBoard,
+    color: Color,
+    queenSide: boolean,
+  ) {
+    if (color === 0) {
+      if (queenSide) {
+        buffer.writeu8(board, CASTLE_WQ, 0);
+      } else {
+        buffer.writeu8(board, CASTLE_WK, 0);
+      }
+    } else {
+      if (queenSide) {
+        buffer.writeu8(board, CASTLE_BQ, 0);
+      } else {
+        buffer.writeu8(board, CASTLE_BK, 0);
+      }
+    }
   }
   export function branch(board: BitBoard) {
     const branch = create();
@@ -96,11 +138,11 @@ export namespace BitBoard {
     return squares;
   }
   export function getTurn(board: BitBoard): Color {
-    return buffer.readu8(board, buffer.len(board) - 1);
+    return buffer.readu8(board, CURRENT_TURN);
   }
   export function flipTurn(board: BitBoard) {
     const currentTurn = getTurn(board);
-    buffer.writeu8(board, buffer.len(board) - 1, 1 - currentTurn);
+    buffer.writeu8(board, CURRENT_TURN, 1 - currentTurn);
   }
 
   export function hash(board: BitBoard): string {
@@ -113,7 +155,17 @@ export namespace BitBoard {
     let file = 0;
     let rank = 7;
 
-    for (const char of fen.split("")) {
+    const [
+      pieces,
+      activeColor,
+      castling,
+      enPassant,
+      halfMoveClock,
+      fullMoveClock,
+    ] = fen.split(" ");
+
+    /* Load pieces */
+    for (const char of pieces.split("")) {
       if (char === "/") {
         rank--;
         file = 0;
@@ -134,11 +186,31 @@ export namespace BitBoard {
         file++;
       }
     }
+
+    /* Load castling */
+    for (const char of castling.split("")) {
+      switch (char) {
+        case "K":
+          buffer.writeu8(board, CASTLE_WK, 1);
+          break;
+        case "Q":
+          buffer.writeu8(board, CASTLE_WQ, 1);
+          break;
+        case "k":
+          buffer.writeu8(board, CASTLE_BK, 1);
+          break;
+        case "q":
+          buffer.writeu8(board, CASTLE_BQ, 1);
+          break;
+      }
+    }
   }
   export function toFEN(board: BitBoard): string {
     let fen = "";
+    let castling = "";
     let empty = 0;
 
+    /* Pieces */
     for (let rank = 7; rank >= 0; rank--) {
       for (let file = 0; file < 8; file++) {
         const [pieceType, color] = getPiece(board, getSquareIndex(file, rank));
@@ -164,6 +236,13 @@ export namespace BitBoard {
       if (rank > 0) fen += "/";
     }
 
-    return `${fen} ${getTurn(board) === 0 ? "w" : "b"} KQkq - 0 2`;
+    /* Castling */
+    if (buffer.readu8(board, CASTLE_WK)) castling += "K";
+    if (buffer.readu8(board, CASTLE_WQ)) castling += "Q";
+    if (buffer.readu8(board, CASTLE_BK)) castling += "k";
+    if (buffer.readu8(board, CASTLE_BQ)) castling += "q";
+    if (castling === "") castling = "-";
+
+    return `${fen} ${getTurn(board) === 0 ? "w" : "b"} ${castling} - 0 2`;
   }
 }
