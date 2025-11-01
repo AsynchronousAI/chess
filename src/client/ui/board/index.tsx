@@ -20,7 +20,7 @@ const DISPLAY_SQUARE_LABELS = true;
 export const FLIPPED = false;
 
 export interface PieceProps {
-  pos: Binding<UDim2> | UDim2;
+  pos: [number, number];
   location: number;
   iconPack: IconPack;
   playingAs: Color;
@@ -32,6 +32,25 @@ export function Piece(props: PieceProps) {
   const holdingPiece = useAtom(Atoms.HoldingPiece);
 
   const [offsetY, offsetYMotion] = useMotion(0);
+
+  const generatePosition = () =>
+    new UDim2(
+      props.pos[0] / 8,
+      0,
+      (FLIPPED ? props.pos[1] : 7 - props.pos[1]) / 8,
+      0,
+    );
+
+  const [pos, posMotion] = useMotion(generatePosition());
+  useEffect(
+    () =>
+      posMotion.tween(generatePosition(), {
+        style: Enum.EasingStyle.Quad,
+        time: 0.1,
+      }),
+
+    [props.pos],
+  );
 
   /* Block data */
   const image = props.piece
@@ -57,7 +76,7 @@ export function Piece(props: PieceProps) {
 
   return (
     <Frame
-      position={props.pos}
+      position={pos}
       size={new UDim2(1 / 8, 0, 1 / 8, 0)}
       noBackground
       zIndex={holdingPiece === props.location ? 100 : 3}
@@ -97,10 +116,23 @@ export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const iconPack = Wood;
+  const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
   const movePieceInternal = (from: number, to: number) => {
     BitBoard.movePiece(board, from, to);
     BitBoard.flipTurn(board);
+
+    /* do this so we can maintain indexs from a bitboard */
+    setPieces((currentPieces) => {
+      for (const piece of currentPieces) {
+        if (piece[0] === from) {
+          piece[0] = to;
+        } else if (piece[0] === to) {
+          piece[1][0] = PieceType.none;
+        }
+      }
+      return currentPieces;
+    });
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
   };
@@ -189,12 +221,12 @@ export default function Board() {
       )}
 
       {/* Pieces */}
-      {BitBoard.getAllPieces(board).map(([loc, piece]) => {
-        const [i, j] = [loc % 8, math.floor(loc / 8)];
+      {pieces.map(([loc, piece], index) => {
+        const pos: [number, number] = [loc % 8, math.floor(loc / 8)];
         return (
           <Piece
-            key={loc}
-            pos={new UDim2(i / 8, 0, (FLIPPED ? j : 7 - j) / 8, 0)}
+            key={index}
+            pos={pos}
             iconPack={iconPack}
             playingAs={Color.white}
             location={loc}
