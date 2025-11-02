@@ -136,7 +136,7 @@ export default function Board() {
       setEvalText(mate > 0 ? "1-0" : "0-1");
     } else if (mate > 0) {
       evalBarMotion.spring(1);
-      setEvalText(`M${mate + 1}`);
+      setEvalText(`M${mate}`);
     } else if (mate < 0) {
       evalBarMotion.spring(0);
       setEvalText(`M${math.abs(mate - 1)}`);
@@ -150,7 +150,7 @@ export default function Board() {
         string.format("%.1f", evaluation > 0 ? evaluation : 1 - evaluation),
       );
     }
-  }, [evaluation, mate]);
+  }, [evaluation, mate, board]);
 
   const iconPack = Wood;
 
