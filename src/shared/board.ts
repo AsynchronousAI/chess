@@ -17,7 +17,7 @@ export enum Color {
   black = 1,
 }
 
-export const DefaultFEN = "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1";
+export const DefaultFEN = "rkbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 
 export function IsSquareBlack(i: number, j: number): boolean {

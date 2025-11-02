@@ -5,9 +5,10 @@ import { BitBoard } from "./bitboard";
 function isOnBoard(index: number): boolean {
   return index >= 0 && index < 64;
 }
-function onEdge(n: Square): boolean {
-  return n < 8 || n >= 56 || n % 8 === 0 || n % 8 === 7;
-}
+
+export type Move =
+  | [Square]
+  | [Square, (branch: BitBoard) => [Square, Square] | undefined];
 
 /* Direction Rules */
 const SLIDE_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
@@ -57,13 +58,10 @@ const FIXED_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
   ],
 };
 const CUSTOM_DIRECTIONS: Partial<
-  Record<
-    Piece,
-    (piece: [Piece, Color], pos: number, board: BitBoard) => Square[]
-  >
+  Record<Piece, (piece: [Piece, Color], pos: number, board: BitBoard) => Move[]>
 > = {
   [Piece.pawn]: (piece, pos, board) => {
-    const moves: Square[] = [];
+    const moves: Move[] = [];
 
     const dir = piece[1] === 0 ? 1 : -1;
     const startRank = piece[1] === 0 ? 1 : 6;
@@ -73,13 +71,13 @@ const CUSTOM_DIRECTIONS: Partial<
     const onBoard = isOnBoard(oneStep);
     if (onBoard) {
       if (!BitBoard.hasPiece(board, oneStep)) {
-        moves.push(oneStep);
+        moves.push([oneStep]);
 
         // Two steps from start
         const twoStep = oneStep + dir * 8;
         const isStarting = pos >= startRank * 8 && pos < startRank * 8 + 8;
         if (isStarting && !BitBoard.hasPiece(board, twoStep)) {
-          moves.push(twoStep);
+          moves.push([twoStep]);
         }
       }
 
@@ -89,7 +87,7 @@ const CUSTOM_DIRECTIONS: Partial<
         if (!isOnBoard(newPos)) continue;
         const target = BitBoard.getPiece(board, newPos);
         if (target[0] !== 0 && target[1] !== piece[1]) {
-          moves.push(newPos);
+          moves.push([newPos]);
         }
       }
     }
@@ -100,14 +98,28 @@ const CUSTOM_DIRECTIONS: Partial<
     /* TODO: move rook also, and check for interruptions in between which include checks & pieces */
     /* this just handles castling, movement is in FIXED_DIRECTIONS */
     const rank = math.floor(pos / 8);
-    const moves: Square[] = [];
+    const moves: Move[] = [];
     if (BitBoard.getCastlingRights(board, piece[1], true)) {
       /* castle queenside, king goes to c file */
-      moves.push(BitBoard.getSquareIndex(2, rank));
+      moves.push([
+        BitBoard.getSquareIndex(2, rank),
+        (branch) => {
+          print("queenside castle");
+          BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8);
+          return [0 + rank * 8, 3 + rank * 8];
+        },
+      ]);
     }
     if (BitBoard.getCastlingRights(board, piece[1], false)) {
       /* castle kingside, king goes to g file */
-      moves.push(BitBoard.getSquareIndex(6, rank));
+      moves.push([
+        BitBoard.getSquareIndex(6, rank),
+        (branch) => {
+          print("kingside castle");
+          BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8);
+          return [7 + rank * 8, 5 + rank * 8];
+        },
+      ]);
     }
     return moves;
   },
@@ -118,25 +130,27 @@ export default function GetLegalMoves(
   board: BitBoard,
   from: Square,
   checks: boolean = true,
-): Square[] {
+): Move[] {
   const piece = BitBoard.getPiece(board, from);
   if (!piece) return [];
 
-  let moves: Square[] = [];
+  let moves: Move[] = [];
 
   let kingPosition =
     checks && BitBoard.findPiece(board, Piece.king, BitBoard.getTurn(board))[0];
 
-  const pushMove = (newPos: Square) => {
+  const pushMove = (newPos: Move) => {
     // check for checks
     if (kingPosition) {
       const newBoard = BitBoard.branch(board);
-      BitBoard.movePiece(newBoard, from, newPos);
+      const pos = typeIs(newPos, "number") ? newPos : newPos[0];
+      BitBoard.movePiece(newBoard, from, pos);
+      newPos[1]?.(newBoard);
 
       // king moved?
       let localKingPos = kingPosition;
       if (piece[0] === Piece.king) {
-        localKingPos = newPos;
+        localKingPos = pos;
       }
 
       for (const [_, followingMoveEnd] of GetAllLegalMoves(
@@ -170,7 +184,7 @@ export default function GetLegalMoves(
       const target = BitBoard.getPiece(board, newPosition);
 
       if (target[0] === Piece.none || target[1] !== piece[1]) {
-        pushMove(newPosition);
+        pushMove([newPosition]);
       }
     }
   }
@@ -183,10 +197,10 @@ export default function GetLegalMoves(
         const location = BitBoard.getSquareIndex(x, y);
         const target = BitBoard.getPiece(board, location);
         if (target[0] === 0) {
-          pushMove(location);
+          pushMove([location]);
         } else {
           if (target[1] !== piece[1]) {
-            pushMove(location);
+            pushMove([location]);
           }
           break;
         }
@@ -207,7 +221,11 @@ export function GetAllLegalMoves(
   for (const [location, [piece, color]] of BitBoard.getAllPieces(board)) {
     if (color !== turn) continue;
     for (const nextLocation of GetLegalMoves(board, location, checks)) {
-      moves.push([location, nextLocation]);
+      if (typeIs(nextLocation, "number")) {
+        moves.push([location, nextLocation]);
+      } else {
+        moves.push([location, nextLocation[0]]);
+      }
     }
   }
 

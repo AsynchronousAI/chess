@@ -1,4 +1,3 @@
-import { Square } from "shared/board";
 import { BitBoard } from "./bitboard";
 import { HttpService } from "@rbxts/services";
 import { Notation } from "./notation";

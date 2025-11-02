@@ -74,7 +74,7 @@ export function Piece(props: PieceProps) {
     } else if (props.piece[0] !== PieceType.none && isMyPiece) {
       // pick up
       Atoms.HoldingPiece(props.location);
-      Atoms.PossibleMoves(GetLegalMoves(board, props.location, false));
+      Atoms.PossibleMoves(GetLegalMoves(board, props.location));
     }
   };
 
@@ -137,8 +137,6 @@ export default function Board() {
 
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
-  print(BitBoard.toFEN(board));
-
   const playSFX = (sfx: keyof typeof SoundEffects) => {
     const newAudio = new Instance("Sound", Workspace);
     newAudio.SoundId = SoundEffects[sfx];
@@ -148,6 +146,9 @@ export default function Board() {
   const movePieceInternal = (from: number, to: number) => {
     BitBoard.movePiece(board, from, to);
     BitBoard.flipTurn(board);
+    const move = possibleMoves.find((v) => v[0] === to);
+    const [moved, movedTo] = move?.[1]?.(board) || [];
+    print(BitBoard.toFEN(board));
 
     /* do this so we can maintain indexs from a bitboard */
     setPieces((currentPieces) => {
@@ -159,6 +160,8 @@ export default function Board() {
         } else if (piece[0] === to) {
           piece[1][0] = PieceType.none;
           captured = true;
+        } else if (piece[0] === moved) {
+          piece[0] = movedTo || 0;
         }
       }
 
@@ -173,7 +176,11 @@ export default function Board() {
     Atoms.PossibleMoves([]);
   };
   const movePiece = (location: number) => {
-    if (!possibleMoves.includes(location) || holdingPiece === undefined) return;
+    if (
+      !possibleMoves.find((v) => v[0] === location) ||
+      holdingPiece === undefined
+    )
+      return;
 
     movePieceInternal(holdingPiece, location);
 
@@ -266,7 +273,7 @@ export default function Board() {
                 </Frame>
 
                 {/* Hitbox */}
-                {possibleMoves.includes(index) && (
+                {possibleMoves.find((v) => v[0] === index) && (
                   <Frame
                     key={`${location}-hit`}
                     position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
