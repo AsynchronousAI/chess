@@ -38,19 +38,34 @@ export interface ImageProps<T extends Instance = ImageLabel>
 }
 
 export function Image(props: ImageProps) {
-  const elements: React.Element[] = [];
+  const commonProps = {
+    ImageRectOffset: props.imageRectOffset,
+    ImageRectSize: props.imageRectSize,
+    ScaleType: props.scaleType,
+    SliceScale: props.sliceScale,
+    SliceCenter: props.sliceCenter,
+    TileSize: props.tileSize,
+    AnchorPoint: props.anchorPoint,
+    Rotation: props.rotation,
+    BackgroundColor3: props.backgroundColor,
+    ClipsDescendants: props.clipsDescendants,
+    Visible: props.visible,
+    LayoutOrder: props.layoutOrder,
+  };
 
-  if (
-    props.outlineStartAngle &&
-    props.outlinePrecision &&
-    props.outlineThickness
-  ) {
-    for (
-      let i = props.outlineStartAngle;
-      i < props.outlineStartAngle + 360;
-      i += props.outlinePrecision
-    ) {
-      const angle = math.rad(i);
+  const z = props.zIndex ? useBindingState(props.zIndex) - 1 : -1;
+  const outlineElements = React.useMemo(() => {
+    if (
+      !props.outlineStartAngle ||
+      !props.outlinePrecision ||
+      !props.outlineThickness
+    )
+      return [];
+
+    const elements: React.Element[] = [];
+
+    for (let i = 0; i < 360; i += props.outlinePrecision) {
+      const angle = math.rad(i + props.outlineStartAngle);
       const offset = new UDim2(
         0,
         math.sin(angle) * props.outlineThickness,
@@ -60,38 +75,37 @@ export function Image(props: ImageProps) {
 
       elements.push(
         <imagelabel
-          key={`Stroke${i}`}
+          key={`stroke${i}`}
           Image={props.image}
-          Size={new UDim2(1, 0, 1, 0)}
+          Size={UDim2.fromScale(1, 1)}
           Position={offset}
-          ZIndex={props.zIndex ? useBindingState(props.zIndex) - 1 : -1}
+          ZIndex={z}
           ImageColor3={props.outlineColor}
           BackgroundTransparency={1}
           ImageTransparency={props.imageTransparency}
-          ImageRectOffset={props.imageRectOffset}
-          ImageRectSize={props.imageRectSize}
-          ScaleType={props.scaleType}
-          SliceScale={props.sliceScale}
-          SliceCenter={props.sliceCenter}
-          TileSize={props.tileSize}
-          AnchorPoint={props.anchorPoint}
-          Rotation={props.rotation}
-          BackgroundColor3={props.backgroundColor}
-          ClipsDescendants={props.clipsDescendants}
-          Visible={props.visible}
-          LayoutOrder={props.layoutOrder}
+          {...commonProps}
         />,
       );
     }
-  }
+    return elements;
+  }, [
+    props.outlineStartAngle,
+    props.outlinePrecision,
+    props.outlineThickness,
+    props.image,
+    props.outlineColor,
+    props.imageTransparency,
+    props.zIndex,
+  ]);
 
   return (
     <frame
       Size={props.size}
       Position={props.position}
+      ZIndex={props.zIndex}
       BackgroundTransparency={1}
     >
-      {elements}
+      {outlineElements}
       <imagelabel
         Image={props.image}
         ImageColor3={props.imageColor}
@@ -109,7 +123,7 @@ export function Image(props: ImageProps) {
         BackgroundTransparency={props.backgroundTransparency ?? 1}
         ClipsDescendants={props.clipsDescendants}
         Visible={props.visible}
-        ZIndex={props.zIndex}
+        ZIndex={1000000000}
         LayoutOrder={props.layoutOrder}
         BorderSizePixel={0}
         Event={props.event}

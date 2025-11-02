@@ -51,8 +51,8 @@ export function Piece(props: PieceProps) {
   useEffect(
     () =>
       posMotion.tween(generatePosition(), {
-        style: Enum.EasingStyle.Quad,
-        time: 0.1,
+        style: Enum.EasingStyle.Quint,
+        time: 0.2,
       }),
 
     [props.pos],
@@ -167,7 +167,6 @@ export default function Board() {
     const move = (myMove ? possibleMoves : GetLegalMoves(board, from, false))
       /* if it is my move use saved outcomes, otherwise calculate new */
       .find((v) => v[0] === to);
-    print(to, move, GetLegalMoves(board, from, false), possibleMoves.size());
     BitBoard.movePiece(board, from, to);
     BitBoard.flipTurn(board);
     const [moved, movedTo] = move?.[1]?.(board) || [];
