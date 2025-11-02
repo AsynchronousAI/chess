@@ -100,19 +100,28 @@ const CUSTOM_DIRECTIONS: Partial<
     const rank = math.floor(pos / 8);
     const moves: Move[] = [];
 
-    const isLegalCastle = (squares: number[]) => {
-      const squaresToCheck = squares.map((file) => file + rank * 8);
+    const isLegalCastle = (
+      mustBeEmpty: number[],
+      mustNotBeAttacked: number[],
+    ) => {
+      const emptyCheck = mustBeEmpty.map((file) => file + rank * 8);
 
-      for (let sq of squaresToCheck) {
+      for (const sq of emptyCheck) {
         if (BitBoard.hasPiece(board, sq)) {
           return false;
         }
       }
+      for (const sq of mustNotBeAttacked) {
+        if (IsSquareAttacked(board, sq, 1 - piece[1])) {
+          return false;
+        }
+      }
+
       return true;
     };
     if (
       BitBoard.getCastlingRights(board, piece[1], true) &&
-      isLegalCastle([1, 2, 3])
+      isLegalCastle([1, 2, 3], [2, 3, 4])
     ) {
       /* castle queenside, king goes to c file */
       moves.push([
@@ -125,7 +134,7 @@ const CUSTOM_DIRECTIONS: Partial<
     }
     if (
       BitBoard.getCastlingRights(board, piece[1], false) &&
-      isLegalCastle([5, 6])
+      isLegalCastle([5, 6], [4, 5, 6])
     ) {
       moves.push([
         BitBoard.getSquareIndex(6, rank),
@@ -140,14 +149,69 @@ const CUSTOM_DIRECTIONS: Partial<
 };
 
 /* Export */
-export function IsSquareAttacked(board: BitBoard, target: Square, turn: Color) {
-  for (const [_, followingMoveEnd] of GetAllLegalMoves(board, turn, false)) {
-    if (followingMoveEnd === target) {
-      return true;
+export function IsSquareAttacked(
+  board: BitBoard,
+  target: Square,
+  attacker: Color,
+): boolean {
+  for (const [pos, [piece, color]] of BitBoard.getAllPieces(board)) {
+    if (color !== attacker) continue;
+
+    const x = pos % 8;
+    const y = math.floor(pos / 8);
+    const tx = target % 8;
+    const ty = math.floor(target / 8);
+
+    const dx = tx - x;
+    const dy = ty - y;
+
+    switch (piece) {
+      case Piece.pawn: {
+        const dir = color === Color.white ? 1 : -1;
+        if (dy === dir && math.abs(dx) === 1) return true;
+        break;
+      }
+      case Piece.knight: {
+        if (
+          (math.abs(dx) === 2 && math.abs(dy) === 1) ||
+          (math.abs(dx) === 1 && math.abs(dy) === 2)
+        )
+          return true;
+        break;
+      }
+      case Piece.king: {
+        if (math.max(math.abs(dx), math.abs(dy)) === 1) return true;
+        break;
+      }
+      case Piece.rook:
+      case Piece.bishop:
+      case Piece.queen: {
+        const directions = SLIDE_DIRECTIONS[piece]!;
+        for (const [sx, sy] of directions) {
+          let cx = x + sx;
+          let cy = y + sy;
+          while (cx >= 0 && cx < 8 && cy >= 0 && cy < 8) {
+            const cSquare = BitBoard.getSquareIndex(cx, cy);
+            const cPiece = BitBoard.getPiece(board, cSquare);
+
+            if (cSquare === target) return true;
+            if (cPiece[0] !== Piece.none) break;
+
+            cx += sx;
+            cy += sy;
+          }
+        }
+        break;
+      }
+      default: {
+        throw `Invalid piece: ${piece}`;
+      }
     }
   }
+
   return false;
 }
+
 export default function GetLegalMoves(
   board: BitBoard,
   from: Square,
