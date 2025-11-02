@@ -23,6 +23,7 @@ import { Workspace } from "@rbxts/services";
 import { usePx } from "../usePx";
 
 export const FLIPPED = false;
+const BOT = false;
 
 export interface PieceProps {
   pos: [number, number];
@@ -125,7 +126,7 @@ export default function Board() {
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const px = usePx();
   const iconPack = Wood;
-  const playingAs = Color.white;
+  const [playingAs, setPlayingAs] = useState(Color.white);
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
   /* Evaluation bar */
@@ -182,7 +183,8 @@ export default function Board() {
           piece[1][0] = PieceType.none;
           captured = true;
         } else if (piece[0] === moved) {
-          piece[0] = movedTo || 0;
+          if (movedTo) piece[0] = movedTo;
+          else piece[1][0] = PieceType.none;
         }
       }
 
@@ -207,10 +209,16 @@ export default function Board() {
     movePieceInternal(holdingPiece, location, true);
 
     const best = GetBestMoveAPI(board);
-    if (!best.move) return;
-    setEval(best.eval);
-    setMate(best.mate ?? 0);
-    movePieceInternal(best.move[0], best.move[1], false);
+    if (best.move) {
+      setEval(best.eval);
+      setMate(tonumber(best.mate) ?? 0);
+    }
+
+    if (BOT && best.move) {
+      movePieceInternal(best.move[0], best.move[1], false);
+    } else {
+      setPlayingAs((p) => 1 - p);
+    }
   };
 
   return (

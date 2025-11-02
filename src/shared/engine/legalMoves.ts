@@ -8,7 +8,14 @@ function isOnBoard(index: number): boolean {
 
 export type Move =
   | [Square]
-  | [Square, (branch: BitBoard) => [Square, Square] | undefined];
+  | [
+      Square,
+      (
+        branch: BitBoard,
+      ) =>
+        | [Square, Square | undefined /* undefined means piece removed */]
+        | void,
+    ];
 
 /* Direction Rules */
 const SLIDE_DIRECTIONS: Partial<Record<Piece, [number, number][]>> = {
@@ -63,37 +70,55 @@ const CUSTOM_DIRECTIONS: Partial<
   [Piece.pawn]: (piece, pos, board) => {
     const moves: Move[] = [];
 
-    const dir = piece[1] === 0 ? 1 : -1;
+    const dir = piece[1] === 0 ? 1 : -1; // 1 for white, -1 for black
     const startRank = piece[1] === 0 ? 1 : 6;
 
     // Forward move
     const oneStep = pos + dir * 8;
     const onBoard = isOnBoard(oneStep);
-    if (onBoard) {
-      if (!BitBoard.hasPiece(board, oneStep)) {
-        moves.push([oneStep]);
+    if (onBoard && !BitBoard.hasPiece(board, oneStep)) {
+      moves.push([oneStep]);
 
-        // Two steps from start
-        const twoStep = oneStep + dir * 8;
-        const isStarting = pos >= startRank * 8 && pos < startRank * 8 + 8;
-        if (isStarting && !BitBoard.hasPiece(board, twoStep)) {
-          moves.push([twoStep]);
-        }
+      // Two steps from start
+      const twoStep = oneStep + dir * 8;
+      const isStarting = pos >= startRank * 8 && pos < startRank * 8 + 8;
+      if (isStarting && !BitBoard.hasPiece(board, twoStep)) {
+        moves.push([
+          twoStep,
+          (branch) => {
+            BitBoard.setEnPassant(branch, oneStep);
+          },
+        ]);
       }
+    }
 
-      // Captures
-      for (const dx of [9, 7]) {
-        const newPos = pos + dx * dir;
-        if (!isOnBoard(newPos)) continue;
-        const target = BitBoard.getPiece(board, newPos);
-        if (target[0] !== 0 && target[1] !== piece[1]) {
-          moves.push([newPos]);
+    // Captures
+    for (const dx of [9, 7]) {
+      const newPos = pos + dx * dir;
+      if (!isOnBoard(newPos)) continue;
+
+      const target = BitBoard.getPiece(board, newPos);
+      if (target[0] !== 0 && target[1] !== piece[1]) {
+        // Normal capture
+        moves.push([newPos]);
+      } else {
+        // En passant capture
+        const enPassantSquare = BitBoard.getEnPassant(board);
+        if (enPassantSquare === newPos) {
+          moves.push([
+            newPos,
+            (branch) => {
+              BitBoard.setPiece(branch, newPos - 8, Piece.none, 0);
+              return [newPos - 8, undefined];
+            },
+          ]);
         }
       }
     }
 
     return moves;
   },
+
   [Piece.king]: (piece, pos, board) => {
     /* TODO: move rook also, and check for interruptions in between which include checks & pieces */
     /* this just handles castling, movement is in FIXED_DIRECTIONS */

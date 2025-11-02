@@ -1,41 +1,20 @@
 import { Color, Piece, Square } from "shared/board";
 
-const fenLookup: Record<string, Piece> = {
-  P: Piece.pawn,
-  N: Piece.knight,
-  B: Piece.bishop,
-  R: Piece.rook,
-  Q: Piece.queen,
-  K: Piece.king,
-};
-const reverseFenLookup: Partial<Record<Piece, string>> = {
-  [Piece.pawn]: "P",
-  [Piece.knight]: "N",
-  [Piece.bishop]: "B",
-  [Piece.rook]: "R",
-  [Piece.queen]: "Q",
-  [Piece.king]: "K",
-};
-
 export type BitBoard = buffer & { readonly brand: unique symbol };
 
 const CURRENT_TURN = 8 * 64 + 1;
-
-const CASTLE_INDEX = {
+export const CASTLE_INDEX = {
   0: [8 * 64 + 2, 8 * 64 + 3],
   1: [8 * 64 + 4, 8 * 64 + 5],
 };
 /* CASTLE_INDEX[color][queenSide ? 0 : 1] */
 
-export namespace BitBoard {
-  export const create = (fen?: string) => {
-    const board = buffer.create(8 * 64 + 6) as BitBoard;
-    // Layout
-    // ([piece id][color])*64 [currentTurn] [white queenside castle] [white kingside castle] [black queenside castle] [black kingside castle]
+export const EN_PASSANT = 8 * 64 + 6;
+const SIZE = 8 * 64 + 7;
+// ([piece id][color])*64 [currentTurn] [WQ castle] [WK castle] [BQ castle] [BK castle] [EnPassant]
 
-    if (fen) fromFEN(board, fen);
-    return board;
-  };
+export namespace BitBoard {
+  export const create = () => buffer.create(SIZE) as BitBoard;
 
   /* internal */
   export function getSquareIndex(file: number, rank: number): number {
@@ -115,6 +94,9 @@ export namespace BitBoard {
         breakCastlingRights(board, 1, true); // a8 rook
       else if (to === 63) breakCastlingRights(board, 1, false); // h8 rook
     }
+
+    /* en passant */
+    BitBoard.setEnPassant(board, undefined);
   }
   export function breakCastlingRights(
     board: BitBoard,
@@ -158,105 +140,15 @@ export namespace BitBoard {
     const currentTurn = getTurn(board);
     buffer.writeu8(board, CURRENT_TURN, 1 - currentTurn);
   }
+  export function getEnPassant(board: BitBoard): Square | undefined {
+    const index = buffer.readu8(board, EN_PASSANT);
+    return index === 0 ? undefined : index;
+  }
+  export function setEnPassant(board: BitBoard, square: Square | undefined) {
+    buffer.writeu8(board, EN_PASSANT, square ?? 0);
+  }
 
   export function hash(board: BitBoard): string {
     return buffer.tostring(board);
-  }
-
-  /* FEN */
-  export function fromFEN(board: BitBoard, fen: string) {
-    /* todo: read turn, castle, en passant */
-    let file = 0;
-    let rank = 7;
-
-    const [
-      pieces,
-      activeColor,
-      castling,
-      enPassant,
-      halfMoveClock,
-      fullMoveClock,
-    ] = fen.split(" ");
-
-    /* Load pieces */
-    for (const char of pieces.split("")) {
-      if (char === "/") {
-        rank--;
-        file = 0;
-        continue;
-      }
-      if (char === " ") break; // unsupported
-
-      const number = tonumber(char);
-      if (number && number > 0 && number <= 8) {
-        /* space */
-        file += number;
-      } else {
-        const upper = string.upper(char);
-
-        const pieceType = fenLookup[upper];
-        const color = upper === char ? 0 : 1;
-        setPiece(board, getSquareIndex(file, rank), pieceType, color);
-        file++;
-      }
-    }
-
-    /* Load castling */
-    for (const char of castling.split("")) {
-      switch (char) {
-        case "K":
-          buffer.writeu8(board, CASTLE_INDEX[Color.white][1], 1);
-          break;
-        case "Q":
-          buffer.writeu8(board, CASTLE_INDEX[Color.white][0], 1);
-          break;
-        case "k":
-          buffer.writeu8(board, CASTLE_INDEX[Color.black][1], 1);
-          break;
-        case "q":
-          buffer.writeu8(board, CASTLE_INDEX[Color.black][0], 1);
-          break;
-      }
-    }
-  }
-  export function toFEN(board: BitBoard): string {
-    let fen = "";
-    let castling = "";
-    let empty = 0;
-
-    /* Pieces */
-    for (let rank = 7; rank >= 0; rank--) {
-      for (let file = 0; file < 8; file++) {
-        const [pieceType, color] = getPiece(board, getSquareIndex(file, rank));
-        if ((pieceType as number) === 0) {
-          empty++;
-        } else {
-          if (empty > 0) {
-            fen += tostring(empty);
-            empty = 0;
-          }
-
-          if (color === 0) {
-            fen += reverseFenLookup[pieceType];
-          } else {
-            fen += string.lower(reverseFenLookup[pieceType]!);
-          }
-        }
-      }
-      if (empty > 0) {
-        fen += tostring(empty);
-        empty = 0;
-      }
-      if (rank > 0) fen += "/";
-    }
-
-    /* Castling */
-    if (buffer.readu8(board, CASTLE_INDEX[Color.white][1])) castling += "K";
-    if (buffer.readu8(board, CASTLE_INDEX[Color.white][0])) castling += "Q";
-    if (buffer.readu8(board, CASTLE_INDEX[Color.black][1])) castling += "k";
-    if (buffer.readu8(board, CASTLE_INDEX[Color.black][0])) castling += "q";
-    if (castling === "") castling = "-";
-
-    return `${fen} ${getTurn(board) === 0 ? "w" : "b"} ${castling} - 0 2`;
   }
 }

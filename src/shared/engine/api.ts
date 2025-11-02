@@ -1,9 +1,10 @@
 import { BitBoard } from "./bitboard";
 import { HttpService } from "@rbxts/services";
 import { Notation } from "./notation";
+import { FEN } from "./fen";
 
 export function GetBestMoveAPI(board: BitBoard) {
-  const fen = BitBoard.toFEN(board);
+  const fen = FEN.toFEN(board);
   const bestMove = HttpService.JSONDecode(
     HttpService.PostAsync(
       "https://chess-api.com/v1",
