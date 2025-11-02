@@ -10,7 +10,10 @@ import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Wood, IconPack } from "./images";
 import { Frame, ListLayout, Text } from "@rbxts/better-react-components";
-import { default as GetLegalMoves } from "shared/engine/legalMoves";
+import {
+  AnalyzeMates,
+  default as GetLegalMoves,
+} from "shared/engine/legalMoves";
 import { Image } from "../image";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { BitBoard } from "shared/engine/bitboard";
@@ -124,14 +127,30 @@ export default function Board() {
   const px = usePx();
 
   const [evaluation, setEval] = useState(0);
+  const [mate, setMate] = useState(0);
   const [evalBar, evalBarMotion] = useMotion(0.5);
-  useEffect(() => {
-    const scale = 10;
-    const probability = 1 / (1 + math.pow(10, -evaluation / scale));
-    const mapped = math.min(math.max(probability, 0), 1);
+  const [evalText, setEvalText] = useState("");
 
-    evalBarMotion.spring(mapped);
-  }, [evaluation]);
+  useEffect(() => {
+    if (AnalyzeMates(board) === "checkmate") {
+      setEvalText(mate > 0 ? "1-0" : "0-1");
+    } else if (mate > 0) {
+      evalBarMotion.spring(1);
+      setEvalText(`M${mate + 1}`);
+    } else if (mate < 0) {
+      evalBarMotion.spring(0);
+      setEvalText(`M${math.abs(mate - 1)}`);
+    } else {
+      const scale = 10;
+      const probability = 1 / (1 + math.pow(10, -evaluation / scale));
+      const mapped = math.min(math.max(probability, 0), 1);
+
+      evalBarMotion.spring(mapped);
+      setEvalText(
+        string.format("%.1f", evaluation > 0 ? evaluation : 1 - evaluation),
+      );
+    }
+  }, [evaluation, mate]);
 
   const iconPack = Wood;
 
@@ -187,6 +206,7 @@ export default function Board() {
     const best = GetBestMoveAPI(board);
     if (!best.move) return;
     setEval(best.eval);
+    setMate(best.mate ?? 0);
     movePieceInternal(best.move[0], best.move[1]);
   };
 
@@ -214,10 +234,7 @@ export default function Board() {
         <Text
           visible={evaluation !== 0}
           size={new UDim2(1, 0, 0, px(20))}
-          text={string.format(
-            "%.1f",
-            evaluation > 0 ? evaluation : 1 - evaluation,
-          )}
+          text={evalText}
           noBackground
           textColor={
             evaluation > 0 ? new Color3(0.45, 0.45, 0.45) : new Color3(1, 1, 1)

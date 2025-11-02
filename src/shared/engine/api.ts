@@ -9,17 +9,19 @@ export function GetBestMoveAPI(board: BitBoard) {
       "https://chess-api.com/v1",
       HttpService.JSONEncode({
         fen,
-        depth: 2,
+        depth: 12,
       }),
     ),
   ) as unknown as {
     lan: string;
     text: string;
     eval: number;
+    mate: number;
   };
+  print(bestMove);
 
   return {
+    ...bestMove,
     move: bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined,
-    eval: bestMove.eval,
   };
 }

@@ -104,7 +104,6 @@ const CUSTOM_DIRECTIONS: Partial<
       moves.push([
         BitBoard.getSquareIndex(2, rank),
         (branch) => {
-          print("queenside castle");
           BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8);
           return [0 + rank * 8, 3 + rank * 8];
         },
@@ -115,7 +114,6 @@ const CUSTOM_DIRECTIONS: Partial<
       moves.push([
         BitBoard.getSquareIndex(6, rank),
         (branch) => {
-          print("kingside castle");
           BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8);
           return [7 + rank * 8, 5 + rank * 8];
         },

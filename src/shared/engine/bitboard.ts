@@ -77,16 +77,22 @@ export namespace BitBoard {
     return pieces;
   }
   export function movePiece(board: BitBoard, from: Square, to: Square) {
+    const [originalPieceType] = binaryToPiece(buffer.readu8(board, to));
+
     const piece = buffer.readu8(board, from);
     buffer.writeu8(board, from, 0);
     buffer.writeu8(board, to, piece);
 
     /* castling rights */
     const [pieceType, color] = binaryToPiece(piece);
+
+    /** moved king */
     if (pieceType === Piece.king) {
       BitBoard.breakCastlingRights(board, color, false);
       BitBoard.breakCastlingRights(board, color, true);
     }
+
+    /** moved rook */
     if (pieceType === Piece.rook) {
       if (from === 0)
         breakCastlingRights(board, 0, true); // a1 rook
@@ -95,6 +101,17 @@ export namespace BitBoard {
       else if (from === 56)
         breakCastlingRights(board, 1, true); // a8 rook
       else if (from === 63) breakCastlingRights(board, 1, false); // h8 rook
+    }
+
+    /** captured rook */
+    if (originalPieceType === Piece.rook) {
+      if (to === 0)
+        breakCastlingRights(board, 0, true); // a1 rook
+      else if (to === 7)
+        breakCastlingRights(board, 0, false); // h1 rook
+      else if (to === 56)
+        breakCastlingRights(board, 1, true); // a8 rook
+      else if (to === 63) breakCastlingRights(board, 1, false); // h8 rook
     }
   }
   export function breakCastlingRights(
