@@ -101,23 +101,66 @@ const CUSTOM_DIRECTIONS: Partial<
     const moves: Move[] = [];
     if (BitBoard.getCastlingRights(board, piece[1], true)) {
       /* castle queenside, king goes to c file */
-      moves.push([
-        BitBoard.getSquareIndex(2, rank),
-        (branch) => {
-          BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8);
-          return [0 + rank * 8, 3 + rank * 8];
-        },
-      ]);
+      let canCastle = true;
+
+      // make sure pieces arent in the way
+      if (BitBoard.hasPiece(board, 1 + rank * 8)) canCastle = false; // knight
+      if (BitBoard.hasPiece(board, 2 + rank * 8)) canCastle = false; // bishop
+      if (BitBoard.hasPiece(board, 3 + rank * 8)) canCastle = false; // queen
+
+      // check for checks
+      /*
+      if (IsSquareAttacked(board, 0 + rank * 8, 1 - piece[1]))
+        canCastle = false; // a file (rook)
+      if (IsSquareAttacked(board, 1 + rank * 8, 1 - piece[1]))
+        canCastle = false; // b file
+      if (IsSquareAttacked(board, 2 + rank * 8, 1 - piece[1]))
+        canCastle = false; // c file
+      if (IsSquareAttacked(board, 3 + rank * 8, 1 - piece[1]))
+        canCastle = false; // d file
+      if (IsSquareAttacked(board, 4 + rank * 8, 1 - piece[1]))
+        canCastle = false; // e file (king)
+        */
+
+      if (canCastle) {
+        moves.push([
+          BitBoard.getSquareIndex(2, rank),
+          (branch) => {
+            BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8);
+            return [0 + rank * 8, 3 + rank * 8];
+          },
+        ]);
+      }
     }
     if (BitBoard.getCastlingRights(board, piece[1], false)) {
       /* castle kingside, king goes to g file */
-      moves.push([
-        BitBoard.getSquareIndex(6, rank),
-        (branch) => {
-          BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8);
-          return [7 + rank * 8, 5 + rank * 8];
-        },
-      ]);
+      let canCastle = true;
+
+      // make sure pieces arent in the way
+      if (BitBoard.hasPiece(board, 6 + rank * 8)) canCastle = false; // knight
+      if (BitBoard.hasPiece(board, 5 + rank * 8)) canCastle = false; // bishop
+
+      // check for checks
+      /*
+      if (IsSquareAttacked(board, 4 + rank * 8, 1 - piece[1]))
+        canCastle = false; // e file (king)
+      if (IsSquareAttacked(board, 5 + rank * 8, 1 - piece[1]))
+        canCastle = false; // f file
+      if (IsSquareAttacked(board, 6 + rank * 8, 1 - piece[1]))
+        canCastle = false; // g file
+      if (IsSquareAttacked(board, 4 + rank * 8, 1 - piece[1]))
+        canCastle = false; // h file (rook)
+        */
+
+      if (canCastle) {
+        moves.push([
+          BitBoard.getSquareIndex(6, rank),
+          (branch) => {
+            BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8);
+            return [7 + rank * 8, 5 + rank * 8];
+          },
+        ]);
+      }
     }
     return moves;
   },
