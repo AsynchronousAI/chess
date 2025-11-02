@@ -29,7 +29,7 @@ import { usePx } from "../usePx";
 import { Motion } from "@rbxts/ripple";
 
 export const FLIPPED = false;
-const BOT = false;
+const BOT = true;
 
 export interface PieceProps {
   pos: [number, number];
@@ -275,12 +275,21 @@ export default function Board() {
     newAudio.Play();
     newAudio.Ended.Connect(() => newAudio.Destroy());
   };
-  const movePieceInternal = (from: number, to: number, myMove: boolean) => {
+  const movePieceInternal = (
+    from: number,
+    to: number,
+    myMove: boolean,
+    as?: PieceType,
+  ) => {
     /* this simply moves a piece, and handles additional closures for castling for example */
     const move = (myMove ? possibleMoves : GetLegalMoves(board, from, false))
       /* if it is my move use saved outcomes, otherwise calculate new */
       .find((v) => v[0] === to);
-    BitBoard.movePiece(board, from, to);
+    if (!as) BitBoard.movePiece(board, from, to); /* normal move */
+    else {
+      BitBoard.setPiece(board, from, 0, 0);
+      BitBoard.setPiece(board, to, as, playingAs);
+    }
     BitBoard.flipTurn(board);
     const [moved, movedTo] = move?.[1]?.(board) || [];
 
@@ -291,6 +300,7 @@ export default function Board() {
       for (const piece of currentPieces) {
         if (piece[0] === from) {
           piece[0] = to;
+          if (as) piece[1][0] = as;
         } else if (piece[0] === to) {
           piece[1][0] = PieceType.none;
           captured = true;
@@ -310,6 +320,19 @@ export default function Board() {
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
   };
+  const onPieceMove = () => {
+    const best = GetBestMoveAPI(board);
+    if (best.move) {
+      setEval(best.eval);
+      setMate(tonumber(best.mate) ?? 0);
+    }
+
+    if (BOT && best.move) {
+      movePieceInternal(best.move[0], best.move[1], false);
+    } else {
+      setPlayingAs((p) => 1 - p);
+    }
+  };
   const movePiece = (location: number) => {
     /* this moves a piece, gets an eval, and responds with bot move */
     if (
@@ -328,18 +351,7 @@ export default function Board() {
     }
 
     movePieceInternal(holdingPiece, location, true);
-
-    const best = GetBestMoveAPI(board);
-    if (best.move) {
-      setEval(best.eval);
-      setMate(tonumber(best.mate) ?? 0);
-    }
-
-    if (BOT && best.move) {
-      movePieceInternal(best.move[0], best.move[1], false);
-    } else {
-      setPlayingAs((p) => 1 - p);
-    }
+    onPieceMove();
   };
 
   return (
@@ -491,6 +503,9 @@ export default function Board() {
             iconPack={iconPack}
             location={promoting}
             onPromote={(piece) => {
+              if (!holdingPiece) return;
+              movePieceInternal(holdingPiece, promoting, true, piece);
+              onPieceMove();
               setPromoting(-1);
               print("promote to", piece);
             }}
