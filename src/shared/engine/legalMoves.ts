@@ -1,4 +1,4 @@
-import { Color, FILES, Piece, RANKS, Square } from "shared/board";
+import { Color, Piece, Square } from "shared/board";
 import { BitBoard } from "./bitboard";
 
 /* Utility functions */
@@ -124,6 +124,14 @@ const CUSTOM_DIRECTIONS: Partial<
 };
 
 /* Export */
+export function IsSquareAttacked(board: BitBoard, target: Square, turn: Color) {
+  for (const [_, followingMoveEnd] of GetAllLegalMoves(board, turn, false)) {
+    if (followingMoveEnd === target) {
+      return true;
+    }
+  }
+  return false;
+}
 export default function GetLegalMoves(
   board: BitBoard,
   from: Square,
@@ -134,33 +142,29 @@ export default function GetLegalMoves(
 
   let moves: Move[] = [];
 
-  let kingPosition =
-    checks && BitBoard.findPiece(board, Piece.king, BitBoard.getTurn(board))[0];
-
+  let kingPosition = BitBoard.findPiece(
+    board,
+    Piece.king,
+    BitBoard.getTurn(board),
+  )[0];
   const pushMove = (newPos: Move) => {
-    // check for checks
-    if (kingPosition) {
+    if (checks) {
+      /* branch + move */
       const newBoard = BitBoard.branch(board);
-      const pos = typeIs(newPos, "number") ? newPos : newPos[0];
+      const pos = newPos[0];
       BitBoard.movePiece(newBoard, from, pos);
       newPos[1]?.(newBoard);
 
-      // king moved?
-      let localKingPos = kingPosition;
+      /* if the king moved then update it */
       if (piece[0] === Piece.king) {
-        localKingPos = pos;
+        kingPosition = pos;
       }
 
-      for (const [_, followingMoveEnd] of GetAllLegalMoves(
-        newBoard,
-        1 - piece[1],
-        false,
-      )) {
-        if (followingMoveEnd === localKingPos) {
-          return;
-        }
+      if (IsSquareAttacked(newBoard, kingPosition, 1 - piece[1])) {
+        return;
       }
     }
+
     moves.push(newPos);
   };
 
@@ -219,11 +223,7 @@ export function GetAllLegalMoves(
   for (const [location, [piece, color]] of BitBoard.getAllPieces(board)) {
     if (color !== turn) continue;
     for (const nextLocation of GetLegalMoves(board, location, checks)) {
-      if (typeIs(nextLocation, "number")) {
-        moves.push([location, nextLocation]);
-      } else {
-        moves.push([location, nextLocation[0]]);
-      }
+      moves.push([location, nextLocation[0]]);
     }
   }
 

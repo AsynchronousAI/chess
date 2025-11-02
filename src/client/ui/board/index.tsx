@@ -22,7 +22,6 @@ import { SoundEffects } from "./sfx";
 import { Workspace } from "@rbxts/services";
 import { usePx } from "../usePx";
 
-const DISPLAY_SQUARE_LABELS = true;
 export const FLIPPED = false;
 
 export interface PieceProps {
@@ -125,14 +124,17 @@ export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const px = usePx();
+  const iconPack = Wood;
+  const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
+  /* Evaluation bar */
   const [evaluation, setEval] = useState(0);
   const [mate, setMate] = useState(0);
   const [evalBar, evalBarMotion] = useMotion(0.5);
   const [evalText, setEvalText] = useState("");
-
   useEffect(() => {
     if (AnalyzeMates(board) === "checkmate") {
+      evalBarMotion.spring(mate > 0 ? 1 : 0);
       setEvalText(mate > 0 ? "1-0" : "0-1");
     } else if (mate > 0) {
       evalBarMotion.spring(1);
@@ -152,10 +154,7 @@ export default function Board() {
     }
   }, [evaluation, mate, board]);
 
-  const iconPack = Wood;
-
-  const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
-
+  /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
     const newAudio = new Instance("Sound", Workspace);
     newAudio.SoundId = SoundEffects[sfx];
@@ -163,6 +162,7 @@ export default function Board() {
     newAudio.Ended.Connect(() => newAudio.Destroy());
   };
   const movePieceInternal = (from: number, to: number) => {
+    /* this simply moves a piece */
     BitBoard.movePiece(board, from, to);
     BitBoard.flipTurn(board);
     const move = possibleMoves.find((v) => v[0] === to);
@@ -195,6 +195,7 @@ export default function Board() {
     Atoms.PossibleMoves([]);
   };
   const movePiece = (location: number) => {
+    /* this moves a piece, gets an eval, and responds with bot move */
     if (
       !possibleMoves.find((v) => v[0] === location) ||
       holdingPiece === undefined
@@ -275,15 +276,29 @@ export default function Board() {
                   background={colored ? iconPack.filled : iconPack.unfilled}
                   zIndex={1}
                 >
-                  {DISPLAY_SQUARE_LABELS && (
+                  {boardJ === 7 && (
                     <Text
                       textColor={!colored ? iconPack.filled : iconPack.unfilled}
-                      textSize={px(17)}
-                      text={location}
+                      textSize={px(20)}
+                      text={letter}
+                      font={"SourceSansBold"}
+                      backgroundTransparency={1}
+                      padding={px(3)}
+                      size={new UDim2(1, 0, 1, 0)}
+                      verticalTextAlign="Bottom"
+                      textAlign="Right"
+                    />
+                  )}
+                  {i === 0 && (
+                    <Text
+                      textColor={!colored ? iconPack.filled : iconPack.unfilled}
+                      textSize={px(20)}
+                      padding={px(3)}
+                      text={number}
                       font={"SourceSansBold"}
                       backgroundTransparency={1}
                       size={new UDim2(1, 0, 1, 0)}
-                      verticalTextAlign="Bottom"
+                      verticalTextAlign="Top"
                       textAlign="Left"
                     />
                   )}

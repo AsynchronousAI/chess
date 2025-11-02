@@ -20,10 +20,12 @@ const reverseFenLookup: Partial<Record<Piece, string>> = {
 export type BitBoard = buffer & { readonly brand: unique symbol };
 
 const CURRENT_TURN = 8 * 64 + 1;
-const CASTLE_WQ = 8 * 64 + 2;
-const CASTLE_WK = 8 * 64 + 3;
-const CASTLE_BQ = 8 * 64 + 4;
-const CASTLE_BK = 8 * 64 + 5;
+
+const CASTLE_INDEX = {
+  0: [8 * 64 + 2, 8 * 64 + 3],
+  1: [8 * 64 + 4, 8 * 64 + 5],
+};
+/* CASTLE_INDEX[color][queenSide ? 0 : 1] */
 
 export namespace BitBoard {
   export const create = (fen?: string) => {
@@ -119,38 +121,14 @@ export namespace BitBoard {
     color: Color,
     queenSide: boolean,
   ) {
-    if (color === 0) {
-      if (queenSide) {
-        buffer.writeu8(board, CASTLE_WQ, 0);
-      } else {
-        buffer.writeu8(board, CASTLE_WK, 0);
-      }
-    } else {
-      if (queenSide) {
-        buffer.writeu8(board, CASTLE_BQ, 0);
-      } else {
-        buffer.writeu8(board, CASTLE_BK, 0);
-      }
-    }
+    buffer.writeu8(board, CASTLE_INDEX[color][queenSide ? 0 : 1], 0);
   }
   export function getCastlingRights(
     board: BitBoard,
     color: Color,
     queenSide: boolean,
   ): boolean {
-    if (color === 0) {
-      if (queenSide) {
-        return buffer.readu8(board, CASTLE_WQ) === 1;
-      } else {
-        return buffer.readu8(board, CASTLE_WK) === 1;
-      }
-    } else {
-      if (queenSide) {
-        return buffer.readu8(board, CASTLE_BQ) === 1;
-      } else {
-        return buffer.readu8(board, CASTLE_BK) === 1;
-      }
-    }
+    return buffer.readu8(board, CASTLE_INDEX[color][queenSide ? 0 : 1]) === 1;
   }
   export function branch(board: BitBoard) {
     const branch = create();
@@ -227,16 +205,16 @@ export namespace BitBoard {
     for (const char of castling.split("")) {
       switch (char) {
         case "K":
-          buffer.writeu8(board, CASTLE_WK, 1);
+          buffer.writeu8(board, CASTLE_INDEX[Color.white][1], 1);
           break;
         case "Q":
-          buffer.writeu8(board, CASTLE_WQ, 1);
+          buffer.writeu8(board, CASTLE_INDEX[Color.white][0], 1);
           break;
         case "k":
-          buffer.writeu8(board, CASTLE_BK, 1);
+          buffer.writeu8(board, CASTLE_INDEX[Color.black][1], 1);
           break;
         case "q":
-          buffer.writeu8(board, CASTLE_BQ, 1);
+          buffer.writeu8(board, CASTLE_INDEX[Color.black][0], 1);
           break;
       }
     }
@@ -273,10 +251,10 @@ export namespace BitBoard {
     }
 
     /* Castling */
-    if (buffer.readu8(board, CASTLE_WK)) castling += "K";
-    if (buffer.readu8(board, CASTLE_WQ)) castling += "Q";
-    if (buffer.readu8(board, CASTLE_BK)) castling += "k";
-    if (buffer.readu8(board, CASTLE_BQ)) castling += "q";
+    if (buffer.readu8(board, CASTLE_INDEX[Color.white][1])) castling += "K";
+    if (buffer.readu8(board, CASTLE_INDEX[Color.white][0])) castling += "Q";
+    if (buffer.readu8(board, CASTLE_INDEX[Color.black][1])) castling += "k";
+    if (buffer.readu8(board, CASTLE_INDEX[Color.black][0])) castling += "q";
     if (castling === "") castling = "-";
 
     return `${fen} ${getTurn(board) === 0 ? "w" : "b"} ${castling} - 0 2`;
