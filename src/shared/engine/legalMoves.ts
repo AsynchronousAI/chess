@@ -152,17 +152,14 @@ export default function GetLegalMoves(
   board: BitBoard,
   from: Square,
   checks: boolean = true,
+  turn: Color = BitBoard.getTurn(board),
 ): Move[] {
   const piece = BitBoard.getPiece(board, from);
   if (!piece) return [];
 
   let moves: Move[] = [];
 
-  let kingPosition = BitBoard.findPiece(
-    board,
-    Piece.king,
-    BitBoard.getTurn(board),
-  )[0];
+  let kingPosition = BitBoard.findPiece(board, Piece.king, turn)[0];
   const pushMove = (newPos: Move) => {
     if (checks) {
       /* branch + move */

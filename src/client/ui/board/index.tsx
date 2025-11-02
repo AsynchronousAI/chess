@@ -1,4 +1,4 @@
-import React, { Binding, useEffect, useRef, useState } from "@rbxts/react";
+import React, { useEffect, useState } from "@rbxts/react";
 import {
   Color,
   FILES,
@@ -125,6 +125,7 @@ export default function Board() {
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const px = usePx();
   const iconPack = Wood;
+  const playingAs = Color.white;
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
   /* Evaluation bar */
@@ -161,13 +162,15 @@ export default function Board() {
     newAudio.Play();
     newAudio.Ended.Connect(() => newAudio.Destroy());
   };
-  const movePieceInternal = (from: number, to: number) => {
-    /* this simply moves a piece */
+  const movePieceInternal = (from: number, to: number, myMove: boolean) => {
+    /* this simply moves a piece, and handles additional closures for castling for example */
+    const move = (myMove ? possibleMoves : GetLegalMoves(board, from, false))
+      /* if it is my move use saved outcomes, otherwise calculate new */
+      .find((v) => v[0] === to);
+    print(to, move, GetLegalMoves(board, from, false), possibleMoves.size());
     BitBoard.movePiece(board, from, to);
     BitBoard.flipTurn(board);
-    const move = possibleMoves.find((v) => v[0] === to);
     const [moved, movedTo] = move?.[1]?.(board) || [];
-    print(BitBoard.toFEN(board));
 
     /* do this so we can maintain indexs from a bitboard */
     setPieces((currentPieces) => {
@@ -202,13 +205,13 @@ export default function Board() {
     )
       return;
 
-    movePieceInternal(holdingPiece, location);
+    movePieceInternal(holdingPiece, location, true);
 
     const best = GetBestMoveAPI(board);
     if (!best.move) return;
     setEval(best.eval);
     setMate(best.mate ?? 0);
-    movePieceInternal(best.move[0], best.move[1]);
+    movePieceInternal(best.move[0], best.move[1], false);
   };
 
   return (
@@ -346,7 +349,7 @@ export default function Board() {
               key={index}
               pos={pos}
               iconPack={iconPack}
-              playingAs={Color.white}
+              playingAs={playingAs}
               location={loc}
               piece={piece}
             />

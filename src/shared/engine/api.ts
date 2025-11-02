@@ -18,7 +18,6 @@ export function GetBestMoveAPI(board: BitBoard) {
     eval: number;
     mate: number;
   };
-  print(bestMove);
 
   return {
     ...bestMove,
