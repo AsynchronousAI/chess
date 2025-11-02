@@ -18,6 +18,7 @@ export interface ImageProps<T extends Instance = ImageLabel>
   size?: React.Binding<UDim2> | UDim2;
   visible?: boolean | React.Binding<boolean>;
   zIndex?: number | React.Binding<number>;
+  aspectRatio?: number | React.Binding<number>;
 
   // Image-specific
   image: string;
@@ -106,6 +107,9 @@ export function Image(props: ImageProps) {
       BackgroundTransparency={1}
     >
       {outlineElements}
+      {props.aspectRatio ? (
+        <uiaspectratioconstraint AspectRatio={props.aspectRatio} />
+      ) : undefined}
       <imagelabel
         Image={props.image}
         ImageColor3={props.imageColor}

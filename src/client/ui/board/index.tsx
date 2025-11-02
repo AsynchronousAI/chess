@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "@rbxts/react";
+import React, { Binding, useEffect, useState } from "@rbxts/react";
 import {
   Color,
   FILES,
@@ -9,7 +9,12 @@ import {
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Wood, IconPack } from "./images";
-import { Frame, ListLayout, Text } from "@rbxts/better-react-components";
+import {
+  CanvasGroup,
+  Frame,
+  ListLayout,
+  Text,
+} from "@rbxts/better-react-components";
 import {
   AnalyzeMates,
   default as GetLegalMoves,
@@ -21,6 +26,7 @@ import { GetBestMoveAPI } from "shared/engine/api";
 import { SoundEffects } from "./sfx";
 import { Workspace } from "@rbxts/services";
 import { usePx } from "../usePx";
+import { Motion } from "@rbxts/ripple";
 
 export const FLIPPED = false;
 const BOT = false;
@@ -33,6 +39,116 @@ export interface PieceProps {
   piece: [PieceType, Color];
 }
 
+const generatePosition = (pos: [number, number]) =>
+  new UDim2(pos[0] / 8, 0, (FLIPPED ? pos[1] : 7 - pos[1]) / 8, 0);
+
+export function Promotion({
+  location,
+  color,
+  iconPack,
+  onPromote,
+}: {
+  location: number;
+  color: Color;
+  iconPack: IconPack;
+  onPromote: (piece: PieceType | undefined) => void;
+}) {
+  const px = usePx();
+  const holdingPiece = useAtom(Atoms.HoldingPiece);
+
+  const pieces = [
+    PieceType.bishop,
+    PieceType.rook,
+    PieceType.knight,
+    PieceType.queen,
+  ];
+  const motions = pieces.map(() => [...useMotion(0)]) as [
+    Binding<number>,
+    Motion<number>,
+  ][];
+
+  const pos = [location % 8, math.floor(location / 8)] as [number, number];
+
+  return (
+    <CanvasGroup
+      position={generatePosition(pos).add(
+        color === Color.white && !FLIPPED
+          ? new UDim2()
+          : new UDim2(0, 0, -0.435, 0),
+      )}
+      size={new UDim2(1 / 8, 0, 4.5 / 8, 0)}
+      zIndex={1000}
+      background={new Color3(1, 1, 1)}
+      cornerRadius={px(4)}
+    >
+      <ListLayout
+        verticalAlign={"Top"}
+        horizontalAlign={"Center"}
+        direction={"Vertical"}
+        order={"LayoutOrder"}
+        padding={px(5)}
+      />
+
+      {/* Close */}
+      <textbutton
+        Font={"ArialBold"}
+        TextSize={px(18)}
+        Size={new UDim2(1, 0, 1 / 9, 0)}
+        Text="X"
+        TextColor3={new Color3(0.35, 0.35, 0.35)}
+        BackgroundColor3={new Color3(0.95, 0.95, 0.95)}
+        LayoutOrder={0}
+        AutoButtonColor={false}
+        Event={{
+          MouseButton1Click: () => onPromote(undefined),
+        }}
+      >
+        <uistroke
+          Thickness={px(1)}
+          Color={new Color3(0.85, 0.85, 0.85)}
+          ApplyStrokeMode={"Border"}
+        />
+      </textbutton>
+
+      {/* Options */}
+      {pieces.map((piece, index) => {
+        const [offsetY, offsetYMotion] = motions[index];
+        return (
+          <Frame
+            size={new UDim2(1, -px(7), 1, -px(7))}
+            noBackground
+            zIndex={holdingPiece === location ? 100 : 3}
+            key={index}
+            layoutOrder={index + 1}
+          >
+            <uiaspectratioconstraint AspectRatio={1} />
+            <textbutton
+              Size={new UDim2(1, 0, 1, 0)}
+              Text={""}
+              BackgroundTransparency={1}
+              ZIndex={1}
+              Event={{
+                MouseEnter: () => offsetYMotion.spring(-10),
+                MouseLeave: () => offsetYMotion.spring(0),
+                MouseButton1Click: () => onPromote(piece),
+              }}
+            />
+            <Image
+              image={iconPack[color][piece]!}
+              position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
+              size={new UDim2(1, 0, 1, 0)}
+              outlinePrecision={30}
+              outlineThickness={px(4)}
+              outlineStartAngle={40}
+              outlineColor={new Color3(0.35, 0.35, 0.35)}
+              zIndex={holdingPiece === location ? 100 : 3}
+            />
+          </Frame>
+        );
+      })}
+    </CanvasGroup>
+  );
+}
 export function Piece(props: PieceProps) {
   const board = useAtom(Atoms.Board);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
@@ -40,18 +156,10 @@ export function Piece(props: PieceProps) {
 
   const [offsetY, offsetYMotion] = useMotion(0);
 
-  const generatePosition = () =>
-    new UDim2(
-      props.pos[0] / 8,
-      0,
-      (FLIPPED ? props.pos[1] : 7 - props.pos[1]) / 8,
-      0,
-    );
-
-  const [pos, posMotion] = useMotion(generatePosition());
+  const [pos, posMotion] = useMotion(generatePosition(props.pos));
   useEffect(
     () =>
-      posMotion.tween(generatePosition(), {
+      posMotion.tween(generatePosition(props.pos), {
         style: Enum.EasingStyle.Quint,
         time: 0.2,
       }),
@@ -83,40 +191,42 @@ export function Piece(props: PieceProps) {
 
   return (
     props.piece[0] !== PieceType.none && (
-      <Frame
-        position={pos}
-        size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-        noBackground
-        zIndex={holdingPiece === props.location ? 100 : 3}
-      >
-        <textbutton
-          Size={new UDim2(1, 0, 1, 0)}
-          Text={""}
-          BackgroundTransparency={1}
-          ZIndex={1}
-          Event={{
-            MouseEnter: () => {
-              offsetYMotion.spring(isMyPiece ? -10 : 0);
-            },
-            MouseLeave: () => {
-              offsetYMotion.spring(0);
-            },
-            MouseButton1Down: onDown,
-          }}
-        />
-        {image ? (
-          <Image
-            image={image}
-            position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
-            size={new UDim2(1, 0, 1, 0)}
-            outlinePrecision={30}
-            outlineThickness={px(4)}
-            outlineStartAngle={40}
-            outlineColor={new Color3(0.35, 0.35, 0.35)}
-            zIndex={holdingPiece === props.location ? 100 : 3}
+      <>
+        <Frame
+          position={pos}
+          size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+          noBackground
+          zIndex={holdingPiece === props.location ? 100 : 3}
+        >
+          <textbutton
+            Size={new UDim2(1, 0, 1, 0)}
+            Text={""}
+            BackgroundTransparency={1}
+            ZIndex={1}
+            Event={{
+              MouseEnter: () => {
+                offsetYMotion.spring(isMyPiece ? -10 : 0);
+              },
+              MouseLeave: () => {
+                offsetYMotion.spring(0);
+              },
+              MouseButton1Down: onDown,
+            }}
           />
-        ) : undefined}
-      </Frame>
+          {image ? (
+            <Image
+              image={image}
+              position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
+              size={new UDim2(1, 0, 1, 0)}
+              outlinePrecision={30}
+              outlineThickness={px(4)}
+              outlineStartAngle={40}
+              outlineColor={new Color3(0.35, 0.35, 0.35)}
+              zIndex={holdingPiece === props.location ? 100 : 3}
+            />
+          ) : undefined}
+        </Frame>
+      </>
     )
   );
 }
@@ -126,8 +236,10 @@ export default function Board() {
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const px = usePx();
   const iconPack = Wood;
+
   const [playingAs, setPlayingAs] = useState(Color.white);
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
+  const [promoting, setPromoting] = useState(-1);
 
   /* Evaluation bar */
   const [evaluation, setEval] = useState(0);
@@ -205,6 +317,15 @@ export default function Board() {
       holdingPiece === undefined
     )
       return;
+
+    const piece = BitBoard.getPiece(board, holdingPiece);
+    if (
+      piece[0] === PieceType.pawn &&
+      (playingAs === Color.white ? location > 49 : location < 8)
+    ) {
+      setPromoting(location);
+      return;
+    }
 
     movePieceInternal(holdingPiece, location, true);
 
@@ -362,6 +483,19 @@ export default function Board() {
             />
           );
         })}
+
+        {/* Promotion popup */}
+        {promoting > 0 ? (
+          <Promotion
+            color={playingAs}
+            iconPack={iconPack}
+            location={promoting}
+            onPromote={(piece) => {
+              setPromoting(-1);
+              print("promote to", piece);
+            }}
+          />
+        ) : undefined}
       </Frame>
     </Frame>
   );
