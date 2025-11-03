@@ -45,12 +45,12 @@ export const EvaluationBar = forwardRef<EvaluationBarRef>((props, ref) => {
       /* black mate */
       evalBarMotion.spring(0);
       setEval(1);
-      setEvalText(`M${mate}`);
+      setEvalText(`M${mate - 1}`);
     } else if (mate < 0) {
       /* white mate */
       evalBarMotion.spring(1);
       setEval(-1);
-      setEvalText(`M${math.abs(mate - 1)}`);
+      setEvalText(`M${math.abs(mate - 2)}`);
     } else {
       /* midgame */
       const scale = 500;

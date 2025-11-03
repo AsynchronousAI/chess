@@ -120,24 +120,22 @@ const CUSTOM_DIRECTIONS: Partial<
   },
 
   [Piece.king]: (piece, pos, board) => {
-    /* TODO: move rook also, and check for interruptions in between which include checks & pieces */
     /* this just handles castling, movement is in FIXED_DIRECTIONS */
     const [, rank] = BitBoard.separateSquareIndex(pos);
     const moves: Move[] = [];
 
-    const isLegalCastle = (
-      mustBeEmpty: number[],
-      mustNotBeAttacked: number[],
-    ) => {
+    const isLegalCastle = (mustBeEmpty: number[], mustNotAttack: number[]) => {
       const emptyCheck = mustBeEmpty.map((file) => file + rank * 8);
+      const attackCheck = mustNotAttack.map((file) => file + rank * 8);
 
       for (const sq of emptyCheck) {
         if (BitBoard.hasPiece(board, sq)) {
           return false;
         }
       }
-      for (const sq of mustNotBeAttacked) {
-        if (IsSquareAttacked(board, sq, 1 - piece[1])) {
+      for (const sq of attackCheck) {
+        const attacker = IsSquareAttacked(board, sq, 1 - piece[1]);
+        if (attacker !== Piece.none) {
           return false;
         }
       }
@@ -178,9 +176,9 @@ export function IsSquareAttacked(
   board: BitBoard,
   target: Square,
   attacker: Color,
-): boolean {
+): Piece {
   for (const [pos, [piece, color]] of BitBoard.getAllPieces(board)) {
-    if (color !== attacker) continue;
+    if (piece === Piece.none || color !== attacker) continue;
 
     const [x, y] = BitBoard.separateSquareIndex(pos);
     const [tx, ty] = BitBoard.separateSquareIndex(target);
@@ -190,8 +188,8 @@ export function IsSquareAttacked(
 
     switch (piece) {
       case Piece.pawn: {
-        const dir = color === Color.white ? 1 : -1;
-        if (dy === dir && math.abs(dx) === 1) return true;
+        const attackDir = color === Color.white ? 1 : -1; // white attacks +y, black attacks -y
+        if (ty - y === attackDir && math.abs(tx - x) === 1) return piece;
         break;
       }
       case Piece.knight: {
@@ -199,11 +197,11 @@ export function IsSquareAttacked(
           (math.abs(dx) === 2 && math.abs(dy) === 1) ||
           (math.abs(dx) === 1 && math.abs(dy) === 2)
         )
-          return true;
+          return piece;
         break;
       }
       case Piece.king: {
-        if (math.max(math.abs(dx), math.abs(dy)) === 1) return true;
+        if (math.max(math.abs(dx), math.abs(dy)) === 1) return piece;
         break;
       }
       case Piece.rook:
@@ -217,7 +215,7 @@ export function IsSquareAttacked(
             const cSquare = BitBoard.getSquareIndex(cx, cy);
             const cPiece = BitBoard.getPiece(board, cSquare);
 
-            if (cSquare === target) return true;
+            if (cSquare === target) return piece;
             if (cPiece[0] !== Piece.none) break;
 
             cx += sx;
@@ -232,7 +230,7 @@ export function IsSquareAttacked(
     }
   }
 
-  return false;
+  return Piece.none;
 }
 
 export default function GetLegalMoves(
@@ -260,7 +258,9 @@ export default function GetLegalMoves(
         kingPosition = pos;
       }
 
-      if (IsSquareAttacked(newBoard, kingPosition, 1 - piece[1])) {
+      if (
+        IsSquareAttacked(newBoard, kingPosition, 1 - piece[1]) !== Piece.none
+      ) {
         return;
       }
     }

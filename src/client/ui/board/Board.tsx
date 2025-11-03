@@ -48,9 +48,11 @@ export default function Board() {
     as?: PieceType,
   ) => {
     /* this simply moves a piece, and handles additional closures for castling for example */
-    const move = (myMove ? possibleMoves : GetLegalMoves(board, from, false))
+    const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
+    const move = allMoves
       /* if it is my move use saved outcomes, otherwise calculate new */
       .find((v) => v[0] === to);
+
     if (!as) BitBoard.movePiece(board, from, to); /* normal move */
     else {
       BitBoard.setPiece(board, from, 0, 0);
