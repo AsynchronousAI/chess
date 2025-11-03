@@ -20,6 +20,7 @@ import { Piece } from "./Piece";
 import { Promotion } from "./Promotion";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { BOT, FLIPPED } from "./shared";
+import { FEN } from "shared/engine/fen";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -33,6 +34,7 @@ export default function Board() {
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
   const [promoting, setPromoting] = useState(-1);
 
+  print(FEN.toFEN(board));
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
     const newAudio = new Instance("Sound", Workspace);
@@ -53,7 +55,7 @@ export default function Board() {
     if (!as) BitBoard.movePiece(board, from, to); /* normal move */
     else {
       BitBoard.setPiece(board, from, 0, 0);
-      BitBoard.setPiece(board, to, as, playingAs);
+      BitBoard.setPiece(board, to, as, myMove ? playingAs : 1 - playingAs);
     }
     BitBoard.flipTurn(board);
     const [moved, movedTo] = move?.[1]?.(board) || [];
@@ -93,7 +95,7 @@ export default function Board() {
     }
 
     if (BOT && best.move) {
-      movePieceInternal(best.move[0], best.move[1], false);
+      movePieceInternal(best.move[0], best.move[1], false, best.move[2]);
     } else {
       setPlayingAs((p) => 1 - p);
     }

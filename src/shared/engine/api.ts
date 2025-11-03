@@ -7,21 +7,22 @@ export function GetBestMoveAPI(board: BitBoard) {
   const fen = FEN.toFEN(board);
   const bestMove = HttpService.JSONDecode(
     HttpService.PostAsync(
-      "https://chess-api.com/v1",
+      "http://localhost:3000",
       HttpService.JSONEncode({
         fen,
-        depth: 12,
       }),
     ),
   ) as unknown as {
-    lan: string;
-    text: string;
+    bestmove: string;
     eval: number;
-    mate: number;
+    mate: number | undefined;
+    depth: number;
   };
 
   return {
-    ...bestMove,
-    move: bestMove.lan ? Notation.parseLan(bestMove.lan) : undefined,
+    eval: bestMove.eval ?? 0,
+    mate: bestMove.mate,
+    depth: bestMove.depth ?? 0,
+    move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
   };
 }

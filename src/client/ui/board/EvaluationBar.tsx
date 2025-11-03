@@ -31,6 +31,7 @@ export const EvaluationBar = forwardRef<EvaluationBarRef>((props, ref) => {
   }));
 
   useEffect(() => {
+    /* TODO: fix mate bar, sometimes wrong color, sometimes doesnt show checkmate, doesnt show stalemate */
     if (AnalyzeMates(board) === "checkmate") {
       evalBarMotion.spring(mate > 0 ? 1 : 0);
       setEvalText(mate > 0 ? "1-0" : "0-1");

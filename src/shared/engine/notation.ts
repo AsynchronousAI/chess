@@ -10,6 +10,13 @@ const Shorthand: Record<Piece, string> = {
   [Piece.queen]: "Q",
   [Piece.rook]: "R",
 } as const;
+const Promotion: Record<string, Piece> = {
+  q: Piece.queen,
+  r: Piece.rook,
+  b: Piece.bishop,
+  n: Piece.knight,
+};
+
 export namespace Notation {
   export function parseSquare(square: string): Square {
     const [file, rank] = square.split("");
@@ -31,8 +38,10 @@ export namespace Notation {
     const [piece] = BitBoard.getPiece(board, square);
     return Shorthand[piece] + additional + encodeSquare(square);
   }
-  export function parseLan(lan: string): [Square, Square] {
+  export function parseLan(lan: string): [Square, Square, Piece | undefined] {
     const [from, to] = [lan.sub(0, 2), lan.sub(3, 4)];
-    return [parseSquare(from), parseSquare(to)];
+    const promotion = lan.sub(5, 5);
+    const piece = promotion ? Promotion[promotion] : undefined;
+    return [parseSquare(from), parseSquare(to), piece];
   }
 }
