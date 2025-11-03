@@ -1,4 +1,4 @@
-import { Color, Piece, Square } from "shared/board";
+import { Color, IsSquareBlack, Piece, Square } from "shared/board";
 import { BitBoard } from "./bitboard";
 
 /* Utility functions */
@@ -331,9 +331,63 @@ export function GetAllLegalMoves(
 
   return moves;
 }
-export function AnalyzeMates(board: BitBoard): "checkmate" | "stalemate" | "" {
+
+function isInsufficientMaterial(board: any): boolean {
+  const pieces: Partial<Record<Piece, number>> = {
+    [Piece.king]: 0,
+    [Piece.queen]: 0,
+    [Piece.rook]: 0,
+    [Piece.bishop]: 0,
+    [Piece.knight]: 0,
+    [Piece.pawn]: 0,
+  };
+
+  const bishopColors: boolean[] = []; // true = dark square, false = light square
+
+  for (const [location, [piece, color]] of BitBoard.getAllPieces(board)) {
+    pieces[piece] = (pieces[piece] || 0) + 1;
+
+    if (piece === Piece.bishop) {
+      bishopColors.push(IsSquareBlack(location % 8, math.floor(location / 8)));
+    }
+  }
+
+  const bishops = pieces[Piece.bishop] || 0;
+  const knights = pieces[Piece.knight] || 0;
+  const rooks = pieces[Piece.rook] || 0;
+  const queens = pieces[Piece.queen] || 0;
+  const pawns = pieces[Piece.pawn] || 0;
+
+  // Any pawns, rooks, or queens means sufficient material
+  if (pawns > 0 || rooks > 0 || queens > 0) return false;
+
+  // King vs King
+  if (bishops === 0 && knights === 0) return true;
+
+  // King + Bishop or Knight vs King
+  if (bishops === 1 && knights === 0) return true;
+  if (bishops === 0 && knights === 1) return true;
+
+  // King + Bishop vs King + Bishop (same color bishops)
+  if (bishops === 2 && knights === 0 && bishopColors[0] === bishopColors[1])
+    return true;
+
+  // King + Knight vs King + Knight
+  if (knights === 2 && bishops === 0) return true;
+
+  return false;
+}
+
+export function AnalyzeMates(
+  board: BitBoard,
+): "checkmate" | "stalemate" | "insufficent" | "" {
   const turn = BitBoard.getTurn(board);
   const legalMoves = GetAllLegalMoves(board, turn, true);
+
+  /* In-sufficent material */
+  if (isInsufficientMaterial(board)) return "insufficent";
+
+  /* Based on legal moves */
   if (legalMoves.size() === 0) {
     const kingPosition = BitBoard.findPiece(board, Piece.king, turn)[0];
 

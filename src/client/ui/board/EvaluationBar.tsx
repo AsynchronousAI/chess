@@ -32,18 +32,30 @@ export const EvaluationBar = forwardRef<EvaluationBarRef>((props, ref) => {
 
   useEffect(() => {
     /* TODO: fix mate bar, sometimes wrong color, sometimes doesnt show checkmate, doesnt show stalemate */
-    if (AnalyzeMates(board) === "checkmate") {
-      evalBarMotion.spring(mate > 0 ? 1 : 0);
+    const analysis = AnalyzeMates(board);
+    if (analysis === "stalemate" || analysis === "insufficent") {
+      evalBarMotion.spring(0.5);
+      setEval(1);
+      setEvalText("1/2");
+    } else if (analysis === "checkmate") {
+      /* checkmate */
+      evalBarMotion.spring(mate > 0 ? 0 : 1);
+      setEval(mate > 0 ? -1 : 1);
       setEvalText(mate > 0 ? "1-0" : "0-1");
     } else if (mate > 0) {
-      evalBarMotion.spring(1);
+      /* black mate */
+      evalBarMotion.spring(0);
+      setEval(-1);
       setEvalText(`M${mate}`);
     } else if (mate < 0) {
-      evalBarMotion.spring(0);
+      /* white mate */
+      evalBarMotion.spring(1);
+      setEval(1);
       setEvalText(`M${math.abs(mate - 1)}`);
     } else {
+      /* midgame */
       const scale = 10;
-      const probability = 1 / (1 + math.pow(10, -evaluation / scale));
+      const probability = 1 / (1 + math.pow(10, evaluation / scale));
       const mapped = math.min(math.max(probability, 0), 1);
 
       evalBarMotion.spring(mapped);
@@ -66,12 +78,12 @@ export const EvaluationBar = forwardRef<EvaluationBarRef>((props, ref) => {
         text={evalText}
         noBackground
         textColor={
-          evaluation > 0 ? new Color3(0.45, 0.45, 0.45) : new Color3(1, 1, 1)
+          evaluation >= 0 ? new Color3(0.45, 0.45, 0.45) : new Color3(1, 1, 1)
         }
         font={"SourceSansBold"}
         textSize={px(14)}
         position={
-          evaluation > 0
+          evaluation >= 0
             ? new UDim2(0, 0, 1, -px(25))
             : new UDim2(0, 0, 0, px(2))
         }
