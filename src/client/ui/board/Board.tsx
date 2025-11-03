@@ -228,7 +228,7 @@ export default function Board() {
 
         {/* Pieces */}
         {pieces.map(([loc, piece], index) => {
-          const pos: [number, number] = [loc % 8, math.floor(loc / 8)];
+          const pos = BitBoard.separateSquareIndex(loc);
           return (
             <Piece
               key={index}

@@ -8,6 +8,7 @@ import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../usePx";
 import { Motion } from "@rbxts/ripple";
 import { PromotionProps, generatePosition, FLIPPED } from "./shared";
+import { BitBoard } from "shared/engine/bitboard";
 
 export function Promotion({
   location,
@@ -29,7 +30,7 @@ export function Promotion({
     Motion<number>,
   ][];
 
-  const pos = [location % 8, math.floor(location / 8)] as [number, number];
+  const pos = BitBoard.separateSquareIndex(location);
 
   return (
     <CanvasGroup

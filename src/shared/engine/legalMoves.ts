@@ -122,7 +122,7 @@ const CUSTOM_DIRECTIONS: Partial<
   [Piece.king]: (piece, pos, board) => {
     /* TODO: move rook also, and check for interruptions in between which include checks & pieces */
     /* this just handles castling, movement is in FIXED_DIRECTIONS */
-    const rank = math.floor(pos / 8);
+    const [, rank] = BitBoard.separateSquareIndex(pos);
     const moves: Move[] = [];
 
     const isLegalCastle = (
@@ -182,10 +182,8 @@ export function IsSquareAttacked(
   for (const [pos, [piece, color]] of BitBoard.getAllPieces(board)) {
     if (color !== attacker) continue;
 
-    const x = pos % 8;
-    const y = math.floor(pos / 8);
-    const tx = target % 8;
-    const ty = math.floor(target / 8);
+    const [x, y] = BitBoard.separateSquareIndex(pos);
+    const [tx, ty] = BitBoard.separateSquareIndex(target);
 
     const dx = tx - x;
     const dy = ty - y;
@@ -277,7 +275,7 @@ export default function GetLegalMoves(
     }
   }
   if (FIXED_DIRECTIONS[piece[0]] !== undefined) {
-    const [xOrigin, yOrigin] = [from % 8, math.floor(from / 8)];
+    const [xOrigin, yOrigin] = BitBoard.separateSquareIndex(from);
     for (const [x, y] of FIXED_DIRECTIONS[piece[0]]!) {
       const newPosition = from + x + y * 8;
 
@@ -293,7 +291,7 @@ export default function GetLegalMoves(
     }
   }
   if (SLIDE_DIRECTIONS[piece[0]] !== undefined) {
-    const [fx, fy] = [from % 8, math.floor(from / 8)];
+    const [fx, fy] = BitBoard.separateSquareIndex(from);
     for (const [dx, dy] of SLIDE_DIRECTIONS[piece[0]]!) {
       let x = fx + dx;
       let y = fy + dy;
@@ -348,7 +346,9 @@ function isInsufficientMaterial(board: any): boolean {
     pieces[piece] = (pieces[piece] || 0) + 1;
 
     if (piece === Piece.bishop) {
-      bishopColors.push(IsSquareBlack(location % 8, math.floor(location / 8)));
+      bishopColors.push(
+        IsSquareBlack(...BitBoard.separateSquareIndex(location)),
+      );
     }
   }
 

@@ -18,7 +18,14 @@ export namespace BitBoard {
 
   /* internal */
   export function getSquareIndex(file: number, rank: number): number {
-    return rank * 8 + file;
+    // rank * 8 + file → (rank << 3) + file
+    return (rank << 3) | file;
+  }
+
+  export function separateSquareIndex(loc: number): [number, number] {
+    // file = loc % 8 → loc & 7
+    // rank = Math.floor(loc / 8) → loc >> 3
+    return [loc & 7, loc >> 3];
   }
   function binaryToPiece(piece: number): [Piece, Color] {
     return [piece >> 1, piece & 1];

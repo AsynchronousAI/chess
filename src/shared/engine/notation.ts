@@ -26,8 +26,7 @@ export namespace Notation {
     );
   }
   export function encodeSquare(square: Square): string {
-    const file = square % 8;
-    const rank = math.floor(square / 8);
+    const [file, rank] = BitBoard.separateSquareIndex(square);
     return FILES[file] + tostring(rank + 1);
   }
   export function encodeSquareFull(
