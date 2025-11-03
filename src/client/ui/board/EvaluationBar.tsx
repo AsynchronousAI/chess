@@ -31,36 +31,38 @@ export const EvaluationBar = forwardRef<EvaluationBarRef>((props, ref) => {
   }));
 
   useEffect(() => {
-    /* TODO: fix mate bar, sometimes wrong color, sometimes doesnt show checkmate, doesnt show stalemate */
     const analysis = AnalyzeMates(board);
     if (analysis === "stalemate" || analysis === "insufficent") {
       evalBarMotion.spring(0.5);
-      setEval(1);
+      setEval(-1);
       setEvalText("1/2");
     } else if (analysis === "checkmate") {
       /* checkmate */
       evalBarMotion.spring(mate > 0 ? 0 : 1);
-      setEval(mate > 0 ? -1 : 1);
+      setEval(mate > 0 ? 1 : -1);
       setEvalText(mate > 0 ? "1-0" : "0-1");
     } else if (mate > 0) {
       /* black mate */
       evalBarMotion.spring(0);
-      setEval(-1);
+      setEval(1);
       setEvalText(`M${mate}`);
     } else if (mate < 0) {
       /* white mate */
       evalBarMotion.spring(1);
-      setEval(1);
+      setEval(-1);
       setEvalText(`M${math.abs(mate - 1)}`);
     } else {
       /* midgame */
-      const scale = 10;
+      const scale = 500;
       const probability = 1 / (1 + math.pow(10, evaluation / scale));
       const mapped = math.min(math.max(probability, 0), 1);
 
       evalBarMotion.spring(mapped);
       setEvalText(
-        string.format("%.1f", evaluation > 0 ? evaluation : 1 - evaluation),
+        string.format(
+          "%.1f",
+          (evaluation > 0 ? evaluation : 1 - evaluation) / 100,
+        ),
       );
     }
   }, [evaluation, mate, board]);
@@ -73,17 +75,16 @@ export const EvaluationBar = forwardRef<EvaluationBarRef>((props, ref) => {
         background={new Color3(1, 1, 1)}
       />
       <Text
-        visible={evaluation !== 0}
         size={new UDim2(1, 0, 0, px(20))}
         text={evalText}
         noBackground
         textColor={
-          evaluation >= 0 ? new Color3(0.45, 0.45, 0.45) : new Color3(1, 1, 1)
+          evaluation <= 0 ? new Color3(0.45, 0.45, 0.45) : new Color3(1, 1, 1)
         }
         font={"SourceSansBold"}
         textSize={px(14)}
         position={
-          evaluation >= 0
+          evaluation <= 0
             ? new UDim2(0, 0, 1, -px(25))
             : new UDim2(0, 0, 0, px(2))
         }

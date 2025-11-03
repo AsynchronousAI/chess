@@ -34,7 +34,6 @@ export default function Board() {
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
   const [promoting, setPromoting] = useState(-1);
 
-  print(FEN.toFEN(board));
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
     const newAudio = new Instance("Sound", Workspace);
@@ -87,7 +86,7 @@ export default function Board() {
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
   };
-  const onPieceMove = () => {
+  const onPieceMove = async () => {
     const best = GetBestMoveAPI(board);
     if (best.move) {
       evalBarRef.current?.setEval(best.eval);
