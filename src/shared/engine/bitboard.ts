@@ -11,6 +11,8 @@ export const CASTLE_INDEX = {
 
 export const EN_PASSANT = 8 * 64 + 6;
 const SIZE = 8 * 64 + 7;
+// TODO: Store pieces as u4 (pairs in a u8) and castles + current turn as 5 bits, and en passant as 6 bits.
+// 519bits -> 267bits. (almost half!)
 // ([piece id][color])*64 [currentTurn] [WQ castle] [WK castle] [BQ castle] [BK castle] [EnPassant]
 
 export namespace BitBoard {
