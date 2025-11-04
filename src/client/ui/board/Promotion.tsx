@@ -7,7 +7,7 @@ import { Image } from "../image";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../usePx";
 import { Motion } from "@rbxts/ripple";
-import { PromotionProps, generatePosition, FLIPPED } from "./shared";
+import { PromotionProps, generatePosition } from "./shared";
 import { BitBoard } from "shared/engine/bitboard";
 
 export function Promotion({
@@ -34,10 +34,8 @@ export function Promotion({
 
   return (
     <CanvasGroup
-      position={generatePosition(pos).add(
-        color === Color.white && !FLIPPED
-          ? new UDim2()
-          : new UDim2(0, 0, -0.435, 0),
+      position={generatePosition(pos, color).add(
+        color === Color.white ? new UDim2() : new UDim2(0, 0, -0.435, 0),
       )}
       size={new UDim2(1 / 8, 0, 4.5 / 8, 0)}
       zIndex={1000}

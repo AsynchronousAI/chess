@@ -19,8 +19,7 @@ import { usePx } from "../usePx";
 import { Piece } from "./Piece";
 import { Promotion } from "./Promotion";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
-import { BOT, FLIPPED } from "./shared";
-import { FEN } from "shared/engine/fen";
+import { BOT } from "./shared";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -122,6 +121,13 @@ export default function Board() {
     onPieceMove();
   };
 
+  useEffect(() => {
+    /* bot first move if im black */
+    if (playingAs === Color.black && BOT) {
+      onPieceMove();
+    }
+  }, [playingAs]);
+
   return (
     <Frame
       size={new UDim2(1, 0, 0.95, 0)}
@@ -153,7 +159,7 @@ export default function Board() {
             const index = BitBoard.getSquareIndex(i, j);
             const colored = IsSquareBlack(i, j);
 
-            const boardJ = FLIPPED ? j : 7 - j;
+            const boardJ = playingAs ? j : 7 - j;
 
             return (
               <>

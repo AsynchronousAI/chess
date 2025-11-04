@@ -2,7 +2,6 @@ import { Color, Piece as PieceType } from "shared/board";
 import { IconPack } from "./images";
 
 // Constants
-export const FLIPPED = false;
 export const BOT = true;
 
 // Types
@@ -22,5 +21,5 @@ export interface PromotionProps {
 }
 
 // Utilities
-export const generatePosition = (pos: [number, number]) =>
-  new UDim2(pos[0] / 8, 0, (FLIPPED ? pos[1] : 7 - pos[1]) / 8, 0);
+export const generatePosition = (pos: [number, number], color: Color) =>
+  new UDim2(pos[0] / 8, 0, (color === 1 ? pos[1] : 7 - pos[1]) / 8, 0);

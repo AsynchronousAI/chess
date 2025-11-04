@@ -16,10 +16,12 @@ export function Piece(props: PieceProps) {
 
   const [offsetY, offsetYMotion] = useMotion(0);
 
-  const [pos, posMotion] = useMotion(generatePosition(props.pos));
+  const [pos, posMotion] = useMotion(
+    generatePosition(props.pos, props.playingAs),
+  );
   useEffect(
     () =>
-      posMotion.tween(generatePosition(props.pos), {
+      posMotion.tween(generatePosition(props.pos, props.playingAs), {
         style: Enum.EasingStyle.Quint,
         time: 0.2,
       }),
