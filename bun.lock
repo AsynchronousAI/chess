@@ -11,6 +11,8 @@
         "@rbxts/charm": "latest",
         "@rbxts/compiler-types": "latest",
         "@rbxts/luau-polyfill": "^1.1.3",
+        "@rbxts/luau-thread-fixed": "https://github.com/AsynchronousAI/luau-thread/",
+        "@rbxts/pretty-react-hooks": "^0.6.4",
         "@rbxts/react": "latest",
         "@rbxts/react-charm": "latest",
         "@rbxts/react-reflex": "latest",
@@ -18,7 +20,6 @@
         "@rbxts/ripple": "latest",
         "@rbxts/services": "latest",
         "@rbxts/ui-labs": "latest",
-        "@rbxts/luau-thread-fixed": "https://github.com/AsynchronousAI/luau-thread/",
         "typescript-eslint": "latest",
       },
       "devDependencies": {

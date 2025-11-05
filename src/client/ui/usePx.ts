@@ -2,6 +2,7 @@ import {
   useCamera,
   useDebounceState,
   useEventListener,
+  useInterval,
 } from "@rbxts/pretty-react-hooks";
 import { useMemo } from "@rbxts/react";
 
@@ -49,14 +50,14 @@ export function usePx(): ScaleFunction {
   const [scale, setScale] = useDebounceState(
     calculateScale(camera.ViewportSize),
     {
-      wait: 0.2,
+      wait: 1,
       leading: true,
     },
   );
 
-  useEventListener(camera.GetPropertyChangedSignal("ViewportSize"), () => {
+  useInterval(() => {
     setScale(calculateScale(camera.ViewportSize));
-  });
+  }, 0.1);
 
   return useMemo(() => {
     const api = {

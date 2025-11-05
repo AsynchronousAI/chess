@@ -12,14 +12,14 @@ import { Wood } from "./images";
 import { Frame, ListLayout, Text } from "@rbxts/better-react-components";
 import { default as GetLegalMoves } from "shared/engine/legalMoves";
 import { BitBoard } from "shared/engine/bitboard";
-import { GetBestMoveAPI } from "shared/engine/api";
 import { SoundEffects } from "./sfx";
 import { Workspace } from "@rbxts/services";
 import { usePx } from "../usePx";
 import { Piece } from "./Piece";
 import { Promotion } from "./Promotion";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
-import { BOT } from "./shared";
+import { useEventListener } from "@rbxts/pretty-react-hooks";
+import { Events, Functions } from "client/network";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -40,7 +40,7 @@ export default function Board() {
     newAudio.Play();
     newAudio.Ended.Connect(() => newAudio.Destroy());
   };
-  const movePieceInternal = (
+  const movePiece = (
     from: number,
     to: number,
     myMove: boolean,
@@ -86,22 +86,11 @@ export default function Board() {
     });
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
+    if (myMove) Functions.MakeMove([from, to, as]);
   };
-  const onPieceMove = async () => {
-    const best = GetBestMoveAPI(board);
-    if (best.move) {
-      evalBarRef.current?.setEval(best.eval);
-      evalBarRef.current?.setMate(tonumber(best.mate) ?? 0);
-    }
 
-    if (BOT && best.move) {
-      movePieceInternal(best.move[0], best.move[1], false, best.move[2]);
-    } else {
-      setPlayingAs((p) => 1 - p);
-    }
-  };
-  const movePiece = (location: number) => {
-    /* this moves a piece, gets an eval, and responds with bot move */
+  /* Handlers */
+  const onMove = (location: number) => {
     if (
       !possibleMoves.find((v) => v[0] === location) ||
       holdingPiece === undefined
@@ -117,16 +106,23 @@ export default function Board() {
       return;
     }
 
-    movePieceInternal(holdingPiece, location, true);
-    onPieceMove();
+    movePiece(holdingPiece, location, true);
+  };
+  const onPromote = (piece?: PieceType) => {
+    if (!holdingPiece || !piece) {
+      setPromoting(-1);
+      return;
+    }
+    movePiece(holdingPiece, promoting, true, piece);
+    setPromoting(-1);
   };
 
-  useEffect(() => {
-    /* bot first move if im black */
-    if (playingAs === Color.black && BOT) {
-      onPieceMove();
-    }
-  }, [playingAs]);
+  useEventListener(Events.MoveMade, (move, evaluation, mate) => {
+    evalBarRef.current?.setEval(evaluation);
+    evalBarRef.current?.setMate(mate);
+
+    movePiece(move[0], move[1], false, move[2]);
+  });
 
   return (
     <Frame
@@ -214,7 +210,7 @@ export default function Board() {
                       BackgroundTransparency={1}
                       ZIndex={1}
                       Event={{
-                        MouseButton1Down: () => movePiece(index),
+                        MouseButton1Down: () => onMove(index),
                       }}
                     />
                     <Frame
@@ -254,15 +250,7 @@ export default function Board() {
             color={playingAs}
             iconPack={iconPack}
             location={promoting}
-            onPromote={(piece) => {
-              if (!holdingPiece || !piece) {
-                setPromoting(-1);
-                return;
-              }
-              movePieceInternal(holdingPiece, promoting, true, piece);
-              onPieceMove();
-              setPromoting(-1);
-            }}
+            onPromote={onPromote}
           />
         ) : undefined}
       </Frame>

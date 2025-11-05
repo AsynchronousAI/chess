@@ -1,16 +1,32 @@
 import { Networking } from "@flamework/networking";
+import { Piece, Square } from "./board";
+import { BitBoard } from "./engine/bitboard";
 
-interface ServerEvents {}
-interface ClientEvents {}
+interface ClientToServerEvents {}
+interface ServerToClientEvents {
+  MoveMade(
+    move: [Square, Square, Piece | undefined],
+    evaluation: number,
+    mate: number,
+  ): void;
+}
 
-interface ServerFunctions {}
-interface ClientFunctions {}
+interface ClientToServerFunctions {
+  MakeMove(
+    move: [
+      Square,
+      Square,
+      Piece | undefined /* the last Piece|undefined is for promotion! */,
+    ],
+  ): BitBoard;
+}
+interface ServerToClientFunctions {}
 
 export const GlobalEvents = Networking.createEvent<
-  ServerEvents,
-  ClientEvents
+  ClientToServerEvents,
+  ServerToClientEvents
 >();
 export const GlobalFunctions = Networking.createFunction<
-  ServerFunctions,
-  ClientFunctions
+  ClientToServerFunctions,
+  ServerToClientFunctions
 >();
