@@ -13,7 +13,11 @@ export type Move =
       (
         branch: BitBoard,
       ) =>
-        | [Square, Square | undefined /* undefined means piece removed */]
+        | [
+            Square /* start square */,
+            Square? /* end square, undefined means piece removed */,
+            string? /* identifier used for SFX */,
+          ]
         | void,
     ];
 
@@ -151,7 +155,7 @@ const CUSTOM_DIRECTIONS: Partial<
         BitBoard.getSquareIndex(2, rank),
         (branch) => {
           BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8);
-          return [0 + rank * 8, 3 + rank * 8];
+          return [0 + rank * 8, 3 + rank * 8, "castle"];
         },
       ]);
     }
@@ -163,7 +167,7 @@ const CUSTOM_DIRECTIONS: Partial<
         BitBoard.getSquareIndex(6, rank),
         (branch) => {
           BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8);
-          return [7 + rank * 8, 5 + rank * 8];
+          return [7 + rank * 8, 5 + rank * 8, "castle"];
         },
       ]);
     }

@@ -25,15 +25,17 @@ export class Gameplay {
     const best = GetBestMoveAPI(this.board);
     this.move(...best.move!);
     BitBoard.flipTurn(this.board);
-    if (this.target)
+    if (this.target) {
+      task.wait(0.25); /* bot is too fast! */
       Events.MoveMade.fire(
         this.target,
         best.move!,
         best.eval,
         tonumber(best.mate) ?? 0,
       );
+    }
   }
-  @Function(Functions.MakeMove)
+  @Event(Events.MakeMove)
   onMoveMade(
     player: Player,
     [from, to, promotion]: [Square, Square, Piece | undefined],
@@ -43,7 +45,5 @@ export class Gameplay {
     BitBoard.flipTurn(this.board);
 
     this.evaluate();
-
-    return this.board;
   }
 }

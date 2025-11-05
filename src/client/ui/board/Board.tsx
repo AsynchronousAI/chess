@@ -13,7 +13,7 @@ import { Frame, ListLayout, Text } from "@rbxts/better-react-components";
 import { default as GetLegalMoves } from "shared/engine/legalMoves";
 import { BitBoard } from "shared/engine/bitboard";
 import { SoundEffects } from "./sfx";
-import { Workspace } from "@rbxts/services";
+import { SoundService, Workspace } from "@rbxts/services";
 import { usePx } from "../usePx";
 import { Piece } from "./Piece";
 import { Promotion } from "./Promotion";
@@ -35,7 +35,7 @@ export default function Board() {
 
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
-    const newAudio = new Instance("Sound", Workspace);
+    const newAudio = new Instance("Sound", SoundService);
     newAudio.SoundId = SoundEffects[sfx];
     newAudio.Play();
     newAudio.Ended.Connect(() => newAudio.Destroy());
@@ -46,24 +46,24 @@ export default function Board() {
     myMove: boolean,
     as?: PieceType,
   ) => {
-    /* this simply moves a piece, and handles additional closures for castling for example */
-    const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
-    const move = allMoves
-      /* if it is my move use saved outcomes, otherwise calculate new */
-      .find((v) => v[0] === to);
-
+    /* Simple piece move with promotion */
     if (!as) BitBoard.movePiece(board, from, to); /* normal move */
     else {
       BitBoard.setPiece(board, from, 0, 0);
       BitBoard.setPiece(board, to, as, myMove ? playingAs : 1 - playingAs);
     }
     BitBoard.flipTurn(board);
-    const [moved, movedTo] = move?.[1]?.(board) || [];
 
-    /* do this so we can maintain indexs from a bitboard */
+    /* Locate the move data, for special moves such as en passant or castling */
+    const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
+    const move = allMoves
+      /* if it is my move use saved outcomes, otherwise calculate new */
+      .find((v) => v[0] === to);
+    const [moved, movedTo, moveType] = move?.[1]?.(board) || [];
+
+    /* Move on a set index, for animations */
+    let captured = false;
     setPieces((currentPieces) => {
-      let captured = false;
-
       for (const piece of currentPieces) {
         if (piece[0] === from) {
           piece[0] = to;
@@ -76,17 +76,22 @@ export default function Board() {
           else piece[1][0] = PieceType.none;
         }
       }
-
-      if (captured) {
-        playSFX("Capture");
-      } else {
-        playSFX("Move");
-      }
       return currentPieces;
     });
+
+    /* Sound effects */
+    if (moveType === "castle") {
+      playSFX("Castle");
+    } else if (captured) {
+      playSFX("Capture");
+    } else {
+      playSFX("Move");
+    }
+
+    /* Update local board, and let server know */
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
-    if (myMove) Functions.MakeMove([from, to, as]);
+    if (myMove) Events.MakeMove([from, to, as]);
   };
 
   /* Handlers */
@@ -202,7 +207,7 @@ export default function Board() {
                     position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
                     size={new UDim2(1 / 8, 0, 1 / 8, 0)}
                     noBackground
-                    zIndex={10}
+                    zIndex={1000}
                   >
                     <textbutton
                       Size={new UDim2(1, 0, 1, 0)}

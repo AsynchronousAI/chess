@@ -12,7 +12,7 @@ export class GuiController implements OnStart {
     const root = createRoot(new Instance("Folder"));
     root.render(
       createPortal(
-        <screengui>
+        <screengui ZIndexBehavior={"Sibling"}>
           <Board />
         </screengui>,
         this.playerGui,
