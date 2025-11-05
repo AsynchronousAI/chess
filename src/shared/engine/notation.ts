@@ -32,10 +32,15 @@ export namespace Notation {
   export function encodeSquareFull(
     board: BitBoard,
     square: Square,
+    promotion?: Piece,
     additional: string = "",
   ): string {
     const [piece] = BitBoard.getPiece(board, square);
-    return Shorthand[piece] + additional + encodeSquare(square);
+    let result = Shorthand[piece] + additional + encodeSquare(square);
+    if (promotion) {
+      result += "=" + Shorthand[promotion];
+    }
+    return result;
   }
   export function parseLan(lan: string): [Square, Square, Piece | undefined] {
     const [from, to] = [lan.sub(0, 2), lan.sub(3, 4)];

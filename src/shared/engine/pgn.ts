@@ -1,5 +1,5 @@
 import { Object } from "@rbxts/luau-polyfill";
-import { Square } from "shared/board";
+import { Color, Piece, Square } from "shared/board";
 import { Notation } from "./notation";
 import { BitBoard } from "./bitboard";
 
@@ -15,30 +15,35 @@ type PGNHeader = {
 
 export class PGN {
   headers: PGNHeader;
-  moves: string[];
+  moves: {
+    board: BitBoard;
+    to: Square;
+    promotion?: Piece;
+    result: string;
+    moveStr: string;
+  }[];
 
   constructor(headers: PGNHeader = {}) {
     this.headers = { ...headers, result: headers.result || "*" };
     this.moves = [];
   }
 
-  move(board: BitBoard, to: Square, result: string = "") {
-    let moveStr = `${Notation.encodeSquareFull(board, to)}`;
+  move(board: BitBoard, to: Square, promotion?: Piece, result: string = "") {
+    let moveStr = Notation.encodeSquareFull(board, to, promotion);
     if (result === "checkmate") {
       this.headers.result = "1-0";
-      moveStr += "#";
+      moveStr += "#"; /* # means mate! */
     } else if (result === "stalemate" || result === "draw") {
       this.headers.result = "1/2-1/2";
     }
 
-    const turn = math.floor(this.moves.size() / 2) + 1;
-    if (this.moves.size() % 2 === 0) {
-      this.moves.push(`${turn}. ${moveStr}`);
-    } else {
-      this.moves.push(moveStr);
-    }
-
-    if (result !== "") print(this.toString());
+    this.moves.push({
+      board,
+      to,
+      promotion,
+      result,
+      moveStr,
+    });
 
     return this;
   }
@@ -48,7 +53,16 @@ export class PGN {
       .map(([key, value]) => `[${key} "${value || ""}"]`)
       .join("\n");
 
-    const movesStr = this.moves.join(" ");
+    let movesStr = "";
+    let moves = 0;
+    for (const move of this.moves) {
+      const isWhite = (this.moves.indexOf(move) >> 1) % 2 === 0;
+      if (isWhite) {
+        movesStr += `${++moves}. ${move.moveStr} `;
+      } else {
+        movesStr += `${move.moveStr} `;
+      }
+    }
 
     return `${headersStr}\n\n${movesStr} ${this.headers.result}`;
   }

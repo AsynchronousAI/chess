@@ -6,7 +6,7 @@ import { Move } from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
 
 const Atoms = {
-  Board: atom<BitBoard>(BitBoard.create()),
+  Board: atom<BitBoard>(FEN.fromFEN(DefaultFEN)),
   PlayingAs: atom<Color>(0),
   HoldingPiece: atom<Square | undefined>(undefined),
   PossibleMoves: atom<Move[]>([]),
@@ -17,6 +17,5 @@ const Atoms = {
     }),
   ),
 };
-Atoms.Board((b) => FEN.fromFEN(b, DefaultFEN));
 
 export default Atoms;

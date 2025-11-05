@@ -20,8 +20,9 @@ const reverseFenLookup: Partial<Record<Piece, string>> = {
 };
 
 export namespace FEN {
-  export function fromFEN(board: BitBoard, fen: string) {
+  export function fromFEN(fen: string) {
     /* todo: read turn */
+    const board = BitBoard.create();
     let file = 0;
     let rank = 7;
 
