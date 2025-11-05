@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "@rbxts/react";
+import React, { useState, useRef } from "@rbxts/react";
 import {
   Color,
   FILES,
@@ -10,16 +10,19 @@ import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Wood } from "./images";
 import { Frame, ListLayout, Text } from "@rbxts/better-react-components";
-import { default as GetLegalMoves } from "shared/engine/legalMoves";
+import {
+  default as GetLegalMoves,
+  IsSquareAttacked,
+} from "shared/engine/legalMoves";
 import { BitBoard } from "shared/engine/bitboard";
 import { SoundEffects } from "./sfx";
-import { SoundService, Workspace } from "@rbxts/services";
+import { SoundService } from "@rbxts/services";
 import { usePx } from "../usePx";
 import { Piece } from "./Piece";
 import { Promotion } from "./Promotion";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
-import { Events, Functions } from "client/network";
+import { Events } from "client/network";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -46,20 +49,20 @@ export default function Board() {
     myMove: boolean,
     as?: PieceType,
   ) => {
+    const color = myMove ? playingAs : 1 - playingAs;
+
+    /* Locate the move data, for special moves such as en passant or castling */
+    const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
+    const move = allMoves.find((v) => v[0] === to);
+    const [moved, movedTo, moveType] = move?.[1]?.(board) || [];
+
     /* Simple piece move with promotion */
     if (!as) BitBoard.movePiece(board, from, to); /* normal move */
     else {
       BitBoard.setPiece(board, from, 0, 0);
-      BitBoard.setPiece(board, to, as, myMove ? playingAs : 1 - playingAs);
+      BitBoard.setPiece(board, to, as, color);
     }
     BitBoard.flipTurn(board);
-
-    /* Locate the move data, for special moves such as en passant or castling */
-    const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
-    const move = allMoves
-      /* if it is my move use saved outcomes, otherwise calculate new */
-      .find((v) => v[0] === to);
-    const [moved, movedTo, moveType] = move?.[1]?.(board) || [];
 
     /* Move on a set index, for animations */
     let captured = false;
@@ -80,7 +83,14 @@ export default function Board() {
     });
 
     /* Sound effects */
-    if (moveType === "castle") {
+    const opponentsKing = BitBoard.findPiece(
+      board,
+      PieceType.king,
+      1 - color,
+    )[0];
+    if (IsSquareAttacked(board, opponentsKing, color)) {
+      playSFX("Check");
+    } else if (moveType === "castle") {
       playSFX("Castle");
     } else if (captured) {
       playSFX("Capture");
