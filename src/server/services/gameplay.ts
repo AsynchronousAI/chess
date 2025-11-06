@@ -1,10 +1,12 @@
 import { Service } from "@flamework/core";
 import { Event, Function } from "server/lifecycles";
 import { Events, Functions } from "server/network";
+import getOpening from "server/openings/getOpening";
 import { Color, DefaultFEN, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
 import { FEN } from "shared/engine/fen";
+import { PGN } from "shared/engine/pgn";
 
 @Service()
 export class Gameplay {
@@ -12,6 +14,7 @@ export class Gameplay {
   private color: Color = Color.black;
 
   private board = FEN.fromFEN(DefaultFEN);
+  private PGN = new PGN();
 
   move(from: Square, to: Square, promotion?: Piece) {
     if (!promotion) {
@@ -20,6 +23,8 @@ export class Gameplay {
       BitBoard.setPiece(this.board, from, 0, 0);
       BitBoard.setPiece(this.board, to, promotion, this.color);
     }
+    this.PGN.move(this.board, to, promotion);
+    print(getOpening(this.board));
   }
   bot() {
     const best = GetBestMoveAPI(this.board);
@@ -50,11 +55,11 @@ export class Gameplay {
   @Event(Events.NewGame)
   newGame(player: Player) {
     this.target = player;
-    this.color = 1; //math.random(0, 1) as Color;
+    this.color = 0; //math.random(0, 1) as Color;
     print(this.color);
 
     Events.AssignedGame.fire(player, this.color);
-    if (this.color === 1) {
+    if ((this.color as Color) === 1) {
       this.bot();
     }
   }
