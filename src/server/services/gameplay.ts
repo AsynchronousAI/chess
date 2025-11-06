@@ -1,6 +1,7 @@
 import { Service } from "@flamework/core";
-import { Event, Function } from "server/lifecycles";
-import { Events, Functions } from "server/network";
+import { HttpService } from "@rbxts/services";
+import { Event } from "server/lifecycles";
+import { Events } from "server/network";
 import getOpening from "server/openings/getOpening";
 import { Color, DefaultFEN, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
@@ -8,49 +9,66 @@ import { BitBoard } from "shared/engine/bitboard";
 import { FEN } from "shared/engine/fen";
 import { PGN } from "shared/engine/pgn";
 
+export type Game = {
+  host: Player;
+  color: Color;
+  board: BitBoard;
+  pgn: PGN;
+  opening: string;
+
+  /* evaluation */
+  eval: number;
+  mate: number;
+};
+
 @Service()
 export class Gameplay {
-  private target?: Player;
-  private color: Color = Color.black;
+  private Games: Record<string, Game> = {};
 
-  private board = FEN.fromFEN(DefaultFEN);
-  private PGN = new PGN();
-  private opening = "Starting Position";
+  private move(gameId: string, from: Square, to: Square, promotion?: Piece) {
+    const activeGame = this.Games[gameId];
 
-  move(from: Square, to: Square, promotion?: Piece) {
+    /* Board move */
     if (!promotion) {
-      BitBoard.movePiece(this.board, from, to);
+      BitBoard.movePiece(activeGame.board, from, to);
     } else {
-      BitBoard.setPiece(this.board, from, 0, 0);
-      BitBoard.setPiece(this.board, to, promotion, this.color);
+      BitBoard.setPiece(activeGame.board, from, 0, 0);
+      BitBoard.setPiece(activeGame.board, to, promotion, activeGame.color);
     }
-    BitBoard.flipTurn(this.board);
-    this.PGN.move(this.board, to, promotion);
+    BitBoard.flipTurn(activeGame.board);
 
-    const opening = getOpening(this.board);
+    /* Attributes, PGN & opening */
+    PGN.move(activeGame.pgn, activeGame.board, to, promotion);
+
+    const opening = getOpening(activeGame.board);
     if (opening) {
-      this.opening = opening.name;
+      activeGame.opening = opening.name;
     }
   }
-  evaluate() {
+  evaluate(gameId: string) {
+    const activeGame = this.Games[gameId];
+
     /* Local (faster) */
-    if (this.target)
-      Events.Evaluate.fire(this.target, {
-        opening: this.opening,
-      });
+    Events.Evaluate.fire(activeGame.host, {
+      opening: activeGame.opening,
+    });
 
     /* HTTP Handled (slower) */
-    const best = GetBestMoveAPI(this.board);
-    this.move(...best.move);
+    const best = GetBestMoveAPI(activeGame.board);
+    this.move(gameId, ...best.move);
 
     const stats = {
-      move: best.move,
       eval: best.eval,
       mate: tonumber(best.mate) ?? 0,
-      opening: this.opening,
+      opening: activeGame.opening,
     };
 
-    if (this.target) Events.Evaluate.fire(this.target, stats);
+    Events.Evaluate.fire(activeGame.host, {
+      eval: best.eval,
+      mate: tonumber(best.mate) ?? 0,
+      opening: activeGame.opening,
+    });
+    Events.MoveMade.fire(activeGame.host, best.move);
 
     return stats;
   }
@@ -58,21 +76,37 @@ export class Gameplay {
   @Event(Events.MakeMove)
   onMoveMade(
     player: Player,
+    gameId: string,
     [from, to, promotion]: [Square, Square, Piece | undefined],
   ) {
-    if (this.target !== player) return;
-    this.move(from, to, promotion);
-    this.evaluate();
+    if (this.Games[gameId]?.host !== player) return; /* no jurisdiction */
+
+    this.move(gameId, from, to, promotion);
+    this.evaluate(gameId);
   }
   @Event(Events.NewGame)
   newGame(player: Player) {
-    this.target = player;
-    this.color = 0; //math.random(0, 1) as Color;
-    print(this.color);
+    const id = HttpService.GenerateGUID();
+    const activeGame: Game = {
+      /* Matchmaking */
+      host: player,
+      color: 0,
 
-    Events.AssignedGame.fire(player, this.color);
-    if ((this.color as Color) === 1) {
-      this.evaluate();
+      /* Board */
+      board: FEN.fromFEN(DefaultFEN),
+      pgn: PGN.create(),
+      opening: "Starting Position",
+
+      /* Evaluation */
+      eval: 0,
+      mate: 0,
+    };
+
+    this.Games[id] = activeGame;
+
+    Events.AssignedGame.fire(player, id, activeGame.color);
+    if (activeGame.color === 1) {
+      this.evaluate(id);
     }
   }
 }

@@ -1,5 +1,6 @@
 import { Networking } from "@flamework/networking";
 import { Color, Piece, Square } from "./board";
+import { Game } from "server/services/gameplay";
 
 type FullMove = [
   Square,
@@ -7,19 +8,13 @@ type FullMove = [
   Piece | undefined,
 ]; /* Piece|undefined is promotion. */
 interface ClientToServerEvents {
-  MakeMove(move: FullMove): void;
+  MakeMove(gameId: string, move: FullMove): void;
   NewGame(): void;
 }
 interface ServerToClientEvents {
-  Evaluate(
-    gameStats: Partial<{
-      move: FullMove;
-      eval: number;
-      mate: number;
-      opening: string;
-    }>,
-  ): void;
-  AssignedGame(color: Color): void;
+  Evaluate(gameStats: Partial<Game>): void;
+  MoveMade(move: FullMove): void;
+  AssignedGame(gameId: string, color: Color): void;
 }
 
 interface ClientToServerFunctions {}

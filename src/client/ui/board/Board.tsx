@@ -35,7 +35,7 @@ export default function Board() {
   const [playingAs, setPlayingAs] = useState(Color.white);
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
   const [promoting, setPromoting] = useState(-1);
-  const [gameId, setGameId] = useState(-1);
+  const [gameId, setGameId] = useState("");
   const [opening, setOpening] = useState("Starting Position");
 
   /* Utils */
@@ -103,7 +103,7 @@ export default function Board() {
     /* Update local board, and let server know */
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
-    if (myMove) Events.MakeMove([from, to, as]);
+    if (myMove) Events.MakeMove(gameId, [from, to, as]);
   };
 
   /* Handlers */
@@ -134,19 +134,18 @@ export default function Board() {
     setPromoting(-1);
   };
 
-  useEventListener(
-    Events.Evaluate,
-    ({ move, eval: evaluation, mate, opening }) => {
-      if (evaluation) evalBarRef.current?.setEval(evaluation);
-      if (mate) evalBarRef.current?.setMate(mate);
+  useEventListener(Events.Evaluate, (activeGame) => {
+    if (activeGame.eval) evalBarRef.current?.setEval(activeGame.eval);
+    if (activeGame.mate) evalBarRef.current?.setMate(activeGame.mate);
 
-      if (opening) setOpening(opening);
-      if (move) movePiece(move[0], move[1], false, move[2]);
-    },
-  );
-  useEventListener(Events.AssignedGame, (color) => {
+    if (activeGame.opening) setOpening(activeGame.opening);
+  });
+  useEventListener(Events.MoveMade, (move) => {
+    movePiece(move[0], move[1], false, move[2]);
+  });
+  useEventListener(Events.AssignedGame, (gameId, color) => {
     setPlayingAs(color);
-    setGameId(1);
+    setGameId(gameId);
   });
   useEffect(() => {
     Events.NewGame();
@@ -293,7 +292,7 @@ export default function Board() {
                 playingAs={playingAs}
                 location={loc}
                 piece={piece}
-                locked={gameId === -1}
+                locked={gameId === ""}
               />
             );
           })}
