@@ -15,6 +15,7 @@ export class Gameplay {
 
   private board = FEN.fromFEN(DefaultFEN);
   private PGN = new PGN();
+  private opening = "Starting position";
 
   move(from: Square, to: Square, promotion?: Piece) {
     if (!promotion) {
@@ -24,7 +25,11 @@ export class Gameplay {
       BitBoard.setPiece(this.board, to, promotion, this.color);
     }
     this.PGN.move(this.board, to, promotion);
-    print(getOpening(this.board));
+
+    const opening = getOpening(this.board);
+    if (opening) {
+      this.opening = opening.name;
+    }
   }
   bot() {
     const best = GetBestMoveAPI(this.board);
@@ -32,12 +37,11 @@ export class Gameplay {
     BitBoard.flipTurn(this.board);
     if (this.target) {
       task.wait(0.25); /* bot is too fast! */
-      Events.MoveMade.fire(
-        this.target,
-        best.move!,
-        best.eval,
-        tonumber(best.mate) ?? 0,
-      );
+      Events.MoveMade.fire(this.target, best.move!, {
+        eval: best.eval,
+        mate: tonumber(best.mate) ?? 0,
+        opening: this.opening,
+      });
     }
   }
 

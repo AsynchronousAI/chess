@@ -15,7 +15,5 @@ const allOpenings: {
 
 export default function getOpening(board: BitBoard) {
   const lookingFor = FEN.toFEN(board).split(" ")[0];
-  print(lookingFor);
-
   return allOpenings[lookingFor];
 }

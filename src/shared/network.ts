@@ -11,7 +11,14 @@ interface ClientToServerEvents {
   NewGame(): void;
 }
 interface ServerToClientEvents {
-  MoveMade(move: FullMove, evaluation: number, mate: number): void;
+  MoveMade(
+    move: FullMove,
+    gameStats: {
+      eval: number;
+      mate: number;
+      opening: string;
+    },
+  ): void;
   AssignedGame(color: Color): void;
 }
 
