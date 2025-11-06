@@ -38,7 +38,7 @@ export function Piece(props: PieceProps) {
 
   /* Events */
   const onDown = () => {
-    if (props.location === undefined || !props.piece) return;
+    if (props.locked || props.location === undefined || !props.piece) return;
 
     if (holdingPiece === props.location) {
       // drop

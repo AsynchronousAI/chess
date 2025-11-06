@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "@rbxts/react";
+import React, { useState, useRef, useEffect } from "@rbxts/react";
 import {
   Color,
   FILES,
@@ -35,6 +35,7 @@ export default function Board() {
   const [playingAs, setPlayingAs] = useState(Color.white);
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
   const [promoting, setPromoting] = useState(-1);
+  const [gameId, setGameId] = useState(-1);
 
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
@@ -138,6 +139,13 @@ export default function Board() {
 
     movePiece(move[0], move[1], false, move[2]);
   });
+  useEventListener(Events.AssignedGame, (color) => {
+    setPlayingAs(color);
+    setGameId(1);
+  });
+  useEffect(() => {
+    Events.NewGame();
+  }, []);
 
   return (
     <Frame
@@ -255,6 +263,7 @@ export default function Board() {
               playingAs={playingAs}
               location={loc}
               piece={piece}
+              locked={gameId === -1}
             />
           );
         })}

@@ -5,28 +5,23 @@ import { Color, DefaultFEN, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
 import { FEN } from "shared/engine/fen";
-import { AnalyzeMates } from "shared/engine/legalMoves";
-import { PGN } from "shared/engine/pgn";
 
 @Service()
 export class Gameplay {
   private target?: Player;
-  private color: Color = Color.white;
+  private color: Color = Color.black;
 
   private board = FEN.fromFEN(DefaultFEN);
-  private pgn = new PGN();
 
   move(from: Square, to: Square, promotion?: Piece) {
-    const analysis = AnalyzeMates(this.board);
     if (!promotion) {
       BitBoard.movePiece(this.board, from, to);
     } else {
       BitBoard.setPiece(this.board, from, 0, 0);
       BitBoard.setPiece(this.board, to, promotion, this.color);
     }
-    this.pgn.move(this.board, to, promotion, analysis);
   }
-  evaluate() {
+  bot() {
     const best = GetBestMoveAPI(this.board);
     this.move(...best.move!);
     BitBoard.flipTurn(this.board);
@@ -39,17 +34,28 @@ export class Gameplay {
         tonumber(best.mate) ?? 0,
       );
     }
-    print(this.pgn.toString());
   }
+
   @Event(Events.MakeMove)
   onMoveMade(
     player: Player,
     [from, to, promotion]: [Square, Square, Piece | undefined],
   ) {
-    this.target = player;
+    if (this.target !== player) return;
     this.move(from, to, promotion);
     BitBoard.flipTurn(this.board);
 
-    this.evaluate();
+    this.bot();
+  }
+  @Event(Events.NewGame)
+  newGame(player: Player) {
+    this.target = player;
+    this.color = 1; //math.random(0, 1) as Color;
+    print(this.color);
+
+    Events.AssignedGame.fire(player, this.color);
+    if (this.color === 1) {
+      this.bot();
+    }
   }
 }

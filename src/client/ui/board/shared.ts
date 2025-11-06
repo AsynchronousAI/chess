@@ -11,6 +11,7 @@ export interface PieceProps {
   iconPack: IconPack;
   playingAs: Color;
   piece: [PieceType, Color];
+  locked: boolean;
 }
 
 export interface PromotionProps {

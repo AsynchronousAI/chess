@@ -1,6 +1,5 @@
 import { Networking } from "@flamework/networking";
-import { Piece, Square } from "./board";
-import { BitBoard } from "./engine/bitboard";
+import { Color, Piece, Square } from "./board";
 
 type FullMove = [
   Square,
@@ -9,9 +8,11 @@ type FullMove = [
 ]; /* Piece|undefined is promotion. */
 interface ClientToServerEvents {
   MakeMove(move: FullMove): void;
+  NewGame(): void;
 }
 interface ServerToClientEvents {
   MoveMade(move: FullMove, evaluation: number, mate: number): void;
+  AssignedGame(color: Color): void;
 }
 
 interface ClientToServerFunctions {}

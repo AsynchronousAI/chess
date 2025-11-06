@@ -19,7 +19,6 @@ export class PGN {
     board: BitBoard;
     to: Square;
     promotion?: Piece;
-    result: string;
     moveStr: string;
   }[];
 
@@ -28,35 +27,37 @@ export class PGN {
     this.moves = [];
   }
 
-  move(board: BitBoard, to: Square, promotion?: Piece, result: string = "") {
+  move(board: BitBoard, to: Square, promotion?: Piece, check: boolean = false) {
     let moveStr = Notation.encodeSquareFull(board, to, promotion);
-    if (result === "checkmate") {
-      this.headers.result = "1-0";
-      moveStr += "#"; /* # means mate! */
-    } else if (result === "stalemate" || result === "draw") {
-      this.headers.result = "1/2-1/2";
-    }
 
     this.moves.push({
       board,
       to,
       promotion,
-      result,
       moveStr,
     });
 
     return this;
   }
 
-  toString(): string {
+  compile(result: string): string {
+    if (result === "checkmate") {
+      this.headers.result = "1-0";
+    } else if (result === "stalemate" || result === "draw") {
+      this.headers.result = "1/2-1/2";
+    }
+
     const headersStr = Object.entries(this.headers)
       .map(([key, value]) => `[${key} "${value || ""}"]`)
       .join("\n");
 
     let movesStr = "";
     let moves = 0;
-    for (const move of this.moves) {
-      const isWhite = (this.moves.indexOf(move) >> 1) % 2 === 0;
+    for (const [index, move] of Object.entries(this.moves)) {
+      const isWhite = index % 2 === 0;
+      if (index === this.moves.size() - 1 && result === "checkmate") {
+        move.moveStr += "#";
+      }
       if (isWhite) {
         movesStr += `${++moves}. ${move.moveStr} `;
       } else {
