@@ -36,7 +36,7 @@ export default function Board() {
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
   const [promoting, setPromoting] = useState(-1);
   const [gameId, setGameId] = useState("");
-  const [opening, setOpening] = useState("Starting Position");
+  const [opening, setOpening] = useState("Starting game...");
 
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
@@ -140,7 +140,8 @@ export default function Board() {
 
     if (activeGame.opening) setOpening(activeGame.opening);
   });
-  useEventListener(Events.MoveMade, (move) => {
+  useEventListener(Events.MoveMade, (move, turn) => {
+    if (turn === playingAs) return; /* i am already this color */
     movePiece(move[0], move[1], false, move[2]);
   });
   useEventListener(Events.AssignedGame, (gameId, color) => {

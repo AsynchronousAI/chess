@@ -10,8 +10,13 @@ import { FEN } from "shared/engine/fen";
 import { PGN } from "shared/engine/pgn";
 
 export type Game = {
-  host: Player;
-  color: Color;
+  /* players */
+  player1: number;
+  player2: number;
+
+  color: Color; // represents player1 color.
+
+  /* board */
   board: BitBoard;
   pgn: PGN;
   opening: string;
@@ -21,12 +26,23 @@ export type Game = {
   mate: number;
 };
 
+const BOT = false;
+
 @Service()
 export class Gameplay {
   private Games: Record<string, Game> = {};
+  private Trackers: Record<string, Player[]> = {};
+  private AwaitingGame: Array<Player> = [];
 
   private move(gameId: string, from: Square, to: Square, promotion?: Piece) {
     const activeGame = this.Games[gameId];
+
+    /* Broadcast */
+    Events.MoveMade.fire(
+      this.Trackers[gameId],
+      [from, to, promotion],
+      BitBoard.getTurn(activeGame.board),
+    );
 
     /* Board move */
     if (!promotion) {
@@ -49,13 +65,13 @@ export class Gameplay {
     const activeGame = this.Games[gameId];
 
     /* Local (faster) */
-    Events.Evaluate.fire(activeGame.host, {
+    Events.Evaluate.fire(this.Trackers[gameId], {
       opening: activeGame.opening,
     });
 
     /* HTTP Handled (slower) */
     const best = GetBestMoveAPI(activeGame.board);
-    this.move(gameId, ...best.move);
+    if (BOT) this.move(gameId, ...best.move);
 
     const stats = {
       eval: best.eval,
@@ -63,12 +79,11 @@ export class Gameplay {
       opening: activeGame.opening,
     };
 
-    Events.Evaluate.fire(activeGame.host, {
+    Events.Evaluate.fire(this.Trackers[gameId], {
       eval: best.eval,
       mate: tonumber(best.mate) ?? 0,
       opening: activeGame.opening,
     });
-    Events.MoveMade.fire(activeGame.host, best.move);
 
     return stats;
   }
@@ -79,17 +94,22 @@ export class Gameplay {
     gameId: string,
     [from, to, promotion]: [Square, Square, Piece | undefined],
   ) {
-    if (this.Games[gameId]?.host !== player) return; /* no jurisdiction */
+    if (
+      this.Games[gameId]?.player1 !== player.UserId &&
+      this.Games[gameId]?.player2 !== player.UserId
+    )
+      return; /* no jurisdiction */
 
     this.move(gameId, from, to, promotion);
     this.evaluate(gameId);
   }
-  @Event(Events.NewGame)
-  newGame(player: Player) {
+
+  makeGame(player1: Player, player2?: Player) {
     const id = HttpService.GenerateGUID();
     const activeGame: Game = {
       /* Matchmaking */
-      host: player,
+      player1: player1.UserId,
+      player2: player2 ? player2.UserId : -1,
       color: 0,
 
       /* Board */
@@ -102,11 +122,28 @@ export class Gameplay {
       mate: 0,
     };
 
+    this.Trackers[id] = player2 ? [player1, player2] : [player1];
     this.Games[id] = activeGame;
 
-    Events.AssignedGame.fire(player, id, activeGame.color);
-    if (activeGame.color === 1) {
+    Events.AssignedGame.fire(player1, id, activeGame.color);
+    if (player2) Events.AssignedGame.fire(player2, id, 1 - activeGame.color);
+
+    /* Bot starts as white */
+    if (BOT && activeGame.color === 1) {
       this.evaluate(id);
+    }
+  }
+
+  @Event(Events.NewGame)
+  newGame(player: Player) {
+    const nextPlayer = this.AwaitingGame.pop();
+
+    if (BOT) {
+      this.makeGame(player);
+    } else if (nextPlayer) {
+      this.makeGame(player, nextPlayer);
+    } else {
+      this.AwaitingGame.push(player);
     }
   }
 }
