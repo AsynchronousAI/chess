@@ -23,6 +23,6 @@ export function GetBestMoveAPI(board: BitBoard) {
     eval: bestMove.eval ?? 0,
     mate: bestMove.mate,
     depth: bestMove.depth ?? 0,
-    move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
+    move: Notation.parseLan(bestMove.bestmove),
   };
 }

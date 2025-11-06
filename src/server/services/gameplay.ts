@@ -15,7 +15,7 @@ export class Gameplay {
 
   private board = FEN.fromFEN(DefaultFEN);
   private PGN = new PGN();
-  private opening = "Starting position";
+  private opening = "Starting Position";
 
   move(from: Square, to: Square, promotion?: Piece) {
     if (!promotion) {
@@ -24,6 +24,7 @@ export class Gameplay {
       BitBoard.setPiece(this.board, from, 0, 0);
       BitBoard.setPiece(this.board, to, promotion, this.color);
     }
+    BitBoard.flipTurn(this.board);
     this.PGN.move(this.board, to, promotion);
 
     const opening = getOpening(this.board);
@@ -31,18 +32,27 @@ export class Gameplay {
       this.opening = opening.name;
     }
   }
-  bot() {
-    const best = GetBestMoveAPI(this.board);
-    this.move(...best.move!);
-    BitBoard.flipTurn(this.board);
-    if (this.target) {
-      task.wait(0.25); /* bot is too fast! */
-      Events.MoveMade.fire(this.target, best.move!, {
-        eval: best.eval,
-        mate: tonumber(best.mate) ?? 0,
+  evaluate() {
+    /* Local (faster) */
+    if (this.target)
+      Events.Evaluate.fire(this.target, {
         opening: this.opening,
       });
-    }
+
+    /* HTTP Handled (slower) */
+    const best = GetBestMoveAPI(this.board);
+    this.move(...best.move);
+
+    const stats = {
+      move: best.move,
+      eval: best.eval,
+      mate: tonumber(best.mate) ?? 0,
+      opening: this.opening,
+    };
+
+    if (this.target) Events.Evaluate.fire(this.target, stats);
+
+    return stats;
   }
 
   @Event(Events.MakeMove)
@@ -52,9 +62,7 @@ export class Gameplay {
   ) {
     if (this.target !== player) return;
     this.move(from, to, promotion);
-    BitBoard.flipTurn(this.board);
-
-    this.bot();
+    this.evaluate();
   }
   @Event(Events.NewGame)
   newGame(player: Player) {
@@ -64,7 +72,7 @@ export class Gameplay {
 
     Events.AssignedGame.fire(player, this.color);
     if ((this.color as Color) === 1) {
-      this.bot();
+      this.evaluate();
     }
   }
 }

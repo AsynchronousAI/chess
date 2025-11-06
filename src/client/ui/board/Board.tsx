@@ -135,13 +135,13 @@ export default function Board() {
   };
 
   useEventListener(
-    Events.MoveMade,
-    (move, { eval: evaluation, mate, opening }) => {
-      evalBarRef.current?.setEval(evaluation);
-      evalBarRef.current?.setMate(mate);
+    Events.Evaluate,
+    ({ move, eval: evaluation, mate, opening }) => {
+      if (evaluation) evalBarRef.current?.setEval(evaluation);
+      if (mate) evalBarRef.current?.setMate(mate);
 
-      setOpening(opening);
-      movePiece(move[0], move[1], false, move[2]);
+      if (opening) setOpening(opening);
+      if (move) movePiece(move[0], move[1], false, move[2]);
     },
   );
   useEventListener(Events.AssignedGame, (color) => {
