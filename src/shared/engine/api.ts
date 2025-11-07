@@ -5,6 +5,7 @@ import { FEN } from "./fen";
 
 export function GetBestMoveAPI(board: BitBoard) {
   const fen = FEN.toFEN(board);
+  const turn = BitBoard.getTurn(board);
   const bestMove = HttpService.JSONDecode(
     HttpService.PostAsync(
       "http://localhost:3000",
@@ -20,8 +21,18 @@ export function GetBestMoveAPI(board: BitBoard) {
   };
 
   return {
-    eval: bestMove.eval ?? 0,
-    mate: bestMove.mate,
+    eval:
+      bestMove.eval !== undefined
+        ? turn === 1
+          ? bestMove.eval
+          : -bestMove.eval
+        : 0,
+    mate:
+      bestMove.mate !== undefined
+        ? turn === 1
+          ? bestMove.mate
+          : -bestMove.mate
+        : 0,
     depth: bestMove.depth ?? 0,
     move: Notation.parseLan(bestMove.bestmove),
   };

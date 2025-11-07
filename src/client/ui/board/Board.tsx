@@ -8,7 +8,7 @@ import {
 } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
-import { Wood } from "./images";
+import { Vector, Wood } from "./images";
 import { Frame, ListLayout, Text } from "@rbxts/better-react-components";
 import {
   default as GetLegalMoves,
@@ -29,7 +29,7 @@ export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const px = usePx();
-  const iconPack = Wood;
+  const iconPack = Vector;
   const evalBarRef = useRef<EvaluationBarRef>(undefined);
 
   const [playingAs, setPlayingAs] = useState(Color.white);

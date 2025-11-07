@@ -26,7 +26,7 @@ export type Game = {
   mate: number;
 };
 
-const BOT = false;
+const BOT = true;
 
 @Service()
 export class Gameplay {

@@ -20,8 +20,8 @@ export const Vector: IconPack = {
     [Piece.queen]: "rbxassetid://131559723456580",
     [Piece.rook]: "rbxassetid://111571822588564",
   },
-  filled: new Color3(1, 1, 1),
-  unfilled: new Color3(0, 0, 0),
+  filled: Color3.fromHex("#779569"),
+  unfilled: Color3.fromHex("#EFEEE7"),
 };
 export const Wood: IconPack = {
   [Color.black]: {
@@ -39,26 +39,6 @@ export const Wood: IconPack = {
     [Piece.pawn]: "rbxassetid://78892092935303",
     [Piece.queen]: "rbxassetid://85854632266679",
     [Piece.rook]: "rbxassetid://77981604292493",
-  },
-  filled: Color3.fromHex("#B58863"),
-  unfilled: Color3.fromHex("#F0D9B5"),
-};
-export const Flat: IconPack = {
-  [Color.black]: {
-    [Piece.bishop]: "rbxassetid://92142353835929",
-    [Piece.king]: "rbxassetid://117143786828665",
-    [Piece.knight]: "rbxassetid://78725689313044",
-    [Piece.pawn]: "rbxassetid://137391088362886",
-    [Piece.queen]: "rbxassetid://140170890678854",
-    [Piece.rook]: "rbxassetid://87166956390690",
-  },
-  [Color.white]: {
-    [Piece.bishop]: "rbxassetid://120207586996136",
-    [Piece.king]: "rbxassetid://85626256806842",
-    [Piece.knight]: "rbxassetid://76033760634711",
-    [Piece.pawn]: "rbxassetid://91468336670577",
-    [Piece.queen]: "rbxassetid://133499444299396",
-    [Piece.rook]: "rbxassetid://131053145085973",
   },
   filled: Color3.fromHex("#B58863"),
   unfilled: Color3.fromHex("#F0D9B5"),
