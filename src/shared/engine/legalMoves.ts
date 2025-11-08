@@ -244,7 +244,9 @@ export default function GetLegalMoves(
   turn: Color = BitBoard.getTurn(board),
 ): Move[] {
   const piece = BitBoard.getPiece(board, from);
-  if (!piece) return [];
+  if (!piece) {
+    return [];
+  }
 
   let moves: Move[] = [];
 
@@ -262,9 +264,8 @@ export default function GetLegalMoves(
         kingPosition = pos;
       }
 
-      if (
-        IsSquareAttacked(newBoard, kingPosition, 1 - piece[1]) !== Piece.none
-      ) {
+      const attacker = IsSquareAttacked(newBoard, kingPosition, 1 - piece[1]);
+      if (attacker !== Piece.none) {
         return;
       }
     }

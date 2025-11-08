@@ -1,5 +1,10 @@
 import { Frame, Text } from "@rbxts/better-react-components";
-import React, { forwardRef, useImperativeHandle, useState } from "@rbxts/react";
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "@rbxts/react";
 import {
   Color,
   FILES,
@@ -15,7 +20,8 @@ import { Promotion } from "./Promotion";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Piece } from "./Piece";
-import { HttpService } from "@rbxts/services";
+import { HttpService, Players } from "@rbxts/services";
+import { useEventListener } from "@rbxts/pretty-react-hooks";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -47,6 +53,16 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     >([]);
 
     const px = usePx();
+    const containerRef = useRef<Frame>();
+
+    const mouse = Players.LocalPlayer.GetMouse();
+    useEventListener(mouse.Button1Up, () => {
+      /* mouse released outside of piece */
+      if (Atoms.Dragging()) {
+        /* TODO: move on let go, dont require an additional click */
+      }
+      Atoms.Dragging(false);
+    });
 
     useImperativeHandle(ref, () => ({
       setBoard: (board) => {
@@ -77,7 +93,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     }));
 
     return (
-      <Frame size={props.size} aspectRatio={1}>
+      <Frame size={props.size} aspectRatio={1} ref={containerRef}>
         {/* Squares */}
         {FILES.map((letter, i) =>
           RANKS.map((number, j) => {
@@ -137,32 +153,36 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
 
                 {/* Hitbox */}
                 {possibleMoves.find((v) => v[0] === index) && (
-                  <Frame
-                    key={`${location}-hit`}
-                    position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
-                    size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-                    noBackground
-                    zIndex={1000}
-                  >
+                  <>
                     <textbutton
-                      Size={new UDim2(1, 0, 1, 0)}
+                      key={`${location}-hit`}
+                      Position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
+                      Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
                       Text={""}
                       BackgroundTransparency={1}
-                      ZIndex={1}
+                      ZIndex={1000}
                       Event={{
                         MouseButton1Down: () => props.onMove(index),
                       }}
                     />
                     <Frame
-                      size={new UDim2(0.35, 0, 0.35, 0)}
-                      position={new UDim2(0.5, 0, 0.5, 0)}
-                      anchorPoint={new Vector2(0.5, 0.5)}
-                      background={new Color3(0, 0, 0)}
-                      backgroundTransparency={0.75}
-                      cornerRadius={new UDim(0.5, 0)}
-                      zIndex={5}
-                    />
-                  </Frame>
+                      key={`${location}-hit-visual`}
+                      position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
+                      size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+                      noBackground
+                      zIndex={25}
+                    >
+                      <Frame
+                        size={new UDim2(0.35, 0, 0.35, 0)}
+                        position={new UDim2(0.5, 0, 0.5, 0)}
+                        anchorPoint={new Vector2(0.5, 0.5)}
+                        background={new Color3(0, 0, 0)}
+                        backgroundTransparency={0.75}
+                        cornerRadius={new UDim(0.5, 0)}
+                        zIndex={5}
+                      />
+                    </Frame>
+                  </>
                 )}
               </>
             );
@@ -181,6 +201,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
               location={loc}
               piece={piece}
               locked={props.locked}
+              containerRef={containerRef}
             />
           );
         })}

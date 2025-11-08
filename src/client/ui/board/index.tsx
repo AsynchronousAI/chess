@@ -31,8 +31,10 @@ export default function Board() {
   const pgn = useAtom(Atoms.PGN);
   const possibleMoves = useAtom(Atoms.PossibleMoves);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
+  const dragging = useAtom(Atoms.Dragging);
+
   const px = usePx();
-  const iconPack = Vector;
+  const iconPack = Wood;
 
   const chessBoardRef = useRef<ChessBoardRef>(undefined);
   const evalBarRef = useRef<EvaluationBarRef>(undefined);
@@ -74,13 +76,16 @@ export default function Board() {
     BitBoard.flipTurn(board);
 
     /* Animate */
-    chessBoardRef.current?.animateBoard(
-      from,
-      to,
-      as,
-      moved ? [moved, movedTo] : undefined,
-    );
-
+    if (dragging) {
+      chessBoardRef.current?.setBoard(board);
+    } else {
+      chessBoardRef.current?.animateBoard(
+        from,
+        to,
+        as,
+        moved ? [moved, movedTo] : undefined,
+      );
+    }
     /* Sound effects */
     const opponentsKing = BitBoard.findPiece(
       board,
@@ -106,15 +111,21 @@ export default function Board() {
     }
     setCurrentMove(pgn.size() - 1);
     Atoms.Board(BitBoard.branch(board));
-    Atoms.PossibleMoves([]);
-    if (myMove) Events.MakeMove(gameId, [from, to, as]);
+
+    if (myMove) {
+      Atoms.PossibleMoves([]);
+      Events.MakeMove(gameId, [from, to, as]);
+    } else if (holdingPiece) {
+      Atoms.PossibleMoves(GetLegalMoves(board, holdingPiece, true, playingAs));
+    }
   };
 
   /* Handlers */
   const onMove = (location: number) => {
     if (
       !possibleMoves.find((v) => v[0] === location) ||
-      holdingPiece === undefined
+      holdingPiece === undefined ||
+      BitBoard.getTurn(board) !== playingAs
     )
       return;
 

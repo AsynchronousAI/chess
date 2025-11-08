@@ -1,5 +1,6 @@
 import { Color, Piece as PieceType } from "shared/board";
 import { IconPack } from "./images";
+import React from "@rbxts/react";
 
 // Constants
 export const BOT = true;
@@ -12,6 +13,8 @@ export interface PieceProps {
   playingAs: Color;
   piece: [PieceType, Color];
   locked: boolean;
+
+  containerRef: React.MutableRefObject<Frame | undefined>;
 }
 
 export interface PromotionProps {

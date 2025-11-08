@@ -1,18 +1,24 @@
-import React, { Binding, useEffect } from "@rbxts/react";
-import { Color, Piece as PieceType } from "shared/board";
+import React, { useEffect } from "@rbxts/react";
+import { Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Frame } from "@rbxts/better-react-components";
 import { default as GetLegalMoves } from "shared/engine/legalMoves";
 import { Image } from "../image";
-import { useMotion } from "@rbxts/pretty-react-hooks";
+import { useMotion, useMouse } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../usePx";
 import { PieceProps, generatePosition } from "./shared";
 
 export function Piece(props: PieceProps) {
   const board = useAtom(Atoms.Board);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
+  const dragging = useAtom(Atoms.Dragging);
+
   const px = usePx();
+
+  const mousePos = useMouse()
+    .map((v) => v.sub(props.containerRef.current?.AbsolutePosition!))
+    .map((v) => new UDim2(0, v.X, 0, v.Y));
 
   const [offsetY, offsetYMotion] = useMotion(0);
 
@@ -38,57 +44,68 @@ export function Piece(props: PieceProps) {
 
   /* Events */
   const onDown = () => {
-    if (props.locked || props.location === undefined || !props.piece) return;
+    if (props.locked || props.location === undefined || !props.piece) {
+      Atoms.Dragging(false);
+      return;
+    }
 
     if (holdingPiece === props.location) {
       // drop
       Atoms.HoldingPiece(undefined);
+      Atoms.Dragging(false);
       Atoms.PossibleMoves([]);
     } else if (props.piece[0] !== PieceType.none && isMyPiece) {
       // pick up
       Atoms.HoldingPiece(props.location);
-      Atoms.PossibleMoves(GetLegalMoves(board, props.location));
+      Atoms.Dragging(true);
+      Atoms.PossibleMoves(
+        GetLegalMoves(board, props.location, true, props.playingAs),
+      );
     }
   };
 
   return (
     props.piece[0] !== PieceType.none && (
-      <>
-        <Frame
-          position={pos}
-          size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-          noBackground
-          zIndex={holdingPiece === props.location ? 100 : 3}
-        >
-          <textbutton
-            Size={new UDim2(1, 0, 1, 0)}
-            Text={""}
-            BackgroundTransparency={1}
-            ZIndex={1}
-            Event={{
-              MouseEnter: () => {
-                offsetYMotion.spring(isMyPiece ? -10 : 0);
-              },
-              MouseLeave: () => {
-                offsetYMotion.spring(0);
-              },
-              MouseButton1Down: onDown,
-            }}
+      <Frame
+        position={dragging && holdingPiece === props.location ? mousePos : pos}
+        size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+        noBackground
+        anchorPoint={
+          dragging && holdingPiece === props.location
+            ? new Vector2(0.5, 1)
+            : undefined
+        }
+        zIndex={holdingPiece === props.location ? 100 : 3}
+      >
+        <textbutton
+          Size={new UDim2(1, 0, 1, 0)}
+          Text={""}
+          BackgroundTransparency={1}
+          ZIndex={1}
+          Event={{
+            MouseEnter: () => {
+              offsetYMotion.spring(isMyPiece ? -10 : 0);
+            },
+            MouseLeave: () => {
+              offsetYMotion.spring(0);
+            },
+            MouseButton1Down: onDown,
+            MouseButton1Up: () => Atoms.Dragging(false), // mouse released on piece
+          }}
+        />
+        {image ? (
+          <Image
+            image={image}
+            position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
+            size={new UDim2(1, 0, 1, 0)}
+            outlinePrecision={30}
+            outlineThickness={px(4)}
+            outlineStartAngle={40}
+            outlineColor={new Color3(0.35, 0.35, 0.35)}
+            zIndex={holdingPiece === props.location ? 100 : 3}
           />
-          {image ? (
-            <Image
-              image={image}
-              position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
-              size={new UDim2(1, 0, 1, 0)}
-              outlinePrecision={30}
-              outlineThickness={px(4)}
-              outlineStartAngle={40}
-              outlineColor={new Color3(0.35, 0.35, 0.35)}
-              zIndex={holdingPiece === props.location ? 100 : 3}
-            />
-          ) : undefined}
-        </Frame>
-      </>
+        ) : undefined}
+      </Frame>
     )
   );
 }
