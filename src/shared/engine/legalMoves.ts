@@ -97,23 +97,25 @@ const CUSTOM_DIRECTIONS: Partial<
     }
 
     // Captures
-    for (const dx of [9, 7]) {
-      const newPos = pos + dx * dir;
+    const file = pos % 8;
+    for (const dx of [-1, 1]) {
+      const newFile = file + dx;
+      if (newFile < 0 || newFile > 7) continue; // Prevent wraparound
+
+      const newPos = pos + dir * 8 + dx;
       if (!isOnBoard(newPos)) continue;
 
       const target = BitBoard.getPiece(board, newPos);
       if (target[0] !== 0 && target[1] !== piece[1]) {
-        // Normal capture
         moves.push([newPos]);
       } else {
-        // En passant capture
         const enPassantSquare = BitBoard.getEnPassant(board);
         if (enPassantSquare === newPos) {
           moves.push([
             newPos,
             (branch) => {
-              BitBoard.setPiece(branch, newPos - 8, Piece.none, 0);
-              return [newPos - 8, undefined];
+              BitBoard.setPiece(branch, newPos - dir * 8, Piece.none, 0);
+              return [newPos - dir * 8, undefined];
             },
           ]);
         }
