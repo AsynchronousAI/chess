@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "@rbxts/react";
-import { Color, Piece as PieceType } from "shared/board";
+import { Color, Piece as PieceType, Square } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
 import {
+  Button,
   Frame,
   ListLayout,
   ScrollingFrame,
@@ -23,6 +24,7 @@ import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import ChessBoard from "./Board";
 import { PGN } from "shared/engine/pgn";
+import { FEN } from "shared/engine/fen";
 export default function Board() {
   const board = useAtom(Atoms.Board);
   const pgn = useAtom(Atoms.PGN);
@@ -35,10 +37,11 @@ export default function Board() {
   const [playingAs, setPlayingAs] = useState(Color.white);
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
 
-  const [promoting, setPromoting] = useState(-1);
+  const [promoting, setPromoting] = useState<Square>(-1);
   const [analysis, setAnalysis] = useState<ReturnType<typeof AnalyzeMates>>("");
   const [gameId, setGameId] = useState("");
   const [opening, setOpening] = useState("Starting game...");
+  const [currentMove, setCurrentMove] = useState<number>(0);
 
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
@@ -52,9 +55,9 @@ export default function Board() {
     to: number,
     myMove: boolean,
     as?: PieceType,
+    pushPGN: boolean = true,
+    color: Color = myMove ? playingAs : 1 - playingAs,
   ) => {
-    const color = myMove ? playingAs : 1 - playingAs;
-
     /* Locate the move data, for special moves such as en passant or castling */
     const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
     const move = allMoves.find((v) => v[0] === to);
@@ -103,11 +106,13 @@ export default function Board() {
     }
 
     /* Update local board, and let server know */
-    Atoms.PGN((x) => {
-      PGN.move(x, board, from, to, as, captured);
-      return x;
-    });
-    print(PGN.compile(pgn));
+    if (pushPGN) {
+      Atoms.PGN((x) => {
+        PGN.move(x, board, from, to, as, captured);
+        return x;
+      });
+    }
+    setCurrentMove(pgn.size() - 1);
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
     if (myMove) Events.MakeMove(gameId, [from, to, as]);
@@ -139,6 +144,13 @@ export default function Board() {
     }
     movePiece(holdingPiece, promoting, true, piece);
     setPromoting(-1);
+  };
+  const onRewind = (moveIndex: number) => {
+    Atoms.Board(pgn[moveIndex].state);
+    setPieces([]);
+    task.wait();
+    setPieces(BitBoard.getAllPieces(pgn[moveIndex].state));
+    setCurrentMove(moveIndex);
   };
 
   useEventListener(Events.Evaluate, (activeGame) => {
@@ -259,34 +271,40 @@ export default function Board() {
                 />
 
                 {/* White move */}
-                <Text
-                  text={move.notation}
-                  textColor={
-                    index === pgn.size() - 1
+                <textbutton
+                  Text={move.notation}
+                  TextColor3={
+                    index === currentMove
                       ? new Color3(1, 1, 1)
                       : new Color3(0.8, 0.8, 0.8)
                   }
-                  textSize={px(20)}
-                  font={"SourceSansSemibold"}
-                  size={new UDim2(0, 0, 1, 0)}
-                  automaticSize={"X"}
-                  noBackground
+                  TextSize={px(20)}
+                  Font={"SourceSansSemibold"}
+                  Size={new UDim2(0, 0, 1, 0)}
+                  AutomaticSize={"X"}
+                  BackgroundTransparency={1}
+                  Event={{
+                    MouseButton1Click: () => onRewind(index),
+                  }}
                 />
 
                 {/* Black move */}
                 {blackResponse !== undefined && (
-                  <Text
-                    text={blackResponse.notation}
-                    textColor={
-                      index + 1 === pgn.size() - 1
+                  <textbutton
+                    Text={blackResponse.notation}
+                    TextColor3={
+                      index + 1 === currentMove
                         ? new Color3(1, 1, 1)
                         : new Color3(0.8, 0.8, 0.8)
                     }
-                    textSize={px(20)}
-                    font={"SourceSansSemibold"}
-                    size={new UDim2(0, 0, 1, 0)}
-                    automaticSize={"X"}
-                    noBackground
+                    TextSize={px(20)}
+                    Font={"SourceSansSemibold"}
+                    Size={new UDim2(0, 0, 1, 0)}
+                    AutomaticSize={"X"}
+                    BackgroundTransparency={1}
+                    Event={{
+                      MouseButton1Click: () => onRewind(index + 1),
+                    }}
                   />
                 )}
               </Frame>
