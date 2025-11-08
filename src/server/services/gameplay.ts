@@ -75,16 +75,15 @@ export class Gameplay {
     if (BOT && best.move) this.move(gameId, ...best.move);
 
     const stats = {
+      ...activeGame,
       eval: best.eval,
       mate: tonumber(best.mate) ?? 0,
-      opening: activeGame.opening,
+      /* very large, better to not send */
+      pgn: undefined,
+      board: undefined,
     };
 
-    Events.Evaluate.fire(this.Trackers[gameId], {
-      eval: best.eval,
-      mate: tonumber(best.mate) ?? 0,
-      opening: activeGame.opening,
-    });
+    Events.Evaluate.fire(this.Trackers[gameId], stats);
 
     return stats;
   }
@@ -126,8 +125,15 @@ export class Gameplay {
     this.Trackers[id] = player2 ? [player1, player2] : [player1];
     this.Games[id] = activeGame;
 
-    Events.AssignedGame.fire(player1, id, activeGame.color);
-    if (player2) Events.AssignedGame.fire(player2, id, 1 - activeGame.color);
+    const shrunk = {
+      ...activeGame,
+      /* very large, better to not send */
+      pgn: undefined,
+      board: undefined,
+    };
+    Events.AssignedGame.fire(player1, id, activeGame.color, shrunk);
+    if (player2)
+      Events.AssignedGame.fire(player2, id, 1 - activeGame.color, shrunk);
 
     /* Bot starts as white */
     if (BOT && activeGame.color === 1) {

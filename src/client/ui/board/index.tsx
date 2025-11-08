@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "@rbxts/react";
+import React, { useState, useRef, useEffect, useMemo } from "@rbxts/react";
 import { Color, Piece as PieceType, Square } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
@@ -6,9 +6,11 @@ import { Vector, Wood } from "./images";
 import {
   Button,
   Frame,
+  Image,
   ListLayout,
   ScrollingFrame,
   Text,
+  TextBox,
 } from "@rbxts/better-react-components";
 import {
   AnalyzeMates,
@@ -17,7 +19,7 @@ import {
 } from "shared/engine/legalMoves";
 import { BitBoard } from "shared/engine/bitboard";
 import { SoundEffects } from "./sfx";
-import { SoundService } from "@rbxts/services";
+import { Players, SoundService } from "@rbxts/services";
 import { usePx } from "../usePx";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
@@ -25,7 +27,93 @@ import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { PGN } from "shared/engine/pgn";
 import { DefaultBoard } from "shared/engine/fen";
+import { Game } from "server/services/gameplay";
 
+function Player({
+  userId,
+  flag,
+  rating,
+  time,
+}: {
+  userId: number;
+  flag: string;
+  rating: number;
+  time: number;
+}) {
+  const formatTime = (seconds: number) => {
+    const minutes = math.floor(seconds / 60);
+    const remaining = seconds % 60;
+    const padded = remaining < 10 ? `0${remaining}` : `${remaining}`;
+    return `${minutes}:${padded}`;
+  };
+  const [name, setName] = useState("Loading..");
+  const [thumbnail, setThumbnail] = useState("");
+
+  useEffect(() => {
+    if (userId > 0) {
+      setName(Players.GetNameFromUserIdAsync(userId));
+      const [content, _success] = Players.GetUserThumbnailAsync(
+        userId,
+        Enum.ThumbnailType.HeadShot,
+        Enum.ThumbnailSize.Size420x420,
+      );
+      setThumbnail(content);
+    } else if (userId < 0) {
+      setName("Bot");
+    }
+  }, [userId]);
+  const px = usePx();
+  return (
+    <Frame size={new UDim2(0.85, 0, 0.05, 0)} noBackground>
+      <uilistlayout
+        VerticalAlignment={"Top"}
+        HorizontalAlignment={"Left"}
+        FillDirection={"Horizontal"}
+        Padding={new UDim(0, px(10))}
+      />
+
+      <Image
+        noBackground
+        visible={thumbnail !== ""}
+        image={thumbnail}
+        size={new UDim2(1, 0, 1, 0)}
+        aspectRatio={1}
+      />
+      <Text
+        noBackground
+        richText
+        text={`<b>${name}</b> <font color="rgb(128,128,128)">(${rating})</font> ${flag}`}
+        size={new UDim2(0.7, 0, 0.5, 0)}
+        textSize={px(20)}
+        textAlign={"Left"}
+        paddingTop={px(15)}
+        paddingBottom={px(15)}
+        textColor={new Color3(1, 1, 1)}
+        font={"SourceSans"}
+      />
+
+      <Text
+        size={new UDim2(0.2, 0, 1, 0)}
+        text={formatTime(time)}
+        background={"#403E39"}
+        textSize={px(25)}
+        textAlign={"Right"}
+        paddingRight={px(10)}
+        textColor={new Color3(1, 1, 1)}
+        font={"SourceSansSemibold"}
+      >
+        <Image
+          noBackground
+          size={new UDim2(0.55, 0, 0.55, 0)}
+          aspectRatio={1}
+          image={"rbxassetid://10709805144"}
+          anchorPoint={new Vector2(0, 0.5)}
+          position={new UDim2(0.1, 0, 0.5, 0)}
+        />
+      </Text>
+    </Frame>
+  );
+}
 export default function Board() {
   const board = useAtom(Atoms.Board);
   const pgn = useAtom(Atoms.PGN);
@@ -45,6 +133,7 @@ export default function Board() {
   const [gameId, setGameId] = useState("");
   const [opening, setOpening] = useState("Starting game...");
   const [currentMove, setCurrentMove] = useState<number>(0);
+  const [activeGame, setGame] = useState<Partial<Game>>({});
 
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
@@ -130,7 +219,6 @@ export default function Board() {
 
     if (BitBoard.getTurn(board) !== playingAs) {
       /* PREMOVE! */
-      
     }
 
     const piece = BitBoard.getPiece(board, holdingPiece);
@@ -176,14 +264,16 @@ export default function Board() {
 
     if (activeGame.opening) setOpening(activeGame.opening);
 
+    setGame((g) => ({ ...g, ...activeGame }));
     setAnalysis(AnalyzeMates(board));
   });
   useEventListener(Events.MoveMade, (move, turn) => {
     if (turn === playingAs) return; /* i am already this color */
     movePiece(move[0], move[1], false, move[2]);
   });
-  useEventListener(Events.AssignedGame, (gameId, color) => {
+  useEventListener(Events.AssignedGame, (gameId, color, activeGame) => {
     setPlayingAs(color);
+    setGame((g) => ({ ...g, ...activeGame }));
     setGameId(gameId);
     setOpening("Starting Position");
     chessBoardRef.current?.setBoard(board);
@@ -206,38 +296,59 @@ export default function Board() {
         HorizontalAlignment={"Center"}
         FillDirection={"Horizontal"}
         Wraps
-        Padding={new UDim(0, px(10))}
+        Padding={new UDim(0, px(5))}
       />
 
       <EvaluationBar
         ref={evalBarRef}
-        size={new UDim2(0.025, 0, 0.85, 0)}
+        size={new UDim2(0.025, 0, 0.975, 0)}
         analysis={analysis}
       />
-      <ChessBoard
-        ref={chessBoardRef}
-        iconPack={iconPack}
-        playingAs={playingAs}
-        onPromote={onPromote}
-        onMove={onMove}
-        promoting={promoting}
-        locked={
-          gameId === "" ||
-          analysis !== "" ||
-          /* if the PGN is not empty, then if the currentMove is not
+      <Frame size={new UDim2(1, 0, 0.975, 0)} aspectRatio={1} noBackground>
+        <uilistlayout
+          VerticalAlignment={"Center"}
+          HorizontalAlignment={"Center"}
+          FillDirection={"Vertical"}
+          Padding={new UDim(0, px(10))}
+        />
+
+        <Player
+          userId={activeGame.player2 ?? 0}
+          flag={"🇺🇸"}
+          rating={2412}
+          time={50}
+        />
+        <ChessBoard
+          ref={chessBoardRef}
+          iconPack={iconPack}
+          playingAs={playingAs}
+          onPromote={onPromote}
+          onMove={onMove}
+          promoting={promoting}
+          locked={
+            gameId === "" ||
+            analysis !== "" ||
+            /* if the PGN is not empty, then if the currentMove is not
           the last move  (rewinding) */
-          (pgn.size() === 0 ? false : currentMove !== pgn.size() - 1)
-        }
-        size={new UDim2(0.85, 0, 0.85, 0)}
-      />
+            (pgn.size() === 0 ? false : currentMove !== pgn.size() - 1)
+          }
+          size={new UDim2(0.85, 0, 0.85, 0)}
+        />
+        <Player
+          userId={activeGame.player1 ?? 0}
+          flag={"🇺🇸"}
+          rating={3674}
+          time={892}
+        />
+      </Frame>
 
       {/* Explorer */}
       <ScrollingFrame
-        size={new UDim2(0.5, 0, 0.85, 0)}
+        size={new UDim2(0.25, 0, 0.975, 0)}
         position={new UDim2(0.5, 0, 0.5, 0)}
         anchorPoint={new Vector2(0.5, 0.5)}
         background={new Color3(0.1, 0.1, 0.1)}
-        canvasSize={new UDim2(0.5, 0, 0, 0)}
+        canvasSize={new UDim2(0.25, 0, 0, 0)}
         scrollbar={{
           topImage: "rbxassetid://3062506215",
           bottomImage: "rbxassetid://3062506215",
@@ -264,6 +375,7 @@ export default function Board() {
           layoutOrder={0}
         />
 
+        {/* Explorer */}
         {pgn
           .filter((_, i) => i % 2 === 0) // only white moves, since black moves will be displayed same place
           .map((move, minimizedIndex) => {
