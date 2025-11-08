@@ -34,6 +34,6 @@ export function GetBestMoveAPI(board: BitBoard) {
           : -bestMove.mate
         : 0,
     depth: bestMove.depth ?? 0,
-    move: Notation.parseLan(bestMove.bestmove),
+    move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
   };
 }

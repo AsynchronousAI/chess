@@ -10,6 +10,7 @@ import {
   Text,
 } from "@rbxts/better-react-components";
 import {
+  AnalyzeMates,
   default as GetLegalMoves,
   IsSquareAttacked,
 } from "shared/engine/legalMoves";
@@ -22,8 +23,6 @@ import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import ChessBoard from "./Board";
 import { PGN } from "shared/engine/pgn";
-import { Notation } from "shared/engine/notation";
-
 export default function Board() {
   const board = useAtom(Atoms.Board);
   const pgn = useAtom(Atoms.PGN);
@@ -35,7 +34,9 @@ export default function Board() {
 
   const [playingAs, setPlayingAs] = useState(Color.white);
   const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
+
   const [promoting, setPromoting] = useState(-1);
+  const [analysis, setAnalysis] = useState<ReturnType<typeof AnalyzeMates>>("");
   const [gameId, setGameId] = useState("");
   const [opening, setOpening] = useState("Starting game...");
 
@@ -123,7 +124,7 @@ export default function Board() {
     const piece = BitBoard.getPiece(board, holdingPiece);
     if (
       piece[0] === PieceType.pawn &&
-      (playingAs === Color.white ? location > 49 : location < 8)
+      (playingAs === Color.white ? location > 55 : location < 8)
     ) {
       setPromoting(location);
       return;
@@ -145,6 +146,8 @@ export default function Board() {
     if (activeGame.mate) evalBarRef.current?.setMate(activeGame.mate);
 
     if (activeGame.opening) setOpening(activeGame.opening);
+
+    setAnalysis(AnalyzeMates(board));
   });
   useEventListener(Events.MoveMade, (move, turn) => {
     if (turn === playingAs) return; /* i am already this color */
@@ -174,14 +177,18 @@ export default function Board() {
         Padding={new UDim(0, px(10))}
       />
 
-      <EvaluationBar ref={evalBarRef} size={new UDim2(0.025, 0, 0.85, 0)} />
+      <EvaluationBar
+        ref={evalBarRef}
+        size={new UDim2(0.025, 0, 0.85, 0)}
+        analysis={analysis}
+      />
       <ChessBoard
         iconPack={iconPack}
         playingAs={playingAs}
         onPromote={onPromote}
         onMove={onMove}
         promoting={promoting}
-        locked={gameId === ""}
+        locked={gameId === "" || analysis !== ""}
         pieces={pieces}
         size={new UDim2(0.85, 0, 0.85, 0)}
       />

@@ -72,7 +72,7 @@ export class Gameplay {
 
     /* HTTP Handled (slower) */
     const best = GetBestMoveAPI(activeGame.board);
-    if (BOT) this.move(gameId, ...best.move);
+    if (BOT && best.move) this.move(gameId, ...best.move);
 
     const stats = {
       eval: best.eval,

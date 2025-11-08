@@ -13,6 +13,7 @@ import { usePx } from "../usePx";
 
 export interface EvaluationBarProps {
   size: UDim2;
+  analysis: string;
 }
 
 export interface EvaluationBarRef {
@@ -36,12 +37,11 @@ export const EvaluationBar = forwardRef<EvaluationBarRef, EvaluationBarProps>(
     }));
 
     useEffect(() => {
-      const analysis = AnalyzeMates(board);
-      if (analysis === "stalemate" || analysis === "insufficent") {
+      if (props.analysis === "stalemate" || props.analysis === "insufficent") {
         evalBarMotion.spring(0.5);
         setEval(-1);
         setEvalText("1/2");
-      } else if (analysis === "checkmate") {
+      } else if (props.analysis === "checkmate") {
         /* checkmate */
         evalBarMotion.spring(mate > 0 ? 0 : 1);
         setEval(mate > 0 ? 1 : -1);
