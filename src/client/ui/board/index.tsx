@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "@rbxts/react";
-import { Color, Piece as PieceType, Square } from "shared/board";
+import { Color, DefaultFEN, Piece as PieceType, Square } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
@@ -24,6 +24,7 @@ import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { PGN } from "shared/engine/pgn";
+import { FEN } from "shared/engine/fen";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -137,8 +138,20 @@ export default function Board() {
     setPromoting(-1);
   };
   const onRewind = (moveIndex: number) => {
-    Atoms.Board(pgn[moveIndex].state);
+    /*if (moveIndex === 0) {
+      Atoms.Board(FEN.fromFEN(DefaultFEN)); // animate from DefaultFEN
+    } else {
+      Atoms.Board(pgn[moveIndex - 1].state); // animate from previous
+    }
     chessBoardRef.current?.setBoard(Atoms.Board());
+    task.wait();
+    chessBoardRef.current?.animateBoard(
+      pgn[moveIndex].from,
+      pgn[moveIndex].to,
+      pgn[moveIndex].promotion,
+    );*/
+    Atoms.Board(pgn[moveIndex].state);
+    chessBoardRef.current?.setBoard(pgn[moveIndex].state);
     setCurrentMove(moveIndex);
   };
 
@@ -157,10 +170,12 @@ export default function Board() {
   useEventListener(Events.AssignedGame, (gameId, color) => {
     setPlayingAs(color);
     setGameId(gameId);
+    setOpening("Starting Position");
     chessBoardRef.current?.setBoard(board);
     pgn.clear();
   });
   useEffect(() => {
+    chessBoardRef.current?.setBoard(FEN.fromFEN(DefaultFEN));
     Events.NewGame();
   }, []);
 
@@ -191,7 +206,13 @@ export default function Board() {
         onPromote={onPromote}
         onMove={onMove}
         promoting={promoting}
-        locked={gameId === "" || analysis !== ""}
+        locked={
+          gameId === "" ||
+          analysis !== "" ||
+          /* if the PGN is not empty, then if the currentMove is not
+          the last move  (rewinding) */
+          (pgn.size() === 0 ? false : currentMove !== pgn.size() - 1)
+        }
         size={new UDim2(0.85, 0, 0.85, 0)}
       />
 
