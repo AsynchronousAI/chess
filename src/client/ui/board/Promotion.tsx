@@ -7,9 +7,16 @@ import { Image } from "../image";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../usePx";
 import { Motion } from "@rbxts/ripple";
-import { PromotionProps, generatePosition } from "./shared";
+import { generatePosition } from "./shared";
 import { BitBoard } from "shared/engine/bitboard";
+import { IconPack } from "./images";
 
+export interface PromotionProps {
+  location: number;
+  color: Color;
+  iconPack: IconPack;
+  onPromote: (piece: PieceType | undefined) => void;
+}
 export function Promotion({
   location,
   color,

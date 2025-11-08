@@ -20,8 +20,10 @@ import { Promotion } from "./Promotion";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Piece } from "./Piece";
-import { HttpService, Players } from "@rbxts/services";
+import { HttpService, Players, RunService } from "@rbxts/services";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
+import { Environment } from "@rbxts/ui-labs";
+import { Notation } from "shared/engine/notation";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -51,19 +53,30 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
         string /* key, used for animations */,
       ][]
     >([]);
+    const [hoveringSquare, setHoveringSquare] = useState<Square | undefined>();
 
     const px = usePx();
     const containerRef = useRef<Frame>();
 
-    const mouse = Players.LocalPlayer.GetMouse();
-    useEventListener(mouse.Button1Up, () => {
+    const UIS = Environment.UserInput;
+
+    const onRelease = () => {
       /* mouse released outside of piece */
-      if (Atoms.Dragging()) {
-        /* TODO: move on let go, dont require an additional click */
+      if (Atoms.Dragging() && hoveringSquare !== undefined) {
+        props.onMove(hoveringSquare);
       }
       Atoms.Dragging(false);
-    });
+    };
 
+    useEventListener(UIS.TouchEnded, onRelease);
+    useEventListener(UIS.InputEnded, (input) => {
+      if (
+        input.KeyCode === Enum.KeyCode.MouseLeftButton ||
+        input.KeyCode === Enum.KeyCode.Unknown
+      ) {
+        onRelease();
+      }
+    });
     useImperativeHandle(ref, () => ({
       setBoard: (board) => {
         setPieces(
@@ -163,6 +176,8 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                       ZIndex={1000}
                       Event={{
                         MouseButton1Down: () => props.onMove(index),
+                        MouseEnter: () => setHoveringSquare(index),
+                        MouseLeave: () => setHoveringSquare(undefined),
                       }}
                     />
                     <Frame
@@ -202,6 +217,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
               piece={piece}
               locked={props.locked}
               containerRef={containerRef}
+              onRelease={onRelease}
             />
           );
         })}

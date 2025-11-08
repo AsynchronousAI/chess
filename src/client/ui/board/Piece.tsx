@@ -1,5 +1,5 @@
 import React, { useEffect } from "@rbxts/react";
-import { Piece as PieceType } from "shared/board";
+import { Color, Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Frame } from "@rbxts/better-react-components";
@@ -7,8 +7,20 @@ import { default as GetLegalMoves } from "shared/engine/legalMoves";
 import { Image } from "../image";
 import { useMotion, useMouse } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../usePx";
-import { PieceProps, generatePosition } from "./shared";
+import { generatePosition } from "./shared";
+import { IconPack } from "./images";
 
+export interface PieceProps {
+  pos: [number, number];
+  location: number;
+  iconPack: IconPack;
+  playingAs: Color;
+  piece: [PieceType, Color];
+  onRelease: () => void;
+  locked: boolean;
+
+  containerRef: React.MutableRefObject<Frame | undefined>;
+}
 export function Piece(props: PieceProps) {
   const board = useAtom(Atoms.Board);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
@@ -90,7 +102,7 @@ export function Piece(props: PieceProps) {
               offsetYMotion.spring(0);
             },
             MouseButton1Down: onDown,
-            MouseButton1Up: () => Atoms.Dragging(false), // mouse released on piece
+            MouseButton1Up: props.onRelease, // mouse released on piece
           }}
         />
         {image ? (
