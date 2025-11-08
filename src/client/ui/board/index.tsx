@@ -24,7 +24,7 @@ import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { PGN } from "shared/engine/pgn";
-import { DefaultBoard, FEN } from "shared/engine/fen";
+import { DefaultBoard } from "shared/engine/fen";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -34,7 +34,7 @@ export default function Board() {
   const dragging = useAtom(Atoms.Dragging);
 
   const px = usePx();
-  const iconPack = Wood;
+  const iconPack = Vector;
 
   const chessBoardRef = useRef<ChessBoardRef>(undefined);
   const evalBarRef = useRef<EvaluationBarRef>(undefined);
@@ -124,10 +124,14 @@ export default function Board() {
   const onMove = (location: number) => {
     if (
       !possibleMoves.find((v) => v[0] === location) ||
-      holdingPiece === undefined ||
-      BitBoard.getTurn(board) !== playingAs
+      holdingPiece === undefined
     )
       return;
+
+    if (BitBoard.getTurn(board) !== playingAs) {
+      /* PREMOVE! */
+      
+    }
 
     const piece = BitBoard.getPiece(board, holdingPiece);
     if (

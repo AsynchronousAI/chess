@@ -46,6 +46,11 @@ export interface ChessBoardRef {
 export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
   (props, ref) => {
     const possibleMoves = useAtom(Atoms.PossibleMoves);
+    const pgn = useAtom(Atoms.PGN);
+
+    const px = usePx();
+    const containerRef = useRef<Frame>();
+
     const [pieces, setPieces] = useState<
       [
         number /* location */,
@@ -54,9 +59,6 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
       ][]
     >([]);
     const [hoveringSquare, setHoveringSquare] = useState<Square | undefined>();
-
-    const px = usePx();
-    const containerRef = useRef<Frame>();
 
     const UIS = Environment.UserInput;
 
@@ -67,6 +69,9 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
       }
       Atoms.Dragging(false);
     };
+    const squareHighlighted = (loc: Square) =>
+      pgn.size() > 0 &&
+      (pgn[pgn.size() - 1].to === loc || pgn[pgn.size() - 1].from === loc);
 
     useEventListener(UIS.TouchEnded, onRelease);
     useEventListener(UIS.InputEnded, (input) => {
@@ -124,7 +129,11 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                   position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
                   size={new UDim2(1 / 8, 0, 1 / 8, 0)}
                   background={
-                    colored ? props.iconPack.filled : props.iconPack.unfilled
+                    squareHighlighted(index)
+                      ? props.iconPack.highlighted
+                      : colored
+                        ? props.iconPack.filled
+                        : props.iconPack.unfilled
                   }
                   zIndex={1}
                 >
