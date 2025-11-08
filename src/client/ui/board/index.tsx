@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "@rbxts/react";
-import { Color, DefaultFEN, Piece as PieceType, Square } from "shared/board";
+import { Color, Piece as PieceType, Square } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
@@ -24,7 +24,7 @@ import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { PGN } from "shared/engine/pgn";
-import { FEN } from "shared/engine/fen";
+import { DefaultBoard, FEN } from "shared/engine/fen";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -139,7 +139,7 @@ export default function Board() {
   };
   const onRewind = (moveIndex: number) => {
     /*if (moveIndex === 0) {
-      Atoms.Board(FEN.fromFEN(DefaultFEN)); // animate from DefaultFEN
+      Atoms.Board(BitBoard.branch(DefaultBoard)); // animate from DefaultBoard
     } else {
       Atoms.Board(pgn[moveIndex - 1].state); // animate from previous
     }
@@ -175,7 +175,7 @@ export default function Board() {
     pgn.clear();
   });
   useEffect(() => {
-    chessBoardRef.current?.setBoard(FEN.fromFEN(DefaultFEN));
+    chessBoardRef.current?.setBoard(BitBoard.branch(DefaultBoard));
     Events.NewGame();
   }, []);
 

@@ -3,10 +3,10 @@ import { HttpService } from "@rbxts/services";
 import { Event } from "server/lifecycles";
 import { Events } from "server/network";
 import getOpening from "server/openings/getOpening";
-import { Color, DefaultFEN, Piece, Square } from "shared/board";
+import { Color, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
-import { FEN } from "shared/engine/fen";
+import { FEN, DefaultBoard } from "shared/engine/fen";
 import { PGN } from "shared/engine/pgn";
 
 export type Game = {
@@ -114,7 +114,7 @@ export class Gameplay {
       color: 0,
 
       /* Board */
-      board: FEN.fromFEN(DefaultFEN),
+      board: BitBoard.branch(DefaultBoard),
       pgn: PGN.create(),
       opening: "Starting Position",
 

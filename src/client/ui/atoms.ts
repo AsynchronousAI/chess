@@ -1,12 +1,13 @@
 import { atom } from "@rbxts/charm";
-import { Color, DefaultFEN, Square } from "shared/board";
+import { Color, Square } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
-import { FEN } from "shared/engine/fen";
+import { DefaultBoard } from "shared/engine/fen";
+
 import { Move } from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
 
 const Atoms = {
-  Board: atom<BitBoard>(FEN.fromFEN(DefaultFEN)),
+  Board: atom<BitBoard>(BitBoard.branch(DefaultBoard)),
   PGN: atom(PGN.create()),
   PlayingAs: atom<Color>(0),
   HoldingPiece: atom<Square | undefined>(undefined),

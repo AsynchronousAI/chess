@@ -143,3 +143,7 @@ export namespace FEN {
     return `${fen} ${BitBoard.getTurn(board) === 0 ? "w" : "b"} ${castling} ${enPassant} 0 2`;
   }
 }
+
+export const DefaultBoard = FEN.fromFEN(
+  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+);
