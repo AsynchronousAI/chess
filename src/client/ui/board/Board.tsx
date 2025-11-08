@@ -63,7 +63,7 @@ export default function ChessBoard({
                   <Text
                     textColor={!colored ? iconPack.filled : iconPack.unfilled}
                     textSize={px(20)}
-                    text={letter}
+                    text={playingAs === 1 ? FILES[7 - i] : FILES[i]}
                     font={"SourceSansBold"}
                     backgroundTransparency={1}
                     padding={px(3)}
@@ -77,7 +77,7 @@ export default function ChessBoard({
                     textColor={!colored ? iconPack.filled : iconPack.unfilled}
                     textSize={px(20)}
                     padding={px(3)}
-                    text={number}
+                    text={RANKS[boardJ]}
                     font={"SourceSansBold"}
                     backgroundTransparency={1}
                     size={new UDim2(1, 0, 1, 0)}

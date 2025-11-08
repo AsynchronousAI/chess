@@ -45,6 +45,7 @@ export class Gameplay {
     );
 
     /* Board move */
+    const captured = BitBoard.hasPiece(activeGame.board, to);
     if (!promotion) {
       BitBoard.movePiece(activeGame.board, from, to);
     } else {
@@ -54,7 +55,7 @@ export class Gameplay {
     BitBoard.flipTurn(activeGame.board);
 
     /* Attributes, PGN & opening */
-    PGN.move(activeGame.pgn, activeGame.board, to, promotion);
+    PGN.move(activeGame.pgn, activeGame.board, from, to, promotion, captured);
 
     const opening = getOpening(activeGame.board);
     if (opening) {

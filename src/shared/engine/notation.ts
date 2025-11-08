@@ -1,15 +1,6 @@
 import { FILES, Piece, Square } from "shared/board";
 import { BitBoard } from "./bitboard";
 
-const Shorthand: Record<Piece, string> = {
-  [Piece.bishop]: "B",
-  [Piece.king]: "K",
-  [Piece.knight]: "N",
-  [Piece.pawn]: "",
-  [Piece.none]: "",
-  [Piece.queen]: "Q",
-  [Piece.rook]: "R",
-} as const;
 const Promotion: Record<string, Piece> = {
   q: Piece.queen,
   r: Piece.rook,
@@ -28,19 +19,6 @@ export namespace Notation {
   export function encodeSquare(square: Square): string {
     const [file, rank] = BitBoard.separateSquareIndex(square);
     return FILES[file] + tostring(rank + 1);
-  }
-  export function encodeSquareFull(
-    board: BitBoard,
-    square: Square,
-    promotion?: Piece,
-    additional: string = "",
-  ): string {
-    const [piece] = BitBoard.getPiece(board, square);
-    let result = Shorthand[piece] + additional + encodeSquare(square);
-    if (promotion) {
-      result += "=" + Shorthand[promotion];
-    }
-    return result;
   }
   export function parseLan(lan: string): [Square, Square, Piece | undefined] {
     const [from, to] = [lan.sub(0, 2), lan.sub(3, 4)];

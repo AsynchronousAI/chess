@@ -3,7 +3,12 @@ import { Color, Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
-import { Frame, Text } from "@rbxts/better-react-components";
+import {
+  Frame,
+  ListLayout,
+  ScrollingFrame,
+  Text,
+} from "@rbxts/better-react-components";
 import {
   default as GetLegalMoves,
   IsSquareAttacked,
@@ -16,9 +21,12 @@ import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import ChessBoard from "./Board";
+import { PGN } from "shared/engine/pgn";
+import { Notation } from "shared/engine/notation";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
+  const pgn = useAtom(Atoms.PGN);
   const possibleMoves = useAtom(Atoms.PossibleMoves);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const px = usePx();
@@ -94,6 +102,11 @@ export default function Board() {
     }
 
     /* Update local board, and let server know */
+    Atoms.PGN((x) => {
+      PGN.move(x, board, from, to, as, captured);
+      return x;
+    });
+    print(PGN.compile(pgn));
     Atoms.Board(BitBoard.branch(board));
     Atoms.PossibleMoves([]);
     if (myMove) Events.MakeMove(gameId, [from, to, as]);
@@ -140,6 +153,7 @@ export default function Board() {
   useEventListener(Events.AssignedGame, (gameId, color) => {
     setPlayingAs(color);
     setGameId(gameId);
+    pgn.clear();
   });
   useEffect(() => {
     Events.NewGame();
@@ -160,8 +174,7 @@ export default function Board() {
         Padding={new UDim(0, px(10))}
       />
 
-      <EvaluationBar ref={evalBarRef} size={new UDim2(0.025, 0, 0.9, 0)} />
-
+      <EvaluationBar ref={evalBarRef} size={new UDim2(0.025, 0, 0.85, 0)} />
       <ChessBoard
         iconPack={iconPack}
         playingAs={playingAs}
@@ -170,17 +183,109 @@ export default function Board() {
         promoting={promoting}
         locked={gameId === ""}
         pieces={pieces}
-        size={new UDim2(0.9, 0, 0.9, 0)}
+        size={new UDim2(0.85, 0, 0.85, 0)}
       />
 
-      <Text
-        background={"#403E39"}
-        text={opening}
-        textColor={new Color3(1, 1, 1)}
-        textSize={px(20)}
-        font={"SourceSansSemibold"}
-        size={new UDim2(0.5, 0, 0.05, 0)}
-      />
+      {/* Explorer */}
+      <ScrollingFrame
+        size={new UDim2(0.5, 0, 0.85, 0)}
+        position={new UDim2(0.5, 0, 0.5, 0)}
+        anchorPoint={new Vector2(0.5, 0.5)}
+        background={new Color3(0.1, 0.1, 0.1)}
+        canvasSize={new UDim2(0.5, 0, 0, 0)}
+        scrollbar={{
+          topImage: "rbxassetid://3062506215",
+          bottomImage: "rbxassetid://3062506215",
+          midImage: "rbxassetid://3062506215",
+          imageTransparency: 0.5,
+          imageColor: new Color3(1, 1, 1),
+        }}
+        direction={"Y"}
+        automaticCanvasSize={"Y"}
+      >
+        <ListLayout
+          direction={"Vertical"}
+          verticalAlign={"Top"}
+          horizontalAlign={"Center"}
+          order={"LayoutOrder"}
+        />
+        <Text
+          background={"#403E39"}
+          text={opening}
+          textColor={new Color3(1, 1, 1)}
+          textSize={px(20)}
+          font={"SourceSansSemibold"}
+          size={new UDim2(1, 0, 0, px(45))}
+          layoutOrder={0}
+        />
+
+        {pgn
+          .filter((_, i) => i % 2 === 0) // only white moves, since black moves will be displayed same place
+          .map((move, minimizedIndex) => {
+            const index = minimizedIndex * 2;
+            const blackResponse = pgn[index + 1];
+            return (
+              <Frame
+                layoutOrder={minimizedIndex}
+                size={new UDim2(1, 0, 0, px(35))}
+                background={minimizedIndex % 2 === 0 ? "#403E39" : "#282723"}
+                key={minimizedIndex}
+                backgroundTransparency={0.5}
+                padding={px(5)}
+                paddingLeft={px(10)}
+              >
+                <ListLayout
+                  direction={"Horizontal"}
+                  verticalAlign={"Center"}
+                  horizontalAlign={"Left"}
+                  order={"LayoutOrder"}
+                  padding={px(15)}
+                />
+                <Text
+                  text={`${minimizedIndex + 1}.`}
+                  textColor={new Color3(0.6, 0.6, 0.6)}
+                  textSize={px(20)}
+                  font={"SourceSansSemibold"}
+                  textAlign={"Left"}
+                  size={new UDim2(0.05, 0, 1, 0)}
+                  noBackground
+                />
+
+                {/* White move */}
+                <Text
+                  text={move.notation}
+                  textColor={
+                    index === pgn.size() - 1
+                      ? new Color3(1, 1, 1)
+                      : new Color3(0.8, 0.8, 0.8)
+                  }
+                  textSize={px(20)}
+                  font={"SourceSansSemibold"}
+                  size={new UDim2(0, 0, 1, 0)}
+                  automaticSize={"X"}
+                  noBackground
+                />
+
+                {/* Black move */}
+                {blackResponse !== undefined && (
+                  <Text
+                    text={blackResponse.notation}
+                    textColor={
+                      index + 1 === pgn.size() - 1
+                        ? new Color3(1, 1, 1)
+                        : new Color3(0.8, 0.8, 0.8)
+                    }
+                    textSize={px(20)}
+                    font={"SourceSansSemibold"}
+                    size={new UDim2(0, 0, 1, 0)}
+                    automaticSize={"X"}
+                    noBackground
+                  />
+                )}
+              </Frame>
+            );
+          })}
+      </ScrollingFrame>
     </Frame>
   );
 }
