@@ -22,9 +22,9 @@ import { usePx } from "../usePx";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
-import ChessBoard from "./Board";
+import { ChessBoard, ChessBoardRef } from "./Board";
 import { PGN } from "shared/engine/pgn";
-import { FEN } from "shared/engine/fen";
+
 export default function Board() {
   const board = useAtom(Atoms.Board);
   const pgn = useAtom(Atoms.PGN);
@@ -32,11 +32,11 @@ export default function Board() {
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const px = usePx();
   const iconPack = Vector;
+
+  const chessBoardRef = useRef<ChessBoardRef>(undefined);
   const evalBarRef = useRef<EvaluationBarRef>(undefined);
 
   const [playingAs, setPlayingAs] = useState(Color.white);
-  const [pieces, setPieces] = useState(BitBoard.getAllPieces(board));
-
   const [promoting, setPromoting] = useState<Square>(-1);
   const [analysis, setAnalysis] = useState<ReturnType<typeof AnalyzeMates>>("");
   const [gameId, setGameId] = useState("");
@@ -53,7 +53,7 @@ export default function Board() {
   const movePiece = (
     from: number,
     to: number,
-    myMove: boolean,
+    myMove: boolean, // this will use cached move data & let server know if it is on
     as?: PieceType,
     pushPGN: boolean = true,
     color: Color = myMove ? playingAs : 1 - playingAs,
@@ -64,6 +64,7 @@ export default function Board() {
     const [moved, movedTo, moveType] = move?.[1]?.(board) || [];
 
     /* Simple piece move with promotion */
+    let captured = BitBoard.hasPiece(board, to);
     if (!as) BitBoard.movePiece(board, from, to); /* normal move */
     else {
       BitBoard.setPiece(board, from, 0, 0);
@@ -71,23 +72,13 @@ export default function Board() {
     }
     BitBoard.flipTurn(board);
 
-    /* Move on a set index, for animations */
-    let captured = false;
-    setPieces((currentPieces) => {
-      for (const piece of currentPieces) {
-        if (piece[0] === from) {
-          piece[0] = to;
-          if (as) piece[1][0] = as;
-        } else if (piece[0] === to) {
-          piece[1][0] = PieceType.none;
-          captured = true;
-        } else if (piece[0] === moved) {
-          if (movedTo) piece[0] = movedTo;
-          else piece[1][0] = PieceType.none;
-        }
-      }
-      return currentPieces;
-    });
+    /* Animate */
+    chessBoardRef.current?.animateBoard(
+      from,
+      to,
+      as,
+      moved ? [moved, movedTo] : undefined,
+    );
 
     /* Sound effects */
     const opponentsKing = BitBoard.findPiece(
@@ -147,9 +138,7 @@ export default function Board() {
   };
   const onRewind = (moveIndex: number) => {
     Atoms.Board(pgn[moveIndex].state);
-    setPieces([]);
-    task.wait();
-    setPieces(BitBoard.getAllPieces(pgn[moveIndex].state));
+    chessBoardRef.current?.setBoard(Atoms.Board());
     setCurrentMove(moveIndex);
   };
 
@@ -168,6 +157,7 @@ export default function Board() {
   useEventListener(Events.AssignedGame, (gameId, color) => {
     setPlayingAs(color);
     setGameId(gameId);
+    chessBoardRef.current?.setBoard(board);
     pgn.clear();
   });
   useEffect(() => {
@@ -195,13 +185,13 @@ export default function Board() {
         analysis={analysis}
       />
       <ChessBoard
+        ref={chessBoardRef}
         iconPack={iconPack}
         playingAs={playingAs}
         onPromote={onPromote}
         onMove={onMove}
         promoting={promoting}
         locked={gameId === "" || analysis !== ""}
-        pieces={pieces}
         size={new UDim2(0.85, 0, 0.85, 0)}
       />
 
