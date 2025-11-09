@@ -39,7 +39,7 @@ export interface ChessBoardRef {
   animateBoard: (
     from: number,
     to: number,
-    as?: PieceType,
+    as?: [PieceType, Color],
     closure?: [Square, Square?], // special moves such as en passant and castling use a closure
   ) => void;
 }
@@ -98,7 +98,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
           for (const piece of currentPieces) {
             if (piece[0] === from) {
               piece[0] = to;
-              if (as) piece[1][0] = as;
+              if (as) piece[1] = as;
             } else if (piece[0] === to) {
               piece[1][0] = PieceType.none;
             } else if (closure !== undefined && piece[0] === closure[0]) {
@@ -169,7 +169,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                       }
                       textSize={px(20)}
                       padding={px(3)}
-                      text={RANKS[boardJ]}
+                      text={RANKS[j]}
                       font={"SourceSansBold"}
                       backgroundTransparency={1}
                       size={new UDim2(1, 0, 1, 0)}

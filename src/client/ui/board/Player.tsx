@@ -150,6 +150,7 @@ export function Player({
               size={new UDim2(0, 0, 1, 0)}
               automaticSize={"X"}
               noBackground
+              layoutOrder={PieceValues[piece]}
               position={new UDim2(0.085, 0, 0.55, 0)}
             >
               <uilistlayout

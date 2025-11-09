@@ -98,7 +98,7 @@ export default function Board() {
       chessBoardRef.current?.animateBoard(
         from,
         to,
-        as,
+        as ? [as, color] : undefined,
         moved ? [moved, movedTo] : undefined,
       );
     }
@@ -180,7 +180,9 @@ export default function Board() {
     chessBoardRef.current?.animateBoard(
       pgn[moveIndex].from,
       pgn[moveIndex].to,
-      pgn[moveIndex].promotion,
+      pgn[moveIndex].promotion
+        ? [pgn[moveIndex].promotion, moveIndex % 2]
+        : undefined,
     );
     playSFX(pgn[moveIndex].moveType as Parameters<typeof playSFX>[0]);
     Atoms.CurrentMove(moveIndex);
