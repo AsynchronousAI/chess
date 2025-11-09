@@ -194,12 +194,24 @@ export function Player({
         size={new UDim2(0.2, 0, 1, 0)}
         position={new UDim2(0.8, 0, 0, 0)}
         text={formatTime(time)}
-        background={color === Color.white ? new Color3(1, 1, 1) : "#403E39"}
+        background={
+          time < 60
+            ? "#f24349"
+            : color === Color.white
+              ? new Color3(1, 1, 1)
+              : "#403E39"
+        }
         textSize={px(25)}
         textAlign={"Right"}
         verticalTextAlign={"Center"}
         paddingRight={px(10)}
-        textColor={color === Color.white ? "#403E39" : new Color3(1, 1, 1)}
+        textColor={
+          time < 60
+            ? new Color3(1, 1, 1)
+            : color === Color.white
+              ? "#403E39"
+              : new Color3(1, 1, 1)
+        }
         font={"SourceSansSemibold"}
         backgroundTransparency={isMyTurn ? 0 : 0.5}
         overrideRoblox={{ TextTransparency: isMyTurn ? 0 : 0.5 }}
@@ -210,7 +222,13 @@ export function Player({
           size={new UDim2(0.55, 0, 0.55, 0)}
           aspectRatio={1}
           image={clocks[clockIndex]}
-          imageColor={color === Color.white ? "#403E39" : new Color3(1, 1, 1)}
+          imageColor={
+            time < 60
+              ? new Color3(1, 1, 1)
+              : color === Color.white
+                ? "#403E39"
+                : new Color3(1, 1, 1)
+          }
           anchorPoint={new Vector2(0, 0.5)}
           position={new UDim2(0.1, 0, 0.5, 0)}
           visible={isMyTurn}

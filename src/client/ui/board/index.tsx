@@ -235,7 +235,9 @@ export default function Board() {
   }, 0.1);
 
   const isPlayer1Turn =
-    1 - (currentMove % 2) === (activeGame.color ?? Color.white);
+    pgn.size() === 0
+      ? activeGame.color === Color.white
+      : currentMove % 2 !== activeGame.color;
   return (
     <Frame
       size={new UDim2(1, 0, 1, 0)}
