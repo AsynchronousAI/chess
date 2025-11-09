@@ -26,7 +26,7 @@ import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { PGN } from "shared/engine/pgn";
-import { DefaultBoard } from "shared/engine/fen";
+import { DefaultBoard, FEN } from "shared/engine/fen";
 import { Game } from "server/services/gameplay";
 import { Explorer } from "./Explorer";
 import { Player } from "./Player";
@@ -70,7 +70,9 @@ export default function Board() {
     /* Locate the move data, for special moves such as en passant or castling */
     const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
     const move = allMoves.find((v) => v[0] === to);
-    const [moved, movedTo, moveType] = move?.[1]?.(board) || [];
+    if (!move) return;
+    const closure = move[1];
+    const [moved, movedTo, moveType] = closure?.(board) || [];
 
     /* Simple piece move with promotion */
     let captured = BitBoard.hasPiece(board, to);

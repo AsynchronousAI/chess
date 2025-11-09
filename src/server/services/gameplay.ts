@@ -6,7 +6,8 @@ import getOpening from "server/openings/getOpening";
 import { Color, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
-import { FEN, DefaultBoard } from "shared/engine/fen";
+import { DefaultBoard } from "shared/engine/fen";
+import GetLegalMoves from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
 
 export type Game = {
@@ -36,6 +37,17 @@ export class Gameplay {
 
   private move(gameId: string, from: Square, to: Square, promotion?: Piece) {
     const activeGame = this.Games[gameId];
+    const legalMoves = GetLegalMoves(activeGame.board, from, true);
+    const found = legalMoves.find((move) => move[0] === to);
+
+    if (!found) {
+      print("illegal move");
+      return;
+    } /* illegal moves, in future check for promotions also */
+
+    /* Special moves, castling & en passant */
+    const closure = found[1];
+    closure?.(activeGame.board);
 
     /* Broadcast */
     Events.MoveMade.fire(
