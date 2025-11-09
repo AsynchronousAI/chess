@@ -34,6 +34,7 @@ export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const dragging = useAtom(Atoms.Dragging);
+  const currentMove = useAtom(Atoms.CurrentMove);
 
   const px = usePx();
   const iconPack = Vector;
@@ -46,7 +47,6 @@ export default function Board() {
   const [analysis, setAnalysis] = useState<ReturnType<typeof AnalyzeMates>>("");
   const [gameId, setGameId] = useState("");
   const [opening, setOpening] = useState("Starting game...");
-  const [currentMove, setCurrentMove] = useState<number>(0);
   const [activeGame, setGame] = useState<Partial<Game>>({});
 
   const [player1taken, setPlayer1taken] = useState<PieceType[]>([]);
@@ -103,29 +103,30 @@ export default function Board() {
       );
     }
     /* Sound effects */
+    let sfx: Parameters<typeof playSFX>[0] = "Move";
     const opponentsKing = BitBoard.findPiece(
       board,
       PieceType.king,
       1 - color,
     )[0];
     if (IsSquareAttacked(board, opponentsKing, color)) {
-      playSFX("Check");
+      sfx = "Check";
     } else if (moveType === "castle") {
-      playSFX("Castle");
+      sfx = "Castle";
     } else if (captured) {
-      playSFX("Capture");
-    } else {
-      playSFX("Move");
+      sfx = "Capture";
     }
+
+    playSFX(sfx);
 
     /* Update local board, and let server know */
     if (pushPGN) {
       Atoms.PGN((x) => {
-        PGN.move(x, board, from, to, as, captured);
+        PGN.move(x, board, from, to, as, captured, sfx);
         return x;
       });
     }
-    setCurrentMove(pgn.size() - 1);
+    Atoms.CurrentMove(pgn.size() - 1);
     Atoms.Board(BitBoard.branch(board));
 
     if (myMove) {
@@ -171,21 +172,19 @@ export default function Board() {
     setPromoting(-1);
   };
   const onRewind = (moveIndex: number) => {
-    /*if (moveIndex === 0) {
-      Atoms.Board(BitBoard.branch(DefaultBoard)); // animate from DefaultBoard
-    } else {
-      Atoms.Board(pgn[moveIndex - 1].state); // animate from previous
-    }
-    chessBoardRef.current?.setBoard(Atoms.Board());
+    /* TODO: Special moves like castling & en passant animated when rewind */
+    chessBoardRef.current?.setBoard(
+      moveIndex === 0 ? DefaultBoard : pgn[moveIndex - 1].state,
+    );
     task.wait();
     chessBoardRef.current?.animateBoard(
       pgn[moveIndex].from,
       pgn[moveIndex].to,
       pgn[moveIndex].promotion,
-    );*/
-    Atoms.Board(pgn[moveIndex].state);
-    chessBoardRef.current?.setBoard(pgn[moveIndex].state);
-    setCurrentMove(moveIndex);
+    );
+    playSFX(pgn[moveIndex].moveType as Parameters<typeof playSFX>[0]);
+    Atoms.CurrentMove(moveIndex);
+    Atoms.PossibleMoves([]);
   };
 
   /* Events */

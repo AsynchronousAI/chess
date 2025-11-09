@@ -47,6 +47,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
   (props, ref) => {
     const possibleMoves = useAtom(Atoms.PossibleMoves);
     const pgn = useAtom(Atoms.PGN);
+    const currentMove = useAtom(Atoms.CurrentMove);
 
     const px = usePx();
     const containerRef = useRef<Frame>();
@@ -70,8 +71,8 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
       Atoms.Dragging(false);
     };
     const squareHighlighted = (loc: Square) =>
-      pgn.size() > 0 &&
-      (pgn[pgn.size() - 1].to === loc || pgn[pgn.size() - 1].from === loc);
+      pgn[currentMove] &&
+      (pgn[currentMove].to === loc || pgn[currentMove].from === loc);
 
     useEventListener(UIS.TouchEnded, onRelease);
     useEventListener(UIS.InputEnded, (input) => {

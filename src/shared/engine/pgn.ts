@@ -20,6 +20,7 @@ export type PGN = {
   piece: [Piece, Color];
   notation: string;
   state: BitBoard /* storing a state could be memory hogging, but with small memory footprint we should be good  */;
+  moveType: string;
 }[];
 
 export namespace PGN {
@@ -30,6 +31,7 @@ export namespace PGN {
     to: Square,
     promotion?: Piece,
     capture?: boolean,
+    moveType: string = "Move",
   ): PGN {
     const piece = BitBoard.getPiece(board, to);
     /* TODO: Castling, 'x' for takes, add piece shorthands,
@@ -47,6 +49,7 @@ export namespace PGN {
       piece,
       notation,
       state: BitBoard.branch(board),
+      moveType,
     });
     return pgn;
   }

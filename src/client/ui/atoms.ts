@@ -11,6 +11,7 @@ const Atoms = {
   PGN: atom(PGN.create()),
   PlayingAs: atom<Color>(0),
   Dragging: atom<boolean>(false),
+  CurrentMove: atom<number>(0),
   HoldingPiece: atom<Square | undefined>(undefined),
   PossibleMoves: atom<Move[]>([]),
 };

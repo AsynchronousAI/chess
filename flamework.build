@@ -9,7 +9,8 @@
 		"chess:out/shared/engine/pgn@PGN": "shared/engine/pgn@PGN",
 		"chess:out/shared/engine/api@API": "shared/engine/api@API",
 		"chess:out/shared/engine/api@ChessAPI": "shared/engine/api@ChessAPI",
-		"chess:out/server/services/gameplay@Gameplay": "server/services/gameplay@Gameplay"
+		"chess:out/server/services/gameplay@Gameplay": "server/services/gameplay@Gameplay",
+		"chess:out/shared/engine/pgn@$p:error": "shared/engine/pgn@$p:error"
 	},
 	"metadata": {}
 }
