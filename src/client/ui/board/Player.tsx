@@ -157,7 +157,9 @@ export function Player({
                 VerticalAlignment={"Center"}
                 HorizontalAlignment={"Left"}
                 FillDirection={"Horizontal"}
-                Padding={new UDim(0, -px(10))}
+                Padding={
+                  new UDim(0, -px(piece === Piece.pawn ? 13 : 10))
+                } /* pawns need to be closer */
                 SortOrder={"LayoutOrder"}
               />
               {repeating(count, () => (

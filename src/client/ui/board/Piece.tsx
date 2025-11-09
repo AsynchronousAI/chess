@@ -111,7 +111,7 @@ export function Piece(props: PieceProps) {
             position={offsetY.map((y) => new UDim2(0, 0, 0, y))}
             size={new UDim2(1, 0, 1, 0)}
             outlinePrecision={30}
-            outlineThickness={px(4)}
+            outlineThickness={px(2)}
             outlineStartAngle={40}
             outlineColor={new Color3(0.35, 0.35, 0.35)}
             zIndex={holdingPiece === props.location ? 100 : 3}

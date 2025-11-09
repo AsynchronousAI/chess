@@ -41,7 +41,7 @@ function calculateScale(viewport: Vector2) {
   const height = math.log(viewport.Y / BASE_RESOLUTION.Y, 2);
   const centered = width + (height - width) * DOMINANT_AXIS;
 
-  return math.max(2 ** centered, MIN_SCALE);
+  return math.max(2 ** centered, MIN_SCALE) * 1.75;
 }
 
 export function usePx(): ScaleFunction {
