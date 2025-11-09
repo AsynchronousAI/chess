@@ -1,17 +1,14 @@
 import React, { useState, useRef, useEffect, useMemo } from "@rbxts/react";
-import { Color, Piece as PieceType, Square } from "shared/board";
+import {
+  Color,
+  GetPieceValues,
+  Piece as PieceType,
+  Square,
+} from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
-import {
-  Button,
-  Frame,
-  Image,
-  ListLayout,
-  ScrollingFrame,
-  Text,
-  TextBox,
-} from "@rbxts/better-react-components";
+import { Frame } from "@rbxts/better-react-components";
 import {
   AnalyzeMates,
   default as GetLegalMoves,
@@ -52,6 +49,9 @@ export default function Board() {
   const [currentMove, setCurrentMove] = useState<number>(0);
   const [activeGame, setGame] = useState<Partial<Game>>({});
 
+  const [player1taken, setPlayer1taken] = useState<PieceType[]>([]);
+  const [player2taken, setPlayer2taken] = useState<PieceType[]>([]);
+
   /* Utils */
   const playSFX = (sfx: keyof typeof SoundEffects) => {
     const newAudio = new Instance("Sound", SoundService);
@@ -74,8 +74,16 @@ export default function Board() {
     const closure = move[1];
     const [moved, movedTo, moveType] = closure?.(board) || [];
 
-    /* Simple piece move with promotion */
+    /* Capturing */
     let captured = BitBoard.hasPiece(board, to);
+    if (captured) {
+      const [piece] = BitBoard.getPiece(board, to);
+      if (color === activeGame.color)
+        setPlayer1taken((prev) => [...prev, piece]);
+      else setPlayer2taken((prev) => [...prev, piece]);
+    }
+
+    /* Simple piece move with promotion */
     if (!as) BitBoard.movePiece(board, from, to); /* normal move */
     else {
       BitBoard.setPiece(board, from, 0, 0);
@@ -138,6 +146,7 @@ export default function Board() {
 
     if (BitBoard.getTurn(board) !== playingAs) {
       /* PREMOVE! */
+      return;
     }
 
     const piece = BitBoard.getPiece(board, holdingPiece);
@@ -230,6 +239,7 @@ export default function Board() {
           HorizontalAlignment={"Center"}
           FillDirection={"Vertical"}
           Padding={new UDim(0, px(10))}
+          SortOrder={"LayoutOrder"}
         />
 
         <Player
@@ -237,9 +247,11 @@ export default function Board() {
           flag={"🇺🇸"}
           rating={2412}
           time={50}
-          color={Color.black}
-          valueDifference={-10}
-          piecesTaken={[PieceType.pawn, PieceType.queen]}
+          color={1 - (activeGame.color ?? Color.white)}
+          valueDifference={
+            GetPieceValues(player2taken) - GetPieceValues(player1taken)
+          }
+          piecesTaken={player2taken}
           iconPack={iconPack}
         />
         <ChessBoard
@@ -263,9 +275,11 @@ export default function Board() {
           flag={"🇺🇸"}
           rating={3674}
           time={892}
-          color={Color.white}
-          valueDifference={9}
-          piecesTaken={[PieceType.rook, PieceType.rook, PieceType.queen]}
+          color={activeGame.color ?? Color.white}
+          valueDifference={
+            GetPieceValues(player1taken) - GetPieceValues(player2taken)
+          }
+          piecesTaken={player1taken}
           iconPack={iconPack}
         />
       </Frame>

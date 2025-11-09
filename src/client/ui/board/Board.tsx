@@ -111,7 +111,12 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     }));
 
     return (
-      <Frame size={props.size} aspectRatio={1} ref={containerRef}>
+      <Frame
+        size={props.size}
+        aspectRatio={1}
+        ref={containerRef}
+        layoutOrder={1}
+      >
         {/* Squares */}
         {FILES.map((letter, i) =>
           RANKS.map((number, j) => {

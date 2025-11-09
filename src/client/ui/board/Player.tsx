@@ -1,10 +1,11 @@
 import { useEffect, useState } from "@rbxts/react";
-import { Color, Piece } from "shared/board";
+import { Color, Piece, PieceValues } from "shared/board";
 import { usePx } from "../usePx";
 import { Players } from "@rbxts/services";
 import { Frame, Image, Text } from "@rbxts/better-react-components";
 import React from "@rbxts/react";
 import { IconPack, Vector } from "./images";
+import { Object } from "@rbxts/luau-polyfill";
 
 const formatTime = (seconds: number) => {
   const minutes = math.floor(seconds / 60);
@@ -12,6 +13,15 @@ const formatTime = (seconds: number) => {
   const padded = remaining < 10 ? `0${remaining}` : `${remaining}`;
   return `${minutes}:${padded}`;
 };
+function repeating<T extends defined>(
+  n: number,
+  render: (i: number) => T,
+): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < n; i++) out.push(render(i));
+  return out;
+}
+
 export function Player({
   userId,
   flag,
@@ -49,8 +59,23 @@ export function Player({
     }
   }, [userId]);
 
+  /* ["a", "a", "b"] into {"a": 2, "b": 1} */
+  const groupedPieces = Object.entries(
+    piecesTaken.reduce<Record<string, number>>((acc, val) => {
+      acc[val] = (acc[val] || 0) + 1;
+      return acc;
+    }, {}),
+  ) as unknown as [Piece, number][];
+
   return (
-    <Frame size={new UDim2(0.85, 0, 0.05, 0)} noBackground>
+    <Frame
+      size={new UDim2(0.85, 0, 0.05, 0)}
+      noBackground
+      layoutOrder={
+        userId === Players.LocalPlayer?.UserId ? 2 : 0
+      } /* align to top or bottom */
+      visible={userId !== 0}
+    >
       {/* Player details */}
       <Image
         noBackground
@@ -85,22 +110,45 @@ export function Player({
           HorizontalAlignment={"Left"}
           FillDirection={"Horizontal"}
           Padding={new UDim(0, -px(5))}
+          SortOrder={"LayoutOrder"}
         />
-        {piecesTaken.map((piece, index) => (
-          <Image
-            key={index}
-            image={iconPack[(1 - color) as Color][piece]}
-            noBackground
-            size={new UDim2(1, 0, 1, 0)}
-            aspectRatio={1}
-          />
-        ))}
+
+        {groupedPieces.map(([piece, count]) => {
+          return (
+            <Frame
+              key={piece}
+              size={new UDim2(0, 0, 1, 0)}
+              automaticSize={"X"}
+              noBackground
+              position={new UDim2(0.085, 0, 0.55, 0)}
+            >
+              <uilistlayout
+                VerticalAlignment={"Center"}
+                HorizontalAlignment={"Left"}
+                FillDirection={"Horizontal"}
+                Padding={new UDim(0, -px(10))}
+                SortOrder={"LayoutOrder"}
+              />
+              {repeating(count, () => (
+                <Image
+                  key={count}
+                  image={iconPack[(1 - color) as Color][piece]}
+                  noBackground
+                  size={new UDim2(0, px(20), 0, px(20))}
+                  aspectRatio={1}
+                  layoutOrder={PieceValues[piece]}
+                />
+              ))}
+            </Frame>
+          );
+        })}
 
         {valueDifference > 0 ? (
           <Text
             text={`+${valueDifference}`}
             size={new UDim2(0.05, 0, 1, 0)}
             textSize={px(17)}
+            layoutOrder={100}
             noBackground
             textColor={new Color3(0.65, 0.65, 0.65)}
             font={"SourceSansSemibold"}

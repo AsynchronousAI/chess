@@ -122,7 +122,7 @@ export class Gameplay {
       /* Matchmaking */
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
-      color: 0,
+      color: 1,
 
       /* Board */
       board: BitBoard.branch(DefaultBoard),
