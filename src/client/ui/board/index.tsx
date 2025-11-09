@@ -34,20 +34,28 @@ function Player({
   flag,
   rating,
   time,
+  color,
+  valueDifference,
+  piecesTaken,
 }: {
   userId: number;
   flag: string;
   rating: number;
   time: number;
+  color: Color;
+  valueDifference: number;
+  piecesTaken: PieceType[];
 }) {
+  const px = usePx();
+  const [name, setName] = useState("Loading..");
+  const [thumbnail, setThumbnail] = useState("");
+
   const formatTime = (seconds: number) => {
     const minutes = math.floor(seconds / 60);
     const remaining = seconds % 60;
     const padded = remaining < 10 ? `0${remaining}` : `${remaining}`;
     return `${minutes}:${padded}`;
   };
-  const [name, setName] = useState("Loading..");
-  const [thumbnail, setThumbnail] = useState("");
 
   useEffect(() => {
     if (userId > 0) {
@@ -62,16 +70,10 @@ function Player({
       setName("Bot");
     }
   }, [userId]);
-  const px = usePx();
+
   return (
     <Frame size={new UDim2(0.85, 0, 0.05, 0)} noBackground>
-      <uilistlayout
-        VerticalAlignment={"Top"}
-        HorizontalAlignment={"Left"}
-        FillDirection={"Horizontal"}
-        Padding={new UDim(0, px(10))}
-      />
-
+      {/* Player details */}
       <Image
         noBackground
         visible={thumbnail !== ""}
@@ -83,17 +85,55 @@ function Player({
         noBackground
         richText
         text={`<b>${name}</b> <font color="rgb(128,128,128)">(${rating})</font> ${flag}`}
-        size={new UDim2(0.7, 0, 0.5, 0)}
-        textSize={px(20)}
+        size={new UDim2(0.85, 0, 0.45, 0)}
+        position={new UDim2(0.085, 0, 0, 0)}
+        textSize={px(18)}
         textAlign={"Left"}
+        paddingLeft={px(2)}
         paddingTop={px(15)}
         paddingBottom={px(15)}
         textColor={new Color3(1, 1, 1)}
         font={"SourceSans"}
       />
 
+      {/* Pieces */}
+      <Frame
+        size={new UDim2(1, 0, 0.5, 0)}
+        noBackground
+        position={new UDim2(0.085, 0, 0.55, 0)}
+      >
+        <uilistlayout
+          VerticalAlignment={"Center"}
+          HorizontalAlignment={"Left"}
+          FillDirection={"Horizontal"}
+          Padding={new UDim(0, -px(5))}
+        />
+        {piecesTaken.map((piece, index) => (
+          <Image
+            key={index}
+            image={Vector[(1 - color) as Color][piece]}
+            noBackground
+            size={new UDim2(1, 0, 1, 0)}
+            aspectRatio={1}
+          />
+        ))}
+
+        {valueDifference > 0 ? (
+          <Text
+            text={`+${valueDifference}`}
+            size={new UDim2(0.05, 0, 1, 0)}
+            textSize={px(17)}
+            noBackground
+            textColor={new Color3(0.65, 0.65, 0.65)}
+            font={"SourceSansSemibold"}
+          />
+        ) : undefined}
+      </Frame>
+
+      {/* Clock */}
       <Text
         size={new UDim2(0.2, 0, 1, 0)}
+        position={new UDim2(0.8, 0, 0, 0)}
         text={formatTime(time)}
         background={"#403E39"}
         textSize={px(25)}
@@ -301,7 +341,7 @@ export default function Board() {
 
       <EvaluationBar
         ref={evalBarRef}
-        size={new UDim2(0.025, 0, 0.975, 0)}
+        size={new UDim2(0.025, 0, 0.975 * 0.85, 0)}
         analysis={analysis}
       />
       <Frame size={new UDim2(1, 0, 0.975, 0)} aspectRatio={1} noBackground>
@@ -317,6 +357,9 @@ export default function Board() {
           flag={"🇺🇸"}
           rating={2412}
           time={50}
+          color={Color.black}
+          valueDifference={-10}
+          piecesTaken={[PieceType.pawn, PieceType.queen]}
         />
         <ChessBoard
           ref={chessBoardRef}
@@ -339,6 +382,9 @@ export default function Board() {
           flag={"🇺🇸"}
           rating={3674}
           time={892}
+          color={Color.white}
+          valueDifference={9}
+          piecesTaken={[PieceType.rook, PieceType.rook, PieceType.queen]}
         />
       </Frame>
 
