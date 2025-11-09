@@ -6,7 +6,7 @@ import getOpening from "server/openings/getOpening";
 import { Color, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
-import { DefaultBoard } from "shared/engine/fen";
+import { DefaultBoard, FEN } from "shared/engine/fen";
 import GetLegalMoves from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
 
@@ -62,7 +62,12 @@ export class Gameplay {
       BitBoard.movePiece(activeGame.board, from, to);
     } else {
       BitBoard.setPiece(activeGame.board, from, 0, 0);
-      BitBoard.setPiece(activeGame.board, to, promotion, activeGame.color);
+      BitBoard.setPiece(
+        activeGame.board,
+        to,
+        promotion,
+        BitBoard.getTurn(activeGame.board),
+      );
     }
     BitBoard.flipTurn(activeGame.board);
 
@@ -73,6 +78,8 @@ export class Gameplay {
     if (opening) {
       activeGame.opening = opening.name;
     }
+
+    print(FEN.toFEN(activeGame.board));
   }
   evaluate(gameId: string) {
     const activeGame = this.Games[gameId];

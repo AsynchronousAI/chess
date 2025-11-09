@@ -134,6 +134,8 @@ export default function Board() {
     } else if (holdingPiece) {
       Atoms.PossibleMoves(GetLegalMoves(board, holdingPiece, true, playingAs));
     }
+
+    print(FEN.toFEN(board));
   };
 
   /* Handlers */
