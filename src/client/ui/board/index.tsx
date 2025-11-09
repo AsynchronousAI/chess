@@ -171,19 +171,31 @@ export default function Board() {
     movePiece(holdingPiece, promoting, true, piece);
     setPromoting(-1);
   };
-  const onRewind = (moveIndex: number) => {
+  const onRewind = (moveIndex: number, backwards = false) => {
     /* TODO: Special moves like castling & en passant animated when rewind */
-    chessBoardRef.current?.setBoard(
-      moveIndex === 0 ? DefaultBoard : pgn[moveIndex - 1].state,
-    );
-    task.wait();
-    chessBoardRef.current?.animateBoard(
-      pgn[moveIndex].from,
-      pgn[moveIndex].to,
-      pgn[moveIndex].promotion
-        ? [pgn[moveIndex].promotion, moveIndex % 2]
-        : undefined,
-    );
+    if (!backwards) {
+      chessBoardRef.current?.setBoard(
+        moveIndex === 0 ? DefaultBoard : pgn[moveIndex - 1].state,
+      );
+      task.wait();
+      chessBoardRef.current?.animateBoard(
+        pgn[moveIndex].from,
+        pgn[moveIndex].to,
+        pgn[moveIndex].promotion
+          ? [pgn[moveIndex].promotion, moveIndex % 2]
+          : undefined,
+      );
+    } else {
+      chessBoardRef.current?.setBoard(
+        moveIndex === 0 ? DefaultBoard : pgn[moveIndex + 1].state,
+      );
+      task.wait();
+      chessBoardRef.current?.animateBoard(
+        pgn[moveIndex].to,
+        pgn[moveIndex].from,
+        pgn[moveIndex].promotion ? [PieceType.pawn, moveIndex % 2] : undefined,
+      );
+    }
     playSFX(pgn[moveIndex].moveType as Parameters<typeof playSFX>[0]);
     Atoms.CurrentMove(moveIndex);
     Atoms.PossibleMoves([]);
