@@ -15,6 +15,11 @@ export type Game = {
   player1: number;
   player2: number;
 
+  player1time: number;
+  player2time: number;
+
+  lastMove: number;
+
   color: Color; // represents player1 color.
 
   /* board */
@@ -35,19 +40,41 @@ export class Gameplay {
   private Trackers: Record<string, Player[]> = {};
   private AwaitingGame: Array<Player> = [];
 
+  private shrinkPatch(patch: Partial<Game>) {
+    /* remove uneeded elements when sending a game patch to the client */
+    return {
+      ...patch,
+      /* client does not need */
+      lastMove: undefined,
+      pgn: undefined,
+      board: undefined,
+    };
+  }
+
   private move(gameId: string, from: Square, to: Square, promotion?: Piece) {
     const activeGame = this.Games[gameId];
     const legalMoves = GetLegalMoves(activeGame.board, from, true);
     const found = legalMoves.find((move) => move[0] === to);
 
+    const currentTime = os.clock();
+
+    /* illegal moves, in future check for promotions also */
     if (!found) {
       print("illegal move");
       return;
-    } /* illegal moves, in future check for promotions also */
+    }
 
     /* Special moves, castling & en passant */
     const closure = found[1];
     closure?.(activeGame.board);
+
+    /* Deduct time */
+    if (BitBoard.getTurn(activeGame.board) === activeGame.color) {
+      activeGame.player1time -= currentTime - activeGame.lastMove;
+    } else {
+      activeGame.player2time -= currentTime - activeGame.lastMove;
+    }
+    activeGame.lastMove = os.clock();
 
     /* Broadcast */
     Events.MoveMade.fire(
@@ -55,6 +82,7 @@ export class Gameplay {
       [from, to, promotion],
       BitBoard.getTurn(activeGame.board),
     );
+    this.evaluate(gameId, true);
 
     /* Board move */
     const captured = BitBoard.hasPiece(activeGame.board, to);
@@ -71,40 +99,80 @@ export class Gameplay {
     }
     BitBoard.flipTurn(activeGame.board);
 
-    /* Attributes, PGN & opening */
+    /* PGN */
+    print(FEN.toFEN(activeGame.board));
     PGN.move(activeGame.pgn, activeGame.board, from, to, promotion, captured);
 
+    /* Opening */
     const opening = getOpening(activeGame.board);
     if (opening) {
       activeGame.opening = opening.name;
     }
-
-    print(FEN.toFEN(activeGame.board));
   }
-  evaluate(gameId: string) {
+  private evaluate(gameId: string, rapid = false) {
     const activeGame = this.Games[gameId];
 
     /* Local (faster) */
-    Events.Evaluate.fire(this.Trackers[gameId], {
-      opening: activeGame.opening,
-    });
+    Events.Evaluate.fire(
+      this.Trackers[gameId],
+      this.shrinkPatch({
+        opening: activeGame.opening,
+      }),
+    );
+
+    if (rapid) return;
 
     /* HTTP Handled (slower) */
     const best = GetBestMoveAPI(activeGame.board);
     if (BOT && best.move) this.move(gameId, ...best.move);
 
-    const stats = {
+    const stats = this.shrinkPatch({
       ...activeGame,
       eval: best.eval,
       mate: tonumber(best.mate) ?? 0,
-      /* very large, better to not send */
-      pgn: undefined,
-      board: undefined,
-    };
+    });
 
     Events.Evaluate.fire(this.Trackers[gameId], stats);
 
     return stats;
+  }
+  private makeGame(player1: Player, player2?: Player) {
+    const id = HttpService.GenerateGUID();
+    const activeGame: Game = {
+      /* Matchmaking */
+      player1: player1.UserId,
+      player2: player2 ? player2.UserId : -1,
+
+      player1time: 300,
+      player2time: 300,
+
+      lastMove: os.clock(),
+
+      color: 1,
+
+      /* Board */
+      board: BitBoard.branch(DefaultBoard),
+      pgn: PGN.create(),
+      opening: "Starting Position",
+
+      /* Evaluation */
+      eval: 0,
+      mate: 0,
+    };
+
+    this.Trackers[id] = player2 ? [player1, player2] : [player1];
+    this.Games[id] = activeGame;
+
+    Events.AssignedGame.fire(this.Trackers[id], id, activeGame.color);
+    this.evaluate(
+      id,
+      true,
+    ); /* perform a quick initial evaluation to upsync clients */
+
+    /* Bot starts as white */
+    if (BOT && activeGame.color === 1) {
+      this.evaluate(id);
+    }
   }
 
   @Event(Events.MakeMove)
@@ -122,44 +190,6 @@ export class Gameplay {
     this.move(gameId, from, to, promotion);
     this.evaluate(gameId);
   }
-
-  makeGame(player1: Player, player2?: Player) {
-    const id = HttpService.GenerateGUID();
-    const activeGame: Game = {
-      /* Matchmaking */
-      player1: player1.UserId,
-      player2: player2 ? player2.UserId : -1,
-      color: 1,
-
-      /* Board */
-      board: BitBoard.branch(DefaultBoard),
-      pgn: PGN.create(),
-      opening: "Starting Position",
-
-      /* Evaluation */
-      eval: 0,
-      mate: 0,
-    };
-
-    this.Trackers[id] = player2 ? [player1, player2] : [player1];
-    this.Games[id] = activeGame;
-
-    const shrunk = {
-      ...activeGame,
-      /* very large, better to not send */
-      pgn: undefined,
-      board: undefined,
-    };
-    Events.AssignedGame.fire(player1, id, activeGame.color, shrunk);
-    if (player2)
-      Events.AssignedGame.fire(player2, id, 1 - activeGame.color, shrunk);
-
-    /* Bot starts as white */
-    if (BOT && activeGame.color === 1) {
-      this.evaluate(id);
-    }
-  }
-
   @Event(Events.NewGame)
   newGame(player: Player) {
     const nextPlayer = this.AwaitingGame.pop();

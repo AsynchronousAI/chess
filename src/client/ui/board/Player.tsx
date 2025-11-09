@@ -6,12 +6,20 @@ import { Frame, Image, Text } from "@rbxts/better-react-components";
 import React from "@rbxts/react";
 import { IconPack, Vector } from "./images";
 import { Object } from "@rbxts/luau-polyfill";
+import { useInterval } from "@rbxts/pretty-react-hooks";
 
 const formatTime = (seconds: number) => {
-  const minutes = math.floor(seconds / 60);
-  const remaining = seconds % 60;
-  const padded = remaining < 10 ? `0${remaining}` : `${remaining}`;
-  return `${minutes}:${padded}`;
+  if (seconds > 60) {
+    seconds = math.floor(seconds);
+    const minutes = math.floor(seconds / 60);
+    const remaining = seconds % 60;
+    const padded = remaining < 10 ? `0${remaining}` : `${remaining}`;
+    return `${minutes}:${padded}`;
+  } else {
+    const formatted = string.format("%.1f", seconds);
+    const padded = seconds < 10 ? `0${formatted}` : `${formatted}`;
+    return `0:${padded}`;
+  }
 };
 function repeating<T extends defined>(
   n: number,
@@ -21,6 +29,20 @@ function repeating<T extends defined>(
   for (let i = 0; i < n; i++) out.push(render(i));
   return out;
 }
+const clocks = [
+  "rbxassetid://10709799535",
+  "rbxassetid://10709803876",
+  "rbxassetid://10709803989",
+  "rbxassetid://10709804164",
+  "rbxassetid://10709804291",
+  "rbxassetid://10709804435",
+  "rbxassetid://10709804599",
+  "rbxassetid://10709804784",
+  "rbxassetid://10709804996",
+  "rbxassetid://10709799718",
+  "rbxassetid://10709799818",
+  "rbxassetid://10709799962",
+];
 
 export function Player({
   userId,
@@ -31,6 +53,7 @@ export function Player({
   valueDifference,
   piecesTaken,
   iconPack,
+  isMyTurn,
 }: {
   userId: number;
   flag: string;
@@ -40,10 +63,16 @@ export function Player({
   valueDifference: number;
   piecesTaken: Piece[];
   iconPack: IconPack;
+  isMyTurn: boolean;
 }) {
   const px = usePx();
   const [name, setName] = useState("Loading..");
   const [thumbnail, setThumbnail] = useState("");
+  const [clockIndex, setClockIndex] = useState(0);
+
+  useInterval(() => {
+    setClockIndex((c) => (c + 1) % clocks.size());
+  }, 0.5);
 
   useEffect(() => {
     if (userId > 0) {
@@ -161,20 +190,24 @@ export function Player({
         size={new UDim2(0.2, 0, 1, 0)}
         position={new UDim2(0.8, 0, 0, 0)}
         text={formatTime(time)}
-        background={"#403E39"}
+        background={color === Color.white ? new Color3(1, 1, 1) : "#403E39"}
         textSize={px(25)}
         textAlign={"Right"}
         paddingRight={px(10)}
-        textColor={new Color3(1, 1, 1)}
+        textColor={color === Color.white ? "#403E39" : new Color3(1, 1, 1)}
         font={"SourceSansSemibold"}
+        backgroundTransparency={isMyTurn ? 0 : 0.5}
+        overrideRoblox={{ TextTransparency: isMyTurn ? 0 : 0.5 }}
       >
         <Image
           noBackground
           size={new UDim2(0.55, 0, 0.55, 0)}
           aspectRatio={1}
-          image={"rbxassetid://10709805144"}
+          image={clocks[clockIndex]}
+          imageColor={color === Color.white ? "#403E39" : new Color3(1, 1, 1)}
           anchorPoint={new Vector2(0, 0.5)}
           position={new UDim2(0.1, 0, 0.5, 0)}
+          visible={isMyTurn}
         />
       </Text>
     </Frame>

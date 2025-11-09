@@ -19,7 +19,7 @@ import { SoundEffects } from "./sfx";
 import { Players, SoundService } from "@rbxts/services";
 import { usePx } from "../usePx";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
-import { useEventListener } from "@rbxts/pretty-react-hooks";
+import { useEventListener, useInterval } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { PGN } from "shared/engine/pgn";
@@ -202,9 +202,8 @@ export default function Board() {
     if (turn === playingAs) return; /* i am already this color */
     movePiece(move[0], move[1], false, move[2]);
   });
-  useEventListener(Events.AssignedGame, (gameId, color, activeGame) => {
+  useEventListener(Events.AssignedGame, (gameId, color) => {
     setPlayingAs(color);
-    setGame((g) => ({ ...g, ...activeGame }));
     setGameId(gameId);
     setOpening("Starting Position");
     chessBoardRef.current?.setBoard(board);
@@ -214,7 +213,17 @@ export default function Board() {
     chessBoardRef.current?.setBoard(BitBoard.branch(DefaultBoard));
     Events.NewGame();
   }, []);
+  useInterval(() => {
+    /* local time counter */
+    if (isPlayer1Turn) {
+      setGame((g) => ({ ...g, player1time: (g.player1time ?? 0) - 0.1 }));
+    } else {
+      setGame((g) => ({ ...g, player2time: (g.player2time ?? 0) - 0.1 }));
+    }
+  }, 0.1);
 
+  const isPlayer1Turn =
+    1 - (currentMove % 2) === (activeGame.color ?? Color.white);
   return (
     <Frame
       size={new UDim2(1, 0, 1, 0)}
@@ -244,17 +253,32 @@ export default function Board() {
           SortOrder={"LayoutOrder"}
         />
 
+        {/* Player component handles layout with the layoutOrder being either 0 or 2 */}
         <Player
           userId={activeGame.player2 ?? 0}
           flag={"🇺🇸"}
           rating={2412}
-          time={50}
+          time={activeGame.player2time ?? 0}
           color={1 - (activeGame.color ?? Color.white)}
           valueDifference={
             GetPieceValues(player2taken) - GetPieceValues(player1taken)
           }
           piecesTaken={player2taken}
           iconPack={iconPack}
+          isMyTurn={!isPlayer1Turn}
+        />
+        <Player
+          userId={activeGame.player1 ?? 0}
+          flag={"🇺🇸"}
+          rating={3674}
+          time={activeGame.player1time ?? 0}
+          color={activeGame.color ?? Color.white}
+          valueDifference={
+            GetPieceValues(player1taken) - GetPieceValues(player2taken)
+          }
+          piecesTaken={player1taken}
+          iconPack={iconPack}
+          isMyTurn={isPlayer1Turn}
         />
         <ChessBoard
           ref={chessBoardRef}
@@ -271,18 +295,6 @@ export default function Board() {
             (pgn.size() === 0 ? false : currentMove !== pgn.size() - 1)
           }
           size={new UDim2(0.85, 0, 0.85, 0)}
-        />
-        <Player
-          userId={activeGame.player1 ?? 0}
-          flag={"🇺🇸"}
-          rating={3674}
-          time={892}
-          color={activeGame.color ?? Color.white}
-          valueDifference={
-            GetPieceValues(player1taken) - GetPieceValues(player2taken)
-          }
-          piecesTaken={player1taken}
-          iconPack={iconPack}
         />
       </Frame>
 
