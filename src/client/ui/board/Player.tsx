@@ -107,7 +107,8 @@ export function Player({
     >
       {/* Player details */}
       <Image
-        noBackground
+        background={"#403E39"}
+        cornerRadius={px(2)}
         visible={thumbnail !== ""}
         image={thumbnail}
         size={new UDim2(1, 0, 1, 0)}
@@ -193,11 +194,13 @@ export function Player({
         background={color === Color.white ? new Color3(1, 1, 1) : "#403E39"}
         textSize={px(25)}
         textAlign={"Right"}
+        verticalTextAlign={"Center"}
         paddingRight={px(10)}
         textColor={color === Color.white ? "#403E39" : new Color3(1, 1, 1)}
         font={"SourceSansSemibold"}
         backgroundTransparency={isMyTurn ? 0 : 0.5}
         overrideRoblox={{ TextTransparency: isMyTurn ? 0 : 0.5 }}
+        cornerRadius={px(2)}
       >
         <Image
           noBackground

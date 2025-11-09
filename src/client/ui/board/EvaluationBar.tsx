@@ -6,7 +6,7 @@ import React, {
 } from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
-import { Frame, Text } from "@rbxts/better-react-components";
+import { CanvasGroup, Frame, Text } from "@rbxts/better-react-components";
 import { AnalyzeMates } from "shared/engine/legalMoves";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../usePx";
@@ -73,7 +73,11 @@ export const EvaluationBar = forwardRef<EvaluationBarRef, EvaluationBarProps>(
     }, [evaluation, mate, board]);
 
     return (
-      <Frame size={props.size} background={"#403E39"}>
+      <CanvasGroup
+        size={props.size}
+        background={"#403E39"}
+        cornerRadius={px(2)}
+      >
         <Frame
           size={evalBar.map((value) => new UDim2(1, 0, value, 0))}
           position={evalBar.map((value) => new UDim2(0, 0, 1 - value, 0))}
@@ -94,7 +98,7 @@ export const EvaluationBar = forwardRef<EvaluationBarRef, EvaluationBarProps>(
               : new UDim2(0, 0, 0, px(2))
           }
         />
-      </Frame>
+      </CanvasGroup>
     );
   },
 );
