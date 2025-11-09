@@ -189,10 +189,9 @@ export default function Board() {
   };
 
   /* Events */
-  useEventListener(Events.Evaluate, (activeGame) => {
+  useEventListener(Events.PatchGame, (activeGame) => {
     if (activeGame.eval) evalBarRef.current?.setEval(activeGame.eval);
     if (activeGame.mate) evalBarRef.current?.setMate(activeGame.mate);
-
     if (activeGame.opening) setOpening(activeGame.opening);
 
     setGame((g) => ({ ...g, ...activeGame }));

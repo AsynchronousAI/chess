@@ -12,7 +12,7 @@ interface ClientToServerEvents {
   NewGame(): void;
 }
 interface ServerToClientEvents {
-  Evaluate(gameStats: Partial<Game>): void;
+  PatchGame(gameStats: Partial<Game>): void;
   MoveMade(move: FullMove, turn: Color): void;
   AssignedGame(gameId: string, color: Color): void;
 }

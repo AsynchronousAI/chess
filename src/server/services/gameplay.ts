@@ -18,7 +18,7 @@ export type Game = {
   player1time: number;
   player2time: number;
 
-  lastMove: number;
+  lastMove: number; // os.clock() of the last move
 
   color: Color; // represents player1 color.
 
@@ -40,21 +40,11 @@ export class Gameplay {
   private Trackers: Record<string, Player[]> = {};
   private AwaitingGame: Array<Player> = [];
 
-  private shrinkPatch(patch: Partial<Game>) {
-    /* remove uneeded elements when sending a game patch to the client */
-    return {
-      ...patch,
-      /* client does not need */
-      lastMove: undefined,
-      pgn: undefined,
-      board: undefined,
-    };
-  }
-
   private move(gameId: string, from: Square, to: Square, promotion?: Piece) {
     const activeGame = this.Games[gameId];
     const legalMoves = GetLegalMoves(activeGame.board, from, true);
     const found = legalMoves.find((move) => move[0] === to);
+    const turn = BitBoard.getTurn(activeGame.board);
 
     const currentTime = os.clock();
 
@@ -68,34 +58,13 @@ export class Gameplay {
     const closure = found[1];
     closure?.(activeGame.board);
 
-    /* Deduct time */
-    if (BitBoard.getTurn(activeGame.board) === activeGame.color) {
-      activeGame.player1time -= currentTime - activeGame.lastMove;
-    } else {
-      activeGame.player2time -= currentTime - activeGame.lastMove;
-    }
-    activeGame.lastMove = os.clock();
-
-    /* Broadcast */
-    Events.MoveMade.fire(
-      this.Trackers[gameId],
-      [from, to, promotion],
-      BitBoard.getTurn(activeGame.board),
-    );
-    this.evaluate(gameId, true);
-
     /* Board move */
     const captured = BitBoard.hasPiece(activeGame.board, to);
     if (!promotion) {
       BitBoard.movePiece(activeGame.board, from, to);
     } else {
       BitBoard.setPiece(activeGame.board, from, 0, 0);
-      BitBoard.setPiece(
-        activeGame.board,
-        to,
-        promotion,
-        BitBoard.getTurn(activeGame.board),
-      );
+      BitBoard.setPiece(activeGame.board, to, promotion, turn);
     }
     BitBoard.flipTurn(activeGame.board);
 
@@ -103,38 +72,46 @@ export class Gameplay {
     print(FEN.toFEN(activeGame.board));
     PGN.move(activeGame.pgn, activeGame.board, from, to, promotion, captured);
 
-    /* Opening */
+    /* Recompute Opening */
     const opening = getOpening(activeGame.board);
     if (opening) {
       activeGame.opening = opening.name;
     }
+
+    /* Deduct time */
+    if (turn === activeGame.color) {
+      activeGame.player1time -= currentTime - activeGame.lastMove;
+    } else {
+      activeGame.player2time -= currentTime - activeGame.lastMove;
+    }
+    activeGame.lastMove = os.clock();
+
+    /* Broadcast */
+    Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
+    this.patchGame(gameId);
   }
-  private evaluate(gameId: string, rapid = false) {
+  private patchGame(gameId: string, additional: Partial<Game> = {}) {
+    const activeGame = this.Games[gameId];
+    Events.PatchGame.fire(this.Trackers[gameId], {
+      ...activeGame,
+      ...additional,
+
+      /* client does not need */
+      lastMove: undefined,
+      pgn: undefined,
+      board: undefined,
+    });
+  }
+  private evaluate(gameId: string) {
     const activeGame = this.Games[gameId];
 
-    /* Local (faster) */
-    Events.Evaluate.fire(
-      this.Trackers[gameId],
-      this.shrinkPatch({
-        opening: activeGame.opening,
-      }),
-    );
-
-    if (rapid) return;
-
-    /* HTTP Handled (slower) */
     const best = GetBestMoveAPI(activeGame.board);
     if (BOT && best.move) this.move(gameId, ...best.move);
 
-    const stats = this.shrinkPatch({
-      ...activeGame,
+    this.patchGame(gameId, {
       eval: best.eval,
       mate: tonumber(best.mate) ?? 0,
     });
-
-    Events.Evaluate.fire(this.Trackers[gameId], stats);
-
-    return stats;
   }
   private makeGame(player1: Player, player2?: Player) {
     const id = HttpService.GenerateGUID();
@@ -148,7 +125,7 @@ export class Gameplay {
 
       lastMove: os.clock(),
 
-      color: 1,
+      color: 0,
 
       /* Board */
       board: BitBoard.branch(DefaultBoard),
@@ -164,9 +141,8 @@ export class Gameplay {
     this.Games[id] = activeGame;
 
     Events.AssignedGame.fire(this.Trackers[id], id, activeGame.color);
-    this.evaluate(
+    this.patchGame(
       id,
-      true,
     ); /* perform a quick initial evaluation to upsync clients */
 
     /* Bot starts as white */
