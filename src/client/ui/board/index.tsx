@@ -26,6 +26,7 @@ import { DefaultBoard, FEN } from "shared/engine/fen";
 import { Game } from "server/services/gameplay";
 import { Explorer } from "./Explorer";
 import { Player } from "./Player";
+import { act } from "@rbxts/react-roblox";
 
 export default function Board() {
   const board = useAtom(Atoms.Board);
@@ -206,6 +207,18 @@ export default function Board() {
     if (activeGame.opening) setOpening(activeGame.opening);
 
     setGame((g) => ({ ...g, ...activeGame }));
+
+    /* Analysis, endgame popup */
+    if (activeGame.analysis) {
+      print(activeGame.analysis);
+      Atoms.Popup({
+        title: "Game over!",
+        description: activeGame.analysis,
+        rating: 100,
+        ratingChange: 10,
+        open: true,
+      });
+    }
   });
   useEventListener(Events.MoveMade, (move, turn) => {
     if (turn === playingAs) return; /* i am already this color */

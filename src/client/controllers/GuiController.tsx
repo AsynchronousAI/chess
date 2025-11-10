@@ -1,8 +1,22 @@
 import { Controller, OnStart } from "@flamework/core";
 import React from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
 import { createPortal, createRoot } from "@rbxts/react-roblox";
 import { Players } from "@rbxts/services";
+import Atoms from "client/ui/atoms";
 import Board from "client/ui/board";
+import { EndgamePopup } from "client/ui/endgamePopup";
+
+function GameRoot() {
+  const popup = useAtom(Atoms.Popup);
+
+  return (
+    <screengui ZIndexBehavior="Sibling" IgnoreGuiInset>
+      <Board />
+      <EndgamePopup {...popup} />
+    </screengui>
+  );
+}
 
 @Controller({})
 export class GuiController implements OnStart {
@@ -10,13 +24,6 @@ export class GuiController implements OnStart {
 
   onStart() {
     const root = createRoot(new Instance("Folder"));
-    root.render(
-      createPortal(
-        <screengui ZIndexBehavior={"Sibling"} IgnoreGuiInset>
-          <Board />
-        </screengui>,
-        this.playerGui,
-      ),
-    );
+    root.render(createPortal(<GameRoot />, this.playerGui));
   }
 }

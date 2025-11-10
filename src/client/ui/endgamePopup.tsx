@@ -8,13 +8,14 @@ import {
 import React, { useEffect, useState } from "@rbxts/react";
 import { usePx } from "./usePx";
 import { useAsyncEffect, useMotion } from "@rbxts/pretty-react-hooks";
+import Atoms from "./atoms";
 
 export interface EndgamePopupProps {
   title: string;
   description: string;
-  moves: number;
   rating: number;
   ratingChange: number;
+  open: boolean;
 }
 
 const getEloChangeText = (rVal: number, rChange: number) => {
@@ -30,6 +31,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
   const px = usePx();
   const [visualizedIncrement, setVisualizedIncrement] = useState(0);
   const [closeButtonTransparency, closeButtonMotion] = useMotion(0.5);
+  const [position, positionMotion] = useMotion(new UDim2(0.5, 0, 1.5, 0));
 
   useAsyncEffect(async () => {
     setVisualizedIncrement(0);
@@ -46,6 +48,11 @@ export function EndgamePopup(props: EndgamePopupProps) {
       }
     }
   }, [props.rating, props.ratingChange]);
+  useEffect(() => {
+    positionMotion.spring(
+      props.open ? new UDim2(0.5, 0, 0.5, 0) : new UDim2(0.5, 0, 1.5, 0),
+    );
+  }, [props.open]);
 
   const infoText = getEloChangeText(
     props.rating + visualizedIncrement,
@@ -54,11 +61,11 @@ export function EndgamePopup(props: EndgamePopupProps) {
 
   return (
     <CanvasGroup
-      size={new UDim2(0.5, 0.0, 0.5, 0)}
+      size={new UDim2(0.4, 0.0, 0.4, 0)}
       anchorPoint={new Vector2(0.5, 0.5)}
-      position={new UDim2(0.5, 0, 0.5, 0)}
+      position={position}
       aspectRatio={0.9}
-      cornerRadius={px(4)}
+      cornerRadius={px(8)}
       background={"#262421"}
       stroke={{ Color: Color3.fromHex("#3C3A38"), Transparency: 0.5 }}
     >
@@ -84,7 +91,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
       <Text
         text={infoText}
         richText
-        position={new UDim2(0, 0, 0.9, 0)}
+        position={new UDim2(0, 0, 0.875, 0)}
         size={new UDim2(1, 0, 0.1, 0)}
         textSize={px(16)}
         font={"SourceSansSemibold"}
@@ -112,6 +119,8 @@ export function EndgamePopup(props: EndgamePopupProps) {
               closeButtonMotion.spring(0.25, { frequency: 0.15 }),
             MouseLeave: () =>
               closeButtonMotion.spring(0.5, { frequency: 0.15 }),
+            MouseButton1Click: () =>
+              Atoms.Popup((p) => ({ ...p, open: false })),
           }}
         />
       </Frame>
