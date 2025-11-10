@@ -9,13 +9,19 @@ import { Object } from "@rbxts/luau-polyfill";
 import { useInterval } from "@rbxts/pretty-react-hooks";
 
 const formatTime = (seconds: number) => {
+  /* incase the visual goes negative, in the time
+  that server needs to inform us of a timeout */
+  seconds = math.max(seconds, 0);
+
   if (seconds > 60) {
+    /* standard x:xx */
     seconds = math.floor(seconds);
     const minutes = math.floor(seconds / 60);
     const remaining = seconds % 60;
     const padded = remaining < 10 ? `0${remaining}` : `${remaining}`;
     return `${minutes}:${padded}`;
   } else {
+    /* rushed mode! 0:xx.x */
     const formatted = string.format("%.1f", seconds);
     const padded = seconds < 10 ? `0${formatted}` : `${formatted}`;
     return `0:${padded}`;
@@ -139,7 +145,7 @@ export function Player({
           VerticalAlignment={"Center"}
           HorizontalAlignment={"Left"}
           FillDirection={"Horizontal"}
-          Padding={new UDim(0, -px(5))}
+          Padding={new UDim(0, -px(3))}
           SortOrder={"LayoutOrder"}
         />
 

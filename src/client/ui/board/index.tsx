@@ -10,13 +10,12 @@ import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
 import {
-  AnalyzeMates,
   default as GetLegalMoves,
   IsSquareAttacked,
 } from "shared/engine/legalMoves";
 import { BitBoard } from "shared/engine/bitboard";
 import { SoundEffects } from "./sfx";
-import { Players, SoundService } from "@rbxts/services";
+import { SoundService } from "@rbxts/services";
 import { usePx } from "../usePx";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { useEventListener, useInterval } from "@rbxts/pretty-react-hooks";
@@ -37,14 +36,13 @@ export default function Board() {
   const currentMove = useAtom(Atoms.CurrentMove);
 
   const px = usePx();
-  const iconPack = Vector;
+  const iconPack = Wood;
 
   const chessBoardRef = useRef<ChessBoardRef>(undefined);
   const evalBarRef = useRef<EvaluationBarRef>(undefined);
 
   const [playingAs, setPlayingAs] = useState(Color.white);
   const [promoting, setPromoting] = useState<Square>(-1);
-  const [analysis, setAnalysis] = useState<ReturnType<typeof AnalyzeMates>>("");
   const [gameId, setGameId] = useState("");
   const [opening, setOpening] = useState("Starting game...");
   const [activeGame, setGame] = useState<Partial<Game>>({});
@@ -208,7 +206,6 @@ export default function Board() {
     if (activeGame.opening) setOpening(activeGame.opening);
 
     setGame((g) => ({ ...g, ...activeGame }));
-    setAnalysis(AnalyzeMates(board));
   });
   useEventListener(Events.MoveMade, (move, turn) => {
     if (turn === playingAs) return; /* i am already this color */
@@ -227,6 +224,8 @@ export default function Board() {
   }, []);
   useInterval(() => {
     /* local time counter */
+    if (activeGame.analysis !== "") return;
+
     if (isPlayer1Turn) {
       setGame((g) => ({ ...g, player1time: (g.player1time ?? 0) - 0.1 }));
     } else {
@@ -256,7 +255,7 @@ export default function Board() {
       <EvaluationBar
         ref={evalBarRef}
         size={new UDim2(0.025, 0, 0.975 * 0.85, 0)}
-        analysis={analysis}
+        analysis={activeGame.analysis!}
       />
       <Frame size={new UDim2(1, 0, 0.975, 0)} aspectRatio={1} noBackground>
         <uilistlayout
@@ -303,7 +302,7 @@ export default function Board() {
           promoting={promoting}
           locked={
             gameId === "" ||
-            analysis !== "" ||
+            activeGame.analysis !== "" ||
             /* if the PGN is not empty, then if the currentMove is not
           the last move  (rewinding) */
             (pgn.size() === 0 ? false : currentMove !== pgn.size() - 1)

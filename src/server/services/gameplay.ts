@@ -1,4 +1,5 @@
-import { Service } from "@flamework/core";
+import { OnStart, Service } from "@flamework/core";
+import { Object } from "@rbxts/luau-polyfill";
 import { HttpService } from "@rbxts/services";
 import { Event } from "server/lifecycles";
 import { Events } from "server/network";
@@ -7,7 +8,7 @@ import { Color, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard, FEN } from "shared/engine/fen";
-import GetLegalMoves from "shared/engine/legalMoves";
+import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
 
 export type Game = {
@@ -28,6 +29,7 @@ export type Game = {
   opening: string;
 
   /* evaluation */
+  analysis: ReturnType<typeof AnalyzeMates>;
   eval: number;
   mate: number;
 };
@@ -35,7 +37,7 @@ export type Game = {
 const BOT = true;
 
 @Service()
-export class Gameplay {
+export class Gameplay implements OnStart {
   private Games: Record<string, Game> = {};
   private Trackers: Record<string, Player[]> = {};
   private AwaitingGame: Array<Player> = [];
@@ -86,6 +88,9 @@ export class Gameplay {
     }
     activeGame.lastMove = os.clock();
 
+    /* Analysis */
+    activeGame.analysis = AnalyzeMates(activeGame.board);
+
     /* Broadcast */
     Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
     this.patchGame(gameId);
@@ -120,7 +125,7 @@ export class Gameplay {
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
 
-      player1time: 300,
+      player1time: 10,
       player2time: 300,
 
       lastMove: os.clock(),
@@ -133,6 +138,7 @@ export class Gameplay {
       opening: "Starting Position",
 
       /* Evaluation */
+      analysis: "",
       eval: 0,
       mate: 0,
     };
@@ -176,6 +182,36 @@ export class Gameplay {
       this.makeGame(player, nextPlayer);
     } else {
       this.AwaitingGame.push(player);
+    }
+  }
+
+  /* Timeout checks */
+  onStart() {
+    while (task.wait(1)) {
+      for (const [id, currentGame] of Object.entries(this.Games)) {
+        if (currentGame.analysis !== "") return; /* game ended */
+
+        const currentTurn = BitBoard.getTurn(currentGame.board);
+
+        let timedOut = 0; /* 1 means player 1, 2 means player 2, 0 means no timeouts */
+        if (currentTurn === currentGame.color) {
+          /* Check for player 1 timeout */
+          if (os.clock() - currentGame.lastMove > currentGame.player1time)
+            timedOut = 1;
+        } else {
+          /* Check for player 2 timeout */
+          if (os.clock() - currentGame.lastMove > currentGame.player2time)
+            timedOut = 2;
+        }
+
+        if (timedOut > 0) {
+          currentGame.analysis = "timeout";
+          if (timedOut === 1) currentGame.player1time = 0;
+          else currentGame.player2time = 0;
+
+          this.patchGame(id);
+        }
+      }
     }
   }
 }
