@@ -5,6 +5,9 @@ import { EndgamePopup, EndgamePopupProps } from "../endgamePopup";
 const controls = {
   title: "You Won!",
   description: "Black wins by checkmate",
+  moves: 10,
+  rating: 6767,
+  ratingChange: 20,
 };
 
 const story = {
