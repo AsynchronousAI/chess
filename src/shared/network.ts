@@ -2,7 +2,7 @@ import { Networking } from "@flamework/networking";
 import { Color, Piece, Square } from "./board";
 import { Game } from "server/services/gameplay";
 
-type FullMove = [
+export type FullMove = [
   Square,
   Square,
   Piece | undefined,

@@ -9,6 +9,9 @@ import { useMotion, useMouse } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../usePx";
 import { generatePosition } from "./shared";
 import { IconPack } from "./images";
+import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
+import { Gameplay } from "client/controllers/gameplay";
+import { FEN } from "shared/engine/fen";
 
 export interface PieceProps {
   pos: [number, number];
@@ -22,7 +25,8 @@ export interface PieceProps {
   containerRef: React.MutableRefObject<Frame | undefined>;
 }
 export function Piece(props: PieceProps) {
-  const board = useAtom(Atoms.Board);
+  const gameplay = useFlameworkDependency<Gameplay>();
+  const board = gameplay.useBoard();
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const dragging = useAtom(Atoms.Dragging);
 

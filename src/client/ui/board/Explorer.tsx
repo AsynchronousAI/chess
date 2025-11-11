@@ -8,9 +8,9 @@ import {
   Text,
 } from "@rbxts/better-react-components";
 import React from "@rbxts/react";
-import { useAtom } from "@rbxts/react-charm";
-import Atoms from "../atoms";
 import { usePx } from "../usePx";
+import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
+import { Gameplay } from "client/controllers/gameplay";
 
 export interface ExplorerProps {
   opening: string;
@@ -18,7 +18,8 @@ export interface ExplorerProps {
   onRewind: (index: number, backwards?: boolean) => void;
 }
 export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
-  const pgn = useAtom(Atoms.PGN);
+  const gameplay = useFlameworkDependency<Gameplay>();
+  const pgn = gameplay.usePGN();
   const px = usePx();
 
   return (

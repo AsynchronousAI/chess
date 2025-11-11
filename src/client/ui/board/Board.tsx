@@ -23,7 +23,8 @@ import { Piece } from "./Piece";
 import { HttpService, Players, RunService } from "@rbxts/services";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Environment } from "@rbxts/ui-labs";
-import { Notation } from "shared/engine/notation";
+import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
+import { Gameplay } from "client/controllers/gameplay";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -45,8 +46,9 @@ export interface ChessBoardRef {
 }
 export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
   (props, ref) => {
+    const gameplay = useFlameworkDependency<Gameplay>();
     const possibleMoves = useAtom(Atoms.PossibleMoves);
-    const pgn = useAtom(Atoms.PGN);
+    const pgn = gameplay.usePGN();
     const currentMove = useAtom(Atoms.CurrentMove);
 
     const px = usePx();

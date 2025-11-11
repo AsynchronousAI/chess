@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "@rbxts/react";
+import React, { useState, useRef, useEffect } from "@rbxts/react";
 import {
   Color,
   GetPieceValues,
@@ -9,31 +9,21 @@ import { useAtom } from "@rbxts/react-charm";
 import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
-import {
-  default as GetLegalMoves,
-  IsSquareAttacked,
-} from "shared/engine/legalMoves";
 import { BitBoard } from "shared/engine/bitboard";
-import { SoundEffects } from "./sfx";
-import { SoundService } from "@rbxts/services";
 import { usePx } from "../usePx";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
-import { useEventListener, useInterval } from "@rbxts/pretty-react-hooks";
 import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
-import { PGN } from "shared/engine/pgn";
 import { DefaultBoard, FEN } from "shared/engine/fen";
-import { Game } from "server/services/gameplay";
 import { Explorer } from "./Explorer";
 import { Player } from "./Player";
-import { act } from "@rbxts/react-roblox";
+import { SoundEffects } from "./sfx";
+import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
+import { Gameplay } from "client/controllers/gameplay";
 
 export default function Board() {
-  const board = useAtom(Atoms.Board);
-  const pgn = useAtom(Atoms.PGN);
   const possibleMoves = useAtom(Atoms.PossibleMoves);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
-  const dragging = useAtom(Atoms.Dragging);
   const currentMove = useAtom(Atoms.CurrentMove);
 
   const px = usePx();
@@ -42,112 +32,26 @@ export default function Board() {
   const chessBoardRef = useRef<ChessBoardRef>(undefined);
   const evalBarRef = useRef<EvaluationBarRef>(undefined);
 
-  const [playingAs, setPlayingAs] = useState(Color.white);
   const [promoting, setPromoting] = useState<Square>(-1);
-  const [gameId, setGameId] = useState("");
-  const [opening, setOpening] = useState("Starting game...");
-  const [activeGame, setGame] = useState<Partial<Game>>({});
 
-  const [player1taken, setPlayer1taken] = useState<PieceType[]>([]);
-  const [player2taken, setPlayer2taken] = useState<PieceType[]>([]);
+  const gameplay = useFlameworkDependency<Gameplay>();
+  const [player1taken, player2taken] = gameplay.useTakenPieces();
 
-  /* Utils */
-  const playSFX = (sfx: keyof typeof SoundEffects) => {
-    const newAudio = new Instance("Sound", SoundService);
-    newAudio.SoundId = SoundEffects[sfx];
-    newAudio.Play();
-    newAudio.Ended.Connect(() => newAudio.Destroy());
-  };
-  const movePiece = (
-    from: number,
-    to: number,
-    myMove: boolean, // this will use cached move data & let server know if it is on
-    as?: PieceType,
-    pushPGN: boolean = true,
-    color: Color = myMove ? playingAs : 1 - playingAs,
-  ) => {
-    /* Locate the move data, for special moves such as en passant or castling */
-    const allMoves = myMove ? possibleMoves : GetLegalMoves(board, from, false);
-    const move = allMoves.find((v) => v[0] === to);
-    if (!move) return;
-    const closure = move[1];
-    const [moved, movedTo, moveType] = closure?.(board) || [];
+  const board = gameplay.useBoard();
+  const pgn = gameplay.usePGN();
+  const playingAs = gameplay.usePlayingAs();
+  const activeGame = gameplay.useActiveGame();
 
-    /* Capturing */
-    let captured = BitBoard.hasPiece(board, to);
-    if (captured) {
-      const [piece] = BitBoard.getPiece(board, to);
-      if (color === activeGame.color)
-        setPlayer1taken((prev) => [...prev, piece]);
-      else setPlayer2taken((prev) => [...prev, piece]);
-    }
-
-    /* Simple piece move with promotion */
-    if (!as) BitBoard.movePiece(board, from, to); /* normal move */
-    else {
-      BitBoard.setPiece(board, from, 0, 0);
-      BitBoard.setPiece(board, to, as, color);
-    }
-    BitBoard.flipTurn(board);
-
-    /* Animate */
-    if (dragging) {
-      chessBoardRef.current?.setBoard(board);
-    } else {
-      chessBoardRef.current?.animateBoard(
-        from,
-        to,
-        as ? [as, color] : undefined,
-        moved ? [moved, movedTo] : undefined,
-      );
-    }
-    /* Sound effects */
-    let sfx: Parameters<typeof playSFX>[0] = "Move";
-    const opponentsKing = BitBoard.findPiece(
-      board,
-      PieceType.king,
-      1 - color,
-    )[0];
-    if (IsSquareAttacked(board, opponentsKing, color)) {
-      sfx = "Check";
-    } else if (moveType === "castle") {
-      sfx = "Castle";
-    } else if (captured) {
-      sfx = "Capture";
-    }
-
-    playSFX(sfx);
-
-    /* Update local board, and let server know */
-    if (pushPGN) {
-      Atoms.PGN((x) => {
-        PGN.move(x, board, from, to, as, captured, sfx);
-        return x;
-      });
-    }
-    Atoms.CurrentMove(pgn.size() - 1);
-    Atoms.Board(BitBoard.branch(board));
-
-    if (myMove) {
-      Atoms.PossibleMoves([]);
-      Events.MakeMove(gameId, [from, to, as]);
-    } else if (holdingPiece) {
-      Atoms.PossibleMoves(GetLegalMoves(board, holdingPiece, true, playingAs));
-    }
-
-    print(FEN.toFEN(board));
-  };
+  gameplay.setChessBoard(chessBoardRef);
+  gameplay.setEvaluationBar(evalBarRef);
 
   /* Handlers */
   const onMove = (location: number) => {
     if (
       !possibleMoves.find((v) => v[0] === location) ||
-      holdingPiece === undefined
-    )
-      return;
-
-    if (BitBoard.getTurn(board) !== playingAs) {
-      /* PREMOVE! */
+      holdingPiece === undefined ||
+      BitBoard.getTurn(board) !== playingAs
+    ) {
       return;
     }
 
@@ -160,14 +64,14 @@ export default function Board() {
       return;
     }
 
-    movePiece(holdingPiece, location, true);
+    gameplay.movePiece(holdingPiece, location, true);
   };
   const onPromote = (piece?: PieceType) => {
     if (!holdingPiece || !piece) {
       setPromoting(-1);
       return;
     }
-    movePiece(holdingPiece, promoting, true, piece);
+    gameplay.movePiece(holdingPiece, promoting, true, piece);
     setPromoting(-1);
   };
   const onRewind = (moveIndex: number, backwards = false) => {
@@ -195,72 +99,17 @@ export default function Board() {
         pgn[moveIndex].promotion ? [PieceType.pawn, moveIndex % 2] : undefined,
       );
     }
-    playSFX(pgn[moveIndex].moveType as Parameters<typeof playSFX>[0]);
+    gameplay.playSFX(pgn[moveIndex].moveType as keyof typeof SoundEffects);
     Atoms.CurrentMove(moveIndex);
     Atoms.PossibleMoves([]);
   };
-
-  /* Events */
-  useEventListener(Events.PatchGame, (activeGame) => {
-    if (activeGame.eval) evalBarRef.current?.setEval(activeGame.eval);
-    if (activeGame.mate) evalBarRef.current?.setMate(activeGame.mate);
-    if (activeGame.opening) setOpening(activeGame.opening);
-
-    setGame((g) => ({ ...g, ...activeGame }));
-
-    /* Analysis, endgame popup */
-    if (activeGame.analysis && activeGame.winner) {
-      let winStatus: 0 | 1 | 2;
-      if (activeGame.winner === 3) winStatus = 0;
-      else if (activeGame.winner === 1 && activeGame.color === playingAs)
-        // player1 won, and we are player1
-        winStatus = 1;
-      else winStatus = 2;
-
-      Atoms.Popup({
-        title:
-          winStatus === 0 ? "Draw" : winStatus === 1 ? "You Win!" : "You Lose!",
-        description:
-          activeGame.analysis === "timeout"
-            ? "on time"
-            : activeGame.analysis === "checkmate"
-              ? "by checkmate"
-              : activeGame.analysis === "insufficent"
-                ? "by insufficent material"
-                : activeGame.analysis === "stalemate"
-                  ? "by stalemate"
-                  : "unknown",
-        rating: 100,
-        ratingChange: winStatus === 0 ? 0 : winStatus === 1 ? 10 : -10,
-        open: true,
-      });
-    }
-  });
-  useEventListener(Events.MoveMade, (move, turn) => {
-    if (turn === playingAs) return; /* i am already this color */
-    movePiece(move[0], move[1], false, move[2]);
-  });
-  useEventListener(Events.AssignedGame, (gameId, color) => {
-    setPlayingAs(color);
-    setGameId(gameId);
-    setOpening("Starting Position");
-    chessBoardRef.current?.setBoard(board);
-    pgn.clear();
-  });
-  useEffect(() => {
+  const startGame = () => {
     chessBoardRef.current?.setBoard(BitBoard.branch(DefaultBoard));
     Events.NewGame();
-  }, []);
-  useInterval(() => {
-    /* local time counter */
-    if (activeGame.analysis !== "") return;
+  };
 
-    if (isPlayer1Turn) {
-      setGame((g) => ({ ...g, player1time: (g.player1time ?? 0) - 0.1 }));
-    } else {
-      setGame((g) => ({ ...g, player2time: (g.player2time ?? 0) - 0.1 }));
-    }
-  }, 0.1);
+  /* Events */
+  useEffect(startGame, []);
 
   const isPlayer1Turn =
     pgn.size() === 0
@@ -330,7 +179,7 @@ export default function Board() {
           onMove={onMove}
           promoting={promoting}
           locked={
-            gameId === "" ||
+            //gameId === "" ||
             activeGame.analysis !== "" ||
             /* if the PGN is not empty, then if the currentMove is not
           the last move  (rewinding) */
@@ -341,7 +190,7 @@ export default function Board() {
       </Frame>
 
       <Explorer
-        opening={opening}
+        opening={activeGame.opening ?? "No game"}
         currentMove={currentMove}
         onRewind={onRewind}
       />

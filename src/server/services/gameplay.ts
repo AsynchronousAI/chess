@@ -1,7 +1,7 @@
 import { OnStart, Service } from "@flamework/core";
 import { Object } from "@rbxts/luau-polyfill";
 import { HttpService } from "@rbxts/services";
-import { Event } from "server/lifecycles";
+import { Event } from "shared/lifecycles";
 import { Events } from "server/network";
 import getOpening from "server/openings/getOpening";
 import { Color, Piece, Square } from "shared/board";
