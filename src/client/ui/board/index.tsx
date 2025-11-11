@@ -209,13 +209,29 @@ export default function Board() {
     setGame((g) => ({ ...g, ...activeGame }));
 
     /* Analysis, endgame popup */
-    if (activeGame.analysis) {
-      print(activeGame.analysis);
+    if (activeGame.analysis && activeGame.winner) {
+      let winStatus: 0 | 1 | 2;
+      if (activeGame.winner === 3) winStatus = 0;
+      else if (activeGame.winner === 1 && activeGame.color === playingAs)
+        // player1 won, and we are player1
+        winStatus = 1;
+      else winStatus = 2;
+
       Atoms.Popup({
-        title: "Game over!",
-        description: activeGame.analysis,
+        title:
+          winStatus === 0 ? "Draw" : winStatus === 1 ? "You Win!" : "You Lose!",
+        description:
+          activeGame.analysis === "timeout"
+            ? "on time"
+            : activeGame.analysis === "checkmate"
+              ? "by checkmate"
+              : activeGame.analysis === "insufficent"
+                ? "by insufficent material"
+                : activeGame.analysis === "stalemate"
+                  ? "by stalemate"
+                  : "unknown",
         rating: 100,
-        ratingChange: 10,
+        ratingChange: winStatus === 0 ? 0 : winStatus === 1 ? 10 : -10,
         open: true,
       });
     }

@@ -33,21 +33,32 @@ export function EndgamePopup(props: EndgamePopupProps) {
   const [closeButtonTransparency, closeButtonMotion] = useMotion(0.5);
   const [position, positionMotion] = useMotion(new UDim2(0.5, 0, 1.5, 0));
 
-  useAsyncEffect(async () => {
-    setVisualizedIncrement(0);
-    task.wait(0.1);
-    if (props.ratingChange > 0) {
-      for (let i = 0; i < props.ratingChange; i++) {
-        setVisualizedIncrement(i + 1);
-        task.wait(0.02);
-      }
-    } else if (props.ratingChange < 0) {
-      for (let i = 0; i > props.ratingChange; i--) {
-        setVisualizedIncrement(i - 1);
-        task.wait(0.02);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function animate() {
+      setVisualizedIncrement(0);
+
+      await Promise.delay(0.5);
+      if (props.ratingChange === 0) return;
+
+      const step = props.ratingChange > 0 ? 1 : -1;
+      const target = props.ratingChange;
+
+      for (let i = 0; i !== target; i += step) {
+        if (cancelled) break;
+        setVisualizedIncrement(i + step);
+        print(i + step);
+        await Promise.delay(5 / 100);
       }
     }
-  }, [props.rating, props.ratingChange]);
+
+    animate();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.ratingChange]);
+
   useEffect(() => {
     positionMotion.spring(
       props.open ? new UDim2(0.5, 0, 0.5, 0) : new UDim2(0.5, 0, 1.5, 0),

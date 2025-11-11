@@ -21,6 +21,7 @@ export type Game = {
 
   lastMove: number; // os.clock() of the last move
 
+  winner: number; // either 1 or 2 for player, 0 for none, 3 for draw.
   color: Color; // represents player1 color.
 
   /* board */
@@ -90,6 +91,14 @@ export class Gameplay implements OnStart {
 
     /* Analysis */
     activeGame.analysis = AnalyzeMates(activeGame.board);
+    if (activeGame.analysis === "stalemate") {
+      activeGame.winner = 3;
+    } else if (activeGame.analysis === "checkmate") {
+      activeGame.winner = turn === activeGame.color ? 1 : 2;
+    } else if (activeGame.analysis === "insufficent") {
+      /* TODO: draw by timeout vs insufficient */
+      activeGame.winner = 3;
+    }
 
     /* Broadcast */
     Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
@@ -125,11 +134,12 @@ export class Gameplay implements OnStart {
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
 
-      player1time: 10,
+      player1time: 300,
       player2time: 300,
 
       lastMove: os.clock(),
 
+      winner: 0,
       color: 0,
 
       /* Board */
@@ -206,6 +216,7 @@ export class Gameplay implements OnStart {
 
         if (timedOut > 0) {
           currentGame.analysis = "timeout";
+          currentGame.winner = timedOut === 1 ? 2 : 1;
           if (timedOut === 1) currentGame.player1time = 0;
           else currentGame.player2time = 0;
 
