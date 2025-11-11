@@ -15,6 +15,8 @@ const Atoms = {
     ratingChange: 0,
     description: "",
     open: false,
+    onNew: () => {},
+    onRematch: () => {},
   }),
 };
 

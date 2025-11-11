@@ -16,6 +16,8 @@ export interface EndgamePopupProps {
   rating: number;
   ratingChange: number;
   open: boolean;
+  onNew: () => void;
+  onRematch: () => void;
 }
 
 const getEloChangeText = (rVal: number, rChange: number) => {
@@ -48,7 +50,6 @@ export function EndgamePopup(props: EndgamePopupProps) {
       for (let i = 0; i !== target; i += step) {
         if (cancelled) break;
         setVisualizedIncrement(i + step);
-        print(i + step);
         await Promise.delay(5 / 100);
       }
     }
@@ -57,7 +58,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
     return () => {
       cancelled = true;
     };
-  }, [props.ratingChange]);
+  }, [props.ratingChange, props.open]);
 
   useEffect(() => {
     positionMotion.spring(
@@ -147,6 +148,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         autoButtonColor={false}
         textSize={px(24)}
         cornerRadius={px(5)}
+        overrideRoblox={{ Event: { MouseButton1Click: props.onNew } }}
       />
       <Button
         size={new UDim2(0.8, 0, 0.2, 0)}
@@ -159,6 +161,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         autoButtonColor={false}
         textSize={px(24)}
         cornerRadius={px(5)}
+        overrideRoblox={{ Event: { MouseButton1Click: props.onRematch } }}
       />
     </CanvasGroup>
   );

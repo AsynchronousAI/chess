@@ -136,6 +136,15 @@ export class Gameplay implements OnStart {
   }
 
   /* Exported Methods */
+  public newGame() {
+    this.chessBoard?.current?.setBoard(BitBoard.branch(DefaultBoard));
+    this.board = BitBoard.branch(DefaultBoard);
+    this.activeGame = {};
+    this.gameId = "";
+    this.pgn.clear();
+    Events.NewGame();
+    Atoms.Popup((x) => ({ ...x, open: false }));
+  }
   public playSFX(sfx: keyof typeof SoundEffects) {
     const newAudio = new Instance("Sound", SoundService);
     newAudio.SoundId = SoundEffects[sfx];
@@ -198,6 +207,10 @@ export class Gameplay implements OnStart {
         rating: 100,
         ratingChange: winStatus === 0 ? 0 : winStatus === 1 ? 10 : -10,
         open: true,
+        onNew: () => {
+          this.newGame();
+        },
+        onRematch: () => {},
       });
     }
   }

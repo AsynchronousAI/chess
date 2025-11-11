@@ -103,13 +103,9 @@ export default function Board() {
     Atoms.CurrentMove(moveIndex);
     Atoms.PossibleMoves([]);
   };
-  const startGame = () => {
-    chessBoardRef.current?.setBoard(BitBoard.branch(DefaultBoard));
-    Events.NewGame();
-  };
 
   /* Events */
-  useEffect(startGame, []);
+  useEffect(() => gameplay.newGame(), []);
 
   const isPlayer1Turn =
     pgn.size() === 0
