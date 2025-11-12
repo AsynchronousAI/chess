@@ -14,7 +14,7 @@ interface ClientToServerEvents {
 interface ServerToClientEvents {
   PatchGame(gameStats: Partial<Game>): void;
   MoveMade(move: FullMove, turn: Color): void;
-  AssignedGame(gameId: string, color: Color): void;
+  AssignedGame(gameId: string): void;
 }
 
 interface ClientToServerFunctions {}

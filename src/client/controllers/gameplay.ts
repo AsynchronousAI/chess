@@ -1,7 +1,7 @@
 import { Controller, OnStart } from "@flamework/core";
 import { useInterval } from "@rbxts/pretty-react-hooks";
 import { RefObject, useState } from "@rbxts/react";
-import { SoundService } from "@rbxts/services";
+import { Players, SoundService } from "@rbxts/services";
 import { Events } from "client/network";
 import Atoms from "client/ui/atoms";
 import { ChessBoardRef } from "client/ui/board/Board";
@@ -10,7 +10,7 @@ import { Event } from "shared/lifecycles";
 import { Game } from "server/services/gameplay";
 import { Color, Piece, Square } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
-import { DefaultBoard, FEN } from "shared/engine/fen";
+import { DefaultBoard } from "shared/engine/fen";
 import GetLegalMoves, {
   AnalyzeMates,
   IsSquareAttacked,
@@ -138,10 +138,16 @@ export class Gameplay implements OnStart {
   /* Exported Methods */
   public newGame() {
     this.chessBoard?.current?.setBoard(BitBoard.branch(DefaultBoard));
+    this.evalBar?.current?.setEval(0);
+    this.evalBar?.current?.setMate(0);
+
     this.board = BitBoard.branch(DefaultBoard);
     this.activeGame = {};
     this.gameId = "";
+    this.player1Taken = [];
+    this.player2Taken = [];
     this.pgn.clear();
+
     Events.NewGame();
     Atoms.Popup((x) => ({ ...x, open: false }));
   }
@@ -171,14 +177,11 @@ export class Gameplay implements OnStart {
     this.playSFX(sfx);
 
     this.updatePGNAndUI(pushPGN, from, to, promotion, captured, sfx, myMove);
-
-    print(FEN.toFEN(this.board));
   }
 
   /* Events */
   @Event(Events.AssignedGame)
-  assignedGame(gameId: string, color: Color) {
-    this.playingAs = color;
+  assignedGame(gameId: string) {
     this.gameId = gameId;
     this.activeGame.opening = "Starting Position";
     this.chessBoard?.current?.setBoard(this.board);
@@ -193,16 +196,14 @@ export class Gameplay implements OnStart {
 
     /* Analysis, endgame popup */
     if (newGame.analysis && newGame.winner) {
-      let winStatus: 0 | 1 | 2; /* 0: draw, 1: i win, 2: i lose */
-      if (newGame.winner === 3) winStatus = 0;
+      let title;
+      if (newGame.winner === 3) title = "Draw";
       else if (newGame.winner === 1 && newGame.color === this.playingAs)
-        // player1 won, and we are player1
-        winStatus = 1;
-      else winStatus = 2;
+        title = "You Win!";
+      else title = "You Lose!";
 
       Atoms.Popup({
-        title:
-          winStatus === 0 ? "Draw" : winStatus === 1 ? "You Win!" : "You Lose!",
+        title,
         description: this.getAnalysisDescription(newGame.analysis),
         rating:
           (newGame.color === this.playingAs
@@ -218,6 +219,14 @@ export class Gameplay implements OnStart {
         },
         onRematch: () => {},
       });
+    }
+
+    /* Assign this.playingAs */
+    if (newGame.color !== undefined && newGame.player1 !== undefined) {
+      this.playingAs =
+        newGame.player1 === Players.LocalPlayer.UserId
+          ? newGame.color
+          : 1 - newGame.color;
     }
   }
   @Event(Events.MoveMade)

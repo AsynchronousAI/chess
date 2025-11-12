@@ -46,7 +46,7 @@ export type Game = {
   mate: number;
 };
 
-const BOT = true;
+const BOT = false;
 const BOT_ELO = 3500;
 
 @Service()
@@ -91,7 +91,6 @@ export class Gameplay implements OnStart {
     BitBoard.flipTurn(activeGame.board);
 
     /* PGN */
-    print(FEN.toFEN(activeGame.board));
     PGN.move(activeGame.pgn, activeGame.board, from, to, promotion, captured);
 
     /* Recompute Opening */
@@ -108,69 +107,92 @@ export class Gameplay implements OnStart {
     }
     activeGame.lastMove = os.clock();
 
-    this.endGameCheck(gameId, turn);
+    /* Is this an endgame? */
+    activeGame.analysis = AnalyzeMates(activeGame.board);
+    if (activeGame.analysis === "stalemate") {
+      activeGame.winner = 3;
+    } else if (activeGame.analysis === "checkmate") {
+      activeGame.winner = turn !== activeGame.color ? 1 : 2;
+    } else if (activeGame.analysis === "insufficent") {
+      /* TODO: draw by timeout vs insufficient */
+      activeGame.winner = 3;
+    }
+
+    /* If so, then compute elo change */
     if (activeGame.winner !== 0) {
-      const ratingChange = await this.adjustElo(
+      const [player1EloChange, player2EloChange] = await this.adjustElo(
         activeGame.player1,
         activeGame.player2,
         activeGame.winner,
       );
-      activeGame.player1eloDiff = ratingChange;
+      activeGame.player1eloDiff = player1EloChange;
+      activeGame.player2eloDiff = player2EloChange;
     }
 
     /* Broadcast */
     Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
     this.patchGame(gameId);
   }
-  private endGameCheck(gameId: string, turn: Color) {
-    const activeGame = this.Games[gameId];
 
-    /* Is this an endgame? */
-    activeGame.analysis = AnalyzeMates(activeGame.board);
-    if (activeGame.analysis === "stalemate") {
-      activeGame.winner = 3;
-    } else if (activeGame.analysis === "checkmate") {
-      activeGame.winner = turn === activeGame.color ? 1 : 2;
-    } else if (activeGame.analysis === "insufficent") {
-      /* TODO: draw by timeout vs insufficient */
-      activeGame.winner = 3;
-    } else return;
-  }
   private async adjustElo(
     player1: number,
     player2: number,
-    endGame: number /* identical to activeGame.winner */,
-  ) {
-    /* Compute new elo */
+    endGame: number, // identical to activeGame.winner
+  ): Promise<[number, number]> {
     const player1user = Players.GetPlayerByUserId(player1);
     const player2user = player2
       ? Players.GetPlayerByUserId(player2)
       : undefined;
-    if (!player1user) return 0;
+    if (!player1user) return [0, 0];
 
     const ratingPlr1 = await this.db.get(player1user, "rating");
     const ratingPlr2: PlayerRating = player2user
       ? await this.db.get(player2user, "rating")
-      : {
-          // bot
-          rating: BOT_ELO,
-          rd: 30,
-          vol: 0.01,
-        };
+      : { rating: BOT_ELO, rd: 30, vol: 0.01 };
 
-    const opponents = await this.db.get(player1user, "opponents");
-    opponents.push({
-      rating: ratingPlr2.rating,
-      rd: ratingPlr2.rd,
-      score: endGame === 1 ? 1 : endGame === 2 ? 0 : 0.5,
-    });
+    const computeAndSave = async (
+      playerUser: any,
+      selfRating: PlayerRating,
+      oppRating: PlayerRating,
+      score: number,
+    ) => {
+      const opponents = await this.db.get(playerUser, "opponents");
+      opponents.push({
+        rating: oppRating.rating,
+        rd: oppRating.rd,
+        score,
+      });
 
-    const newElo = computeNewRating(ratingPlr1, opponents);
-    newElo.rating = math.floor(newElo.rating);
-    this.db.set(player1user, "rating", newElo);
+      const newElo = computeNewRating(selfRating, opponents);
+      newElo.rating = math.floor(newElo.rating);
+      await this.db.set(playerUser, "rating", newElo);
 
-    return newElo.rating - ratingPlr1.rating;
+      return newElo.rating - selfRating.rating;
+    };
+
+    const score = endGame === 1 ? 1 : endGame === 2 ? 0 : 0.5;
+    // Player 1’s result (1 = win, 0 = loss, 0.5 = draw)
+    const diff1 = await computeAndSave(
+      player1user,
+      ratingPlr1,
+      ratingPlr2,
+      score,
+    );
+
+    // Update player 2 if real player
+    let diff2 = 0;
+    if (player2user) {
+      diff2 = await computeAndSave(
+        player2user,
+        ratingPlr2,
+        ratingPlr1,
+        1 - score,
+      );
+    }
+
+    return [diff1, diff2];
   }
+
   private patchGame(gameId: string, additional: Partial<Game> = {}) {
     const activeGame = this.Games[gameId];
     Events.PatchGame.fire(this.Trackers[gameId], {
@@ -231,7 +253,7 @@ export class Gameplay implements OnStart {
     this.Trackers[id] = player2 ? [player1, player2] : [player1];
     this.Games[id] = activeGame;
 
-    Events.AssignedGame.fire(this.Trackers[id], id, activeGame.color);
+    Events.AssignedGame.fire(this.Trackers[id], id);
     this.patchGame(
       id,
     ); /* perform a quick initial evaluation to upsync clients */

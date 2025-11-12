@@ -7,7 +7,7 @@ import {
 } from "@rbxts/better-react-components";
 import React, { useEffect, useState } from "@rbxts/react";
 import { usePx } from "./usePx";
-import { useAsyncEffect, useMotion } from "@rbxts/pretty-react-hooks";
+import { useMotion } from "@rbxts/pretty-react-hooks";
 import Atoms from "./atoms";
 
 export interface EndgamePopupProps {
