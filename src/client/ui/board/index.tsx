@@ -144,7 +144,7 @@ export default function Board() {
         <Player
           userId={activeGame.player2 ?? 0}
           flag={"🇺🇸"}
-          rating={2412}
+          rating={activeGame.player2elo ?? 0}
           time={activeGame.player2time ?? 0}
           color={1 - (activeGame.color ?? Color.white)}
           valueDifference={
@@ -157,7 +157,7 @@ export default function Board() {
         <Player
           userId={activeGame.player1 ?? 0}
           flag={"🇺🇸"}
-          rating={3674}
+          rating={activeGame.player1elo ?? 0}
           time={activeGame.player1time ?? 0}
           color={activeGame.color ?? Color.white}
           valueDifference={

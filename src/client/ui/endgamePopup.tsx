@@ -50,7 +50,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
       for (let i = 0; i !== target; i += step) {
         if (cancelled) break;
         setVisualizedIncrement(i + step);
-        await Promise.delay(5 / 100);
+        await Promise.delay(0.65 / math.abs(props.ratingChange));
       }
     }
 

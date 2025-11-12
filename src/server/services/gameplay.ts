@@ -1,6 +1,6 @@
 import { OnStart, Service } from "@flamework/core";
 import { Object } from "@rbxts/luau-polyfill";
-import { HttpService } from "@rbxts/services";
+import { HttpService, Players } from "@rbxts/services";
 import { Event } from "shared/lifecycles";
 import { Events } from "server/network";
 import getOpening from "server/openings/getOpening";
@@ -10,17 +10,28 @@ import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard, FEN } from "shared/engine/fen";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
+import { Datastores } from "./datastore";
+import { computeNewRating, PlayerRating } from "server/glicko2";
 
 export type Game = {
   /* players */
-  player1: number;
+  player1: number; // userid
   player2: number;
 
+  /* Elo */
+  player1elo: number;
+  player2elo: number;
+
+  player1eloDiff: number;
+  player2eloDiff: number;
+
+  /* Timer */
   player1time: number;
   player2time: number;
 
   lastMove: number; // os.clock() of the last move
 
+  /* Roles */
   winner: number; // either 1 or 2 for player, 0 for none, 3 for draw.
   color: Color; // represents player1 color.
 
@@ -36,6 +47,7 @@ export type Game = {
 };
 
 const BOT = true;
+const BOT_ELO = 3500;
 
 @Service()
 export class Gameplay implements OnStart {
@@ -43,7 +55,14 @@ export class Gameplay implements OnStart {
   private Trackers: Record<string, Player[]> = {};
   private AwaitingGame: Array<Player> = [];
 
-  private move(gameId: string, from: Square, to: Square, promotion?: Piece) {
+  constructor(private readonly db: Datastores) {}
+
+  private async move(
+    gameId: string,
+    from: Square,
+    to: Square,
+    promotion?: Piece,
+  ) {
     const activeGame = this.Games[gameId];
     const legalMoves = GetLegalMoves(activeGame.board, from, true);
     const found = legalMoves.find((move) => move[0] === to);
@@ -89,7 +108,24 @@ export class Gameplay implements OnStart {
     }
     activeGame.lastMove = os.clock();
 
-    /* Analysis */
+    this.endGameCheck(gameId, turn);
+    if (activeGame.winner !== 0) {
+      const ratingChange = await this.adjustElo(
+        activeGame.player1,
+        activeGame.player2,
+        activeGame.winner,
+      );
+      activeGame.player1eloDiff = ratingChange;
+    }
+
+    /* Broadcast */
+    Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
+    this.patchGame(gameId);
+  }
+  private endGameCheck(gameId: string, turn: Color) {
+    const activeGame = this.Games[gameId];
+
+    /* Is this an endgame? */
     activeGame.analysis = AnalyzeMates(activeGame.board);
     if (activeGame.analysis === "stalemate") {
       activeGame.winner = 3;
@@ -98,11 +134,42 @@ export class Gameplay implements OnStart {
     } else if (activeGame.analysis === "insufficent") {
       /* TODO: draw by timeout vs insufficient */
       activeGame.winner = 3;
-    }
+    } else return;
+  }
+  private async adjustElo(
+    player1: number,
+    player2: number,
+    endGame: number /* identical to activeGame.winner */,
+  ) {
+    /* Compute new elo */
+    const player1user = Players.GetPlayerByUserId(player1);
+    const player2user = player2
+      ? Players.GetPlayerByUserId(player2)
+      : undefined;
+    if (!player1user) return 0;
 
-    /* Broadcast */
-    Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
-    this.patchGame(gameId);
+    const ratingPlr1 = await this.db.get(player1user, "rating");
+    const ratingPlr2: PlayerRating = player2user
+      ? await this.db.get(player2user, "rating")
+      : {
+          // bot
+          rating: BOT_ELO,
+          rd: 30,
+          vol: 0.01,
+        };
+
+    const opponents = await this.db.get(player1user, "opponents");
+    opponents.push({
+      rating: ratingPlr2.rating,
+      rd: ratingPlr2.rd,
+      score: endGame === 1 ? 1 : endGame === 2 ? 0 : 0.5,
+    });
+
+    const newElo = computeNewRating(ratingPlr1, opponents);
+    newElo.rating = math.floor(newElo.rating);
+    this.db.set(player1user, "rating", newElo);
+
+    return newElo.rating - ratingPlr1.rating;
   }
   private patchGame(gameId: string, additional: Partial<Game> = {}) {
     const activeGame = this.Games[gameId];
@@ -127,12 +194,20 @@ export class Gameplay implements OnStart {
       mate: tonumber(best.mate) ?? 0,
     });
   }
-  private makeGame(player1: Player, player2?: Player) {
+  private async makeGame(player1: Player, player2?: Player) {
     const id = HttpService.GenerateGUID();
     const activeGame: Game = {
       /* Matchmaking */
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
+
+      player1elo: (await this.db.get(player1, "rating")).rating,
+      player2elo: player2
+        ? (await this.db.get(player2, "rating")).rating
+        : BOT_ELO,
+
+      player1eloDiff: 0,
+      player2eloDiff: 0,
 
       player1time: 300,
       player2time: 300,

@@ -193,7 +193,7 @@ export class Gameplay implements OnStart {
 
     /* Analysis, endgame popup */
     if (newGame.analysis && newGame.winner) {
-      let winStatus: 0 | 1 | 2;
+      let winStatus: 0 | 1 | 2; /* 0: draw, 1: i win, 2: i lose */
       if (newGame.winner === 3) winStatus = 0;
       else if (newGame.winner === 1 && newGame.color === this.playingAs)
         // player1 won, and we are player1
@@ -204,8 +204,14 @@ export class Gameplay implements OnStart {
         title:
           winStatus === 0 ? "Draw" : winStatus === 1 ? "You Win!" : "You Lose!",
         description: this.getAnalysisDescription(newGame.analysis),
-        rating: 100,
-        ratingChange: winStatus === 0 ? 0 : winStatus === 1 ? 10 : -10,
+        rating:
+          (newGame.color === this.playingAs
+            ? newGame.player1elo
+            : newGame.player2elo) ?? 0,
+        ratingChange:
+          (newGame.color === this.playingAs
+            ? newGame.player1eloDiff
+            : newGame.player2eloDiff) ?? 0,
         open: true,
         onNew: () => {
           this.newGame();
