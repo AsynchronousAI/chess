@@ -8,7 +8,8 @@
 		"chess:out/shared/network@GlobalFunctions": "shared/network@GlobalFunctions",
 		"chess:out/client/controllers/GameplayController@GameplayController": "client/controllers/GameplayController@GameplayController",
 		"chess:out/client/controllers/gameplay@Gameplay": "client/controllers/gameplay@Gameplay",
-		"chess:out/server/services/datastore@Datastores": "server/services/datastore@Datastores"
+		"chess:out/server/services/datastore@Datastores": "server/services/datastore@Datastores",
+		"chess:out/server/services/datastore@Datastore": "server/services/datastore@Datastore"
 	},
 	"metadata": {}
 }

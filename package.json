@@ -34,6 +34,7 @@
     "@rbxts/flamework-react-utils": "^1.0.8",
     "@rbxts/luau-polyfill": "^1.1.3",
     "@rbxts/luau-thread-fixed": "https://github.com/AsynchronousAI/luau-thread/",
+    "@rbxts/lyra": "^0.6.0",
     "@rbxts/pretty-react-hooks": "^0.6.4",
     "@rbxts/react": "latest",
     "@rbxts/react-charm": "latest",

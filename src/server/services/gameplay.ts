@@ -10,8 +10,8 @@ import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard, FEN } from "shared/engine/fen";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
-import { Datastores } from "./datastore";
-import { computeNewRating, PlayerRating } from "server/glicko2";
+import { Datastore } from "./datastore";
+import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 
 export type Game = {
   /* players */
@@ -55,7 +55,7 @@ export class Gameplay implements OnStart {
   private Trackers: Record<string, Player[]> = {};
   private AwaitingGame: Array<Player> = [];
 
-  constructor(private readonly db: Datastores) {}
+  constructor(private readonly db: Datastore) {}
 
   private async move(
     gameId: string,
@@ -127,10 +127,11 @@ export class Gameplay implements OnStart {
 
     /* If so, then compute elo change */
     if (activeGame.winner !== 0) {
-      const [player1EloChange, player2EloChange] = await this.adjustElo(
+      const [player1EloChange, player2EloChange] = this.adjustElo(
         activeGame.player1,
         activeGame.player2,
         activeGame.winner,
+        gameId,
       );
       activeGame.player1eloDiff = player1EloChange;
       activeGame.player2eloDiff = player2EloChange;
@@ -141,38 +142,45 @@ export class Gameplay implements OnStart {
     this.patchGame(gameId);
   }
 
-  private async adjustElo(
+  private adjustElo(
     player1: number,
     player2: number,
     endGame: number, // identical to activeGame.winner
-  ): Promise<[number, number]> {
+    gameId: string,
+  ): [number, number] {
     const player1user = Players.GetPlayerByUserId(player1);
     const player2user = player2
       ? Players.GetPlayerByUserId(player2)
       : undefined;
     if (!player1user) return [0, 0];
 
-    const ratingPlr1 = await this.db.get(player1user, "rating");
-    const ratingPlr2: PlayerRating = player2user
-      ? await this.db.get(player2user, "rating")
-      : { rating: BOT_ELO, rd: 30, vol: 0.01 };
+    const plr1 = this.db.playerStore.getAsync(player1user);
+    const plr2 = player2user
+      ? this.db.playerStore.getAsync(player2user)
+      : { rating: { rating: BOT_ELO, rd: 30, vol: 0.01 }, opponents: [] };
 
-    const computeAndSave = async (
+    const computeAndSave = (
       playerUser: any,
+      opponents: (OpponentRating & { gameId: string })[],
       selfRating: PlayerRating,
       oppRating: PlayerRating,
       score: number,
     ) => {
-      const opponents = await this.db.get(playerUser, "opponents");
+      opponents = table.clone(opponents);
+      selfRating = table.clone(selfRating);
       opponents.push({
         rating: oppRating.rating,
         rd: oppRating.rd,
+        gameId,
         score,
       });
 
       const newElo = computeNewRating(selfRating, opponents);
-      newElo.rating = math.floor(newElo.rating);
-      await this.db.set(playerUser, "rating", newElo);
+      newElo.rating = math.clamp(math.floor(newElo.rating), 100, 3500);
+      this.db.playerStore.updateAsync(playerUser, (data) => {
+        data.rating = newElo;
+        return true;
+      });
 
       return newElo.rating - selfRating.rating;
     };
@@ -180,24 +188,25 @@ export class Gameplay implements OnStart {
     const score = endGame === 1 ? 1 : endGame === 2 ? 0 : 0.5;
 
     // Player 1’s result (1 = win, 0 = loss, 0.5 = draw)
-    const diff1 = await computeAndSave(
+    const diff1 = computeAndSave(
       player1user,
-      ratingPlr1,
-      ratingPlr2,
+      plr1.opponents,
+      plr1.rating,
+      plr2.rating,
       score,
     );
 
     // Update player 2 if real player
     let diff2 = 0;
     if (player2user) {
-      diff2 = await computeAndSave(
+      diff2 = computeAndSave(
         player2user,
-        ratingPlr2,
-        ratingPlr1,
+        plr2.opponents,
+        plr2.rating,
+        plr1.rating,
         1 - score,
       );
     }
-
     return [diff1, diff2];
   }
 
@@ -231,9 +240,9 @@ export class Gameplay implements OnStart {
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
 
-      player1elo: (await this.db.get(player1, "rating")).rating,
+      player1elo: this.db.playerStore.getAsync(player1).rating.rating,
       player2elo: player2
-        ? (await this.db.get(player2, "rating")).rating
+        ? this.db.playerStore.getAsync(player2).rating.rating
         : BOT_ELO,
 
       player1eloDiff: 0,
