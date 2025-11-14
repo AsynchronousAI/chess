@@ -145,7 +145,7 @@ export class Gameplay implements OnStart {
   private adjustElo(
     player1: number,
     player2: number,
-    endGame: number, // identical to activeGame.winner
+    endGame: number,
     gameId: string,
   ): [number, number] {
     const player1user = Players.GetPlayerByUserId(player1);
@@ -154,59 +154,65 @@ export class Gameplay implements OnStart {
       : undefined;
     if (!player1user) return [0, 0];
 
-    const plr1 = this.db.playerStore.getAsync(player1user);
-    const plr2 = player2user
-      ? this.db.playerStore.getAsync(player2user)
-      : { rating: { rating: BOT_ELO, rd: 30, vol: 0.01 }, opponents: [] };
-
-    const computeAndSave = (
-      playerUser: any,
-      opponents: (OpponentRating & { gameId: string })[],
-      selfRating: PlayerRating,
-      oppRating: PlayerRating,
-      score: number,
-    ) => {
-      opponents = table.clone(opponents);
-      selfRating = table.clone(selfRating);
-      opponents.push({
-        rating: oppRating.rating,
-        rd: oppRating.rd,
-        gameId,
-        score,
-      });
-
-      const newElo = computeNewRating(selfRating, opponents);
-      newElo.rating = math.clamp(math.floor(newElo.rating), 100, 3500);
-      this.db.playerStore.updateAsync(playerUser, (data) => {
-        data.rating = newElo;
-        return true;
-      });
-
-      return newElo.rating - selfRating.rating;
+    const defaultBot = {
+      rating: { rating: BOT_ELO, rd: 30, vol: 0.01 },
+      opponents: [],
     };
 
     const score = endGame === 1 ? 1 : endGame === 2 ? 0 : 0.5;
 
-    // Player 1’s result (1 = win, 0 = loss, 0.5 = draw)
-    const diff1 = computeAndSave(
-      player1user,
-      plr1.opponents,
-      plr1.rating,
-      plr2.rating,
-      score,
+    let diff1 = 0;
+    let diff2 = 0;
+
+    // Atomic update
+    this.db.playerStore.txAsync(
+      [player1user, player2user] as Player[],
+      (state) => {
+        const p1 = state.get(player1user)!;
+        const p2 = player2user ? state.get(player2user)! : defaultBot;
+
+        const compute = (
+          myRating: PlayerRating,
+          opp: PlayerRating,
+          opponents: OpponentRating[],
+          score: number,
+        ) => {
+          const updatedOpponents = [
+            ...opponents,
+            {
+              rating: opp.rating,
+              rd: opp.rd,
+              gameId,
+              score,
+            },
+          ];
+
+          const newRating = computeNewRating(myRating, updatedOpponents);
+          newRating.rating = math.clamp(
+            math.floor(newRating.rating),
+            100,
+            3500,
+          );
+          const delta = newRating.rating - myRating.rating;
+          return { newRating, delta };
+        };
+
+        // Player 1
+        const r1 = compute(p1.rating, p2.rating, p1.opponents, score);
+        p1.rating = r1.newRating;
+        diff1 = r1.delta;
+
+        // Player 2 (if human)
+        if (player2user) {
+          const r2 = compute(p2.rating, p1.rating, p2.opponents, 1 - score);
+          p2.rating = r2.newRating;
+          diff2 = r2.delta;
+        }
+
+        return true;
+      },
     );
 
-    // Update player 2 if real player
-    let diff2 = 0;
-    if (player2user) {
-      diff2 = computeAndSave(
-        player2user,
-        plr2.opponents,
-        plr2.rating,
-        plr1.rating,
-        1 - score,
-      );
-    }
     return [diff1, diff2];
   }
 
