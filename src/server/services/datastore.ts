@@ -1,28 +1,44 @@
 import { OnStart, Service } from "@flamework/core";
 import { t } from "@rbxts/t";
-import Lyra from "@rbxts/lyra";
 import { Players } from "@rbxts/services";
 import { Event } from "shared/lifecycles";
+import { createCollection } from "@rbxts/lapis";
 
-const store = Lyra.createPlayerStore({
-  name: "players",
-  template: {
+class TotalMap<K, V> {
+  private map = new Map<K, V>();
+
+  get(key: K): V {
+    while (!this.map.has(key)) task.wait();
+    return this.map.get(key)!;
+  }
+
+  set(key: K, value: V) {
+    this.map.set(key, value);
+  }
+
+  delete(key: K) {
+    this.map.delete(key);
+  }
+}
+
+const playerStore = createCollection("players", {
+  defaultData: {
     rating: {
-      rating: 1500,
+      elo: 1500,
       rd: 350,
       vol: 0.06,
     },
     opponents: [],
   },
-  schema: t.strictInterface({
+  validate: t.strictInterface({
     rating: t.strictInterface({
-      rating: t.number,
+      elo: t.number,
       rd: t.number,
       vol: t.number,
     }),
     opponents: t.array(
       t.strictInterface({
-        rating: t.number,
+        elo: t.number,
         rd: t.number,
         score: t.union(t.literal(0), t.literal(0.5), t.literal(1)),
         gameId: t.string,
@@ -33,19 +49,31 @@ const store = Lyra.createPlayerStore({
 
 @Service()
 export class Datastore implements OnStart {
-  public readonly playerStore = store;
+  public players = new TotalMap<
+    Player,
+    Awaited<ReturnType<typeof playerStore.load>>
+  >();
 
   @Event(Players.PlayerAdded)
   onPlayer(player: Player) {
-    store.loadAsync(player);
+    playerStore
+      .load(`${player.UserId}`, [player.UserId])
+      .andThen((document) => {
+        this.players.set(player, document);
+      })
+      .catch((err) => {
+        warn(`Failed to load player data for ${player.UserId}: ${err}`);
+        player.Kick("Failed to load player data");
+      });
   }
   @Event(Players.PlayerRemoving)
   onPlayerLeave(player: Player) {
-    store.unloadAsync(player);
+    this.players.get(player)?.close().catch(warn);
+    this.players.delete(player);
   }
   onStart(): void {
     for (const player of Players.GetPlayers()) {
-      this.onPlayerLeave(player);
+      this.onPlayer(player);
     }
   }
 }

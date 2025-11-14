@@ -2,13 +2,13 @@
 // Defaults follow common choices: rating scale 1500, q = ln(10)/400, conversion factor = 173.7178.
 
 export type PlayerRating = {
-  rating: number; // e.g. 1500
+  elo: number; // e.g. 1500
   rd: number; // rating deviation, e.g. 200
   vol: number; // volatility, e.g. 0.06
 };
 
 export type OpponentRating = {
-  rating: number; // opponent rating
+  elo: number; // opponent rating
   rd: number; // opponent rating deviation
   score: number; // 1 = win, 0.5 = draw, 0 = loss
 };
@@ -53,7 +53,7 @@ export function computeNewRating(
   opponents: OpponentRating[],
   tau = TAU_DEFAULT,
 ): PlayerRating {
-  const mu = toGlicko2Rating(player.rating);
+  const mu = toGlicko2Rating(player.elo);
   const phi = toGlicko2RD(player.rd);
   const sigma = player.vol;
 
@@ -61,7 +61,7 @@ export function computeNewRating(
     // No games this period: only increase RD
     const phiPrime = math.sqrt(phi * phi + sigma * sigma);
     return {
-      rating: player.rating,
+      elo: player.elo,
       rd: fromGlicko2RD(phiPrime),
       vol: sigma,
     };
@@ -71,7 +71,7 @@ export function computeNewRating(
   let vInv = 0;
   let deltaSum = 0;
   for (const opp of opponents) {
-    const mu_j = toGlicko2Rating(opp.rating);
+    const mu_j = toGlicko2Rating(opp.elo);
     const phi_j = toGlicko2RD(opp.rd);
     const gPhi = g(phi_j);
     const EVal = E(mu, mu_j, phi_j);
@@ -145,7 +145,7 @@ export function computeNewRating(
 
   // Convert back
   return {
-    rating: fromGlicko2Rating(muPrime),
+    elo: fromGlicko2Rating(muPrime),
     rd: fromGlicko2RD(phiPrime),
     vol: sigmaPrime,
   };

@@ -155,7 +155,7 @@ export class Gameplay implements OnStart {
     if (!player1user) return [0, 0];
 
     const defaultBot = {
-      rating: { rating: BOT_ELO, rd: 30, vol: 0.01 },
+      rating: { elo: BOT_ELO, rd: 30, vol: 0.01 },
       opponents: [],
     };
 
@@ -164,54 +164,46 @@ export class Gameplay implements OnStart {
     let diff1 = 0;
     let diff2 = 0;
 
-    // Atomic update
-    this.db.playerStore.txAsync(
-      [player1user, player2user] as Player[],
-      (state) => {
-        const p1 = state.get(player1user)!;
-        const p2 = player2user ? state.get(player2user)! : defaultBot;
+    const p1 = { ...this.db.players.get(player1user).read() };
+    const p2 = player2user
+      ? { ...this.db.players.get(player2user).read() }
+      : defaultBot;
 
-        const compute = (
-          myRating: PlayerRating,
-          opp: PlayerRating,
-          opponents: OpponentRating[],
-          score: number,
-        ) => {
-          const updatedOpponents = [
-            ...opponents,
-            {
-              rating: opp.rating,
-              rd: opp.rd,
-              gameId,
-              score,
-            },
-          ];
+    const compute = (
+      myRating: PlayerRating,
+      opp: PlayerRating,
+      opponents: OpponentRating[],
+      score: number,
+    ) => {
+      const updatedOpponents = [
+        ...opponents,
+        {
+          elo: opp.elo,
+          rd: opp.rd,
+          gameId,
+          score,
+        },
+      ];
 
-          const newRating = computeNewRating(myRating, updatedOpponents);
-          newRating.rating = math.clamp(
-            math.floor(newRating.rating),
-            100,
-            3500,
-          );
-          const delta = newRating.rating - myRating.rating;
-          return { newRating, delta };
-        };
+      const newRating = computeNewRating(myRating, updatedOpponents);
+      newRating.elo = math.clamp(math.floor(newRating.elo), 100, 3500);
+      const delta = newRating.elo - myRating.elo;
+      return { newRating, delta };
+    };
 
-        // Player 1
-        const r1 = compute(p1.rating, p2.rating, p1.opponents, score);
-        p1.rating = r1.newRating;
-        diff1 = r1.delta;
+    // Player 1
+    const r1 = compute(p1.rating, p2.rating, p1.opponents, score);
+    p1.rating = r1.newRating;
+    this.db.players.get(player1user).write(p1);
+    diff1 = r1.delta;
 
-        // Player 2 (if human)
-        if (player2user) {
-          const r2 = compute(p2.rating, p1.rating, p2.opponents, 1 - score);
-          p2.rating = r2.newRating;
-          diff2 = r2.delta;
-        }
-
-        return true;
-      },
-    );
+    // Player 2 (if human)
+    if (player2user) {
+      const r2 = compute(p2.rating, p1.rating, p2.opponents, 1 - score);
+      p2.rating = r2.newRating;
+      this.db.players.get(player1user).write(p2);
+      diff2 = r2.delta;
+    }
 
     return [diff1, diff2];
   }
@@ -246,9 +238,9 @@ export class Gameplay implements OnStart {
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
 
-      player1elo: this.db.playerStore.getAsync(player1).rating.rating,
+      player1elo: this.db.players.get(player1).read().rating.elo,
       player2elo: player2
-        ? this.db.playerStore.getAsync(player2).rating.rating
+        ? this.db.players.get(player2).read().rating.elo
         : BOT_ELO,
 
       player1eloDiff: 0,

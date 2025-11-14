@@ -9,7 +9,8 @@
 		"chess:out/client/controllers/GameplayController@GameplayController": "client/controllers/GameplayController@GameplayController",
 		"chess:out/client/controllers/gameplay@Gameplay": "client/controllers/gameplay@Gameplay",
 		"chess:out/server/services/datastore@Datastores": "server/services/datastore@Datastores",
-		"chess:out/server/services/datastore@Datastore": "server/services/datastore@Datastore"
+		"chess:out/server/services/datastore@Datastore": "server/services/datastore@Datastore",
+		"chess:out/server/services/datastore@TotalMap": "server/services/datastore@TotalMap"
 	},
 	"metadata": {}
 }
