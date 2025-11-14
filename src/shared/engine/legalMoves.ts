@@ -12,6 +12,7 @@ export type Move =
       Square,
       (
         branch: BitBoard,
+        skip?: boolean, // this will not apply changes to the bitboard
       ) =>
         | [
             Square /* start square */,
@@ -89,8 +90,8 @@ const CUSTOM_DIRECTIONS: Partial<
       if (isStarting && !BitBoard.hasPiece(board, twoStep)) {
         moves.push([
           twoStep,
-          (branch) => {
-            BitBoard.setEnPassant(branch, oneStep);
+          (branch, skip) => {
+            if (!skip) BitBoard.setEnPassant(branch, oneStep);
           },
         ]);
       }
@@ -113,8 +114,9 @@ const CUSTOM_DIRECTIONS: Partial<
         if (enPassantSquare === newPos) {
           moves.push([
             newPos,
-            (branch) => {
-              BitBoard.setPiece(branch, newPos - dir * 8, Piece.none, 0);
+            (branch, skip) => {
+              if (!skip)
+                BitBoard.setPiece(branch, newPos - dir * 8, Piece.none, 0);
               return [newPos - dir * 8, undefined];
             },
           ]);
@@ -155,8 +157,8 @@ const CUSTOM_DIRECTIONS: Partial<
       /* castle queenside, king goes to c file */
       moves.push([
         BitBoard.getSquareIndex(2, rank),
-        (branch) => {
-          BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8);
+        (branch, skip) => {
+          if (!skip) BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8);
           return [0 + rank * 8, 3 + rank * 8, "castle"];
         },
       ]);
@@ -167,8 +169,8 @@ const CUSTOM_DIRECTIONS: Partial<
     ) {
       moves.push([
         BitBoard.getSquareIndex(6, rank),
-        (branch) => {
-          BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8);
+        (branch, skip) => {
+          if (!skip) BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8);
           return [7 + rank * 8, 5 + rank * 8, "castle"];
         },
       ]);

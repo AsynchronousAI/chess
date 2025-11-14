@@ -32,3 +32,6 @@ export function IsSquareBlack(i: number, j: number): boolean {
 export function GetPieceValues(pieces: Piece[]): number {
   return pieces.reduce((acc, piece) => acc + PieceValues[piece], 0);
 }
+export function IsPromotion(loc: Square, piece: Piece, color: Color) {
+  return piece === Piece.pawn && (color === Color.white ? loc > 55 : loc < 8);
+}

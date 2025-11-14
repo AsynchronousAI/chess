@@ -34,18 +34,20 @@ export class Gameplay implements OnStart {
   private evalBar?: React.RefObject<EvaluationBarRef>;
 
   /* Methods */
-  private findMoveData(from: Square, to: Square) {
-    const allMoves = GetLegalMoves(this.board, from, false);
+  private findMoveData(from: Square, to: Square, board: BitBoard = this.board) {
+    const allMoves = GetLegalMoves(board, from, false);
     const move = allMoves.find((v) => v[0] === to);
     if (!move) return undefined;
     const closure = move[1];
-    const [moved, movedTo, moveType] = closure?.(this.board) || [];
+    const [moved, movedTo, moveType] =
+      closure?.(board, board !== this.board) || [];
     return { moved, movedTo, moveType };
   }
-  private handleCapture(to: Square, color: Color) {
+  private handleCapture(to: Square, color: Color, save: boolean = true) {
     let captured = BitBoard.hasPiece(this.board, to);
-    if (captured) {
+    if (captured && save) {
       const [piece] = BitBoard.getPiece(this.board, to);
+
       if (color === this.activeGame.color) this.player1Taken.push(piece);
       else this.player2Taken.push(piece);
     }
@@ -95,6 +97,9 @@ export class Gameplay implements OnStart {
       Piece.king,
       1 - color,
     )[0];
+
+    if (!opponentsKing) print("No king!");
+
     if (IsSquareAttacked(this.board, opponentsKing, color)) {
       sfx = "Check";
     } else if (moveType === "castle") {
@@ -104,8 +109,7 @@ export class Gameplay implements OnStart {
     }
     return sfx;
   }
-  private updatePGNAndUI(
-    pushPGN: boolean,
+  private pushMove(
     from: Square,
     to: Square,
     promotion: Piece | undefined,
@@ -113,9 +117,7 @@ export class Gameplay implements OnStart {
     sfx: keyof typeof SoundEffects,
     myMove: boolean,
   ) {
-    if (pushPGN) {
-      PGN.move(this.pgn, this.board, from, to, promotion, captured, sfx);
-    }
+    PGN.move(this.pgn, this.board, from, to, promotion, captured, sfx);
     Atoms.CurrentMove(this.pgn.size() - 1);
 
     if (myMove) {
@@ -158,25 +160,26 @@ export class Gameplay implements OnStart {
     newAudio.Ended.Connect(() => newAudio.Destroy());
   }
   public movePiece(
-    from: Square,
-    to: Square,
-    myMove: boolean,
-    promotion?: Piece,
-    pushPGN: boolean = true,
+    move: FullMove,
+    myMove: boolean = false,
     color: Color = myMove ? this.playingAs : 1 - this.playingAs,
+    overrideBoard: BitBoard | undefined = undefined, //  used when we are just visually moving
   ) {
-    const moveData = this.findMoveData(from, to);
+    const [from, to, promotion] = move;
+
+    const moveData = this.findMoveData(from, to, overrideBoard);
     if (!moveData) return;
     const { moved, movedTo, moveType } = moveData;
 
-    const captured = this.handleCapture(to, color);
-    this.moveOrPromotePiece(from, to, promotion, color);
+    const captured = this.handleCapture(to, color, !overrideBoard);
+    if (!overrideBoard) this.moveOrPromotePiece(from, to, promotion, color);
     this.animateBoard(from, to, promotion, color, moved, movedTo);
 
     const sfx = this.determineSFX(moveType, captured, color);
     this.playSFX(sfx);
 
-    this.updatePGNAndUI(pushPGN, from, to, promotion, captured, sfx, myMove);
+    if (!overrideBoard)
+      this.pushMove(from, to, promotion, captured, sfx, myMove);
   }
 
   /* Events */
@@ -232,7 +235,7 @@ export class Gameplay implements OnStart {
   @Event(Events.MoveMade)
   onMoveMade(move: FullMove, turn: Color) {
     if (turn === this.playingAs) return; /* i am already this color */
-    this.movePiece(move[0], move[1], false, move[2]);
+    this.movePiece(move, false);
   }
 
   /* Ref setters */

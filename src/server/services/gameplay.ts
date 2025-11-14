@@ -4,7 +4,7 @@ import { HttpService, Players } from "@rbxts/services";
 import { Event } from "shared/lifecycles";
 import { Events } from "server/network";
 import getOpening from "server/openings/getOpening";
-import { Color, Piece, Square } from "shared/board";
+import { Color, IsPromotion, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard, FEN } from "shared/engine/fen";
@@ -46,7 +46,7 @@ export type Game = {
   mate: number;
 };
 
-const BOT = false;
+const BOT = true;
 const BOT_ELO = 3500;
 
 @Service()
@@ -71,6 +71,13 @@ export class Gameplay implements OnStart {
     const currentTime = os.clock();
 
     /* illegal moves, in future check for promotions also */
+    if (
+      promotion !== undefined &&
+      !IsPromotion(to, ...BitBoard.getPiece(activeGame.board, from))
+    ) {
+      print("illegal promotion");
+      return;
+    }
     if (!found) {
       print("illegal move");
       return;
@@ -112,7 +119,7 @@ export class Gameplay implements OnStart {
     if (activeGame.analysis === "stalemate") {
       activeGame.winner = 3;
     } else if (activeGame.analysis === "checkmate") {
-      activeGame.winner = turn !== activeGame.color ? 1 : 2;
+      activeGame.winner = turn === activeGame.color ? 1 : 2;
     } else if (activeGame.analysis === "insufficent") {
       /* TODO: draw by timeout vs insufficient */
       activeGame.winner = 3;
@@ -171,6 +178,7 @@ export class Gameplay implements OnStart {
     };
 
     const score = endGame === 1 ? 1 : endGame === 2 ? 0 : 0.5;
+
     // Player 1’s result (1 = win, 0 = loss, 0.5 = draw)
     const diff1 = await computeAndSave(
       player1user,

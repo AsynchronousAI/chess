@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "@rbxts/react";
 import {
   Color,
   GetPieceValues,
+  IsPromotion,
   Piece as PieceType,
   Square,
 } from "shared/board";
@@ -12,12 +13,10 @@ import { Frame } from "@rbxts/better-react-components";
 import { BitBoard } from "shared/engine/bitboard";
 import { usePx } from "../usePx";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
-import { Events } from "client/network";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { DefaultBoard, FEN } from "shared/engine/fen";
 import { Explorer } from "./Explorer";
 import { Player } from "./Player";
-import { SoundEffects } from "./sfx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 
@@ -56,50 +55,31 @@ export default function Board() {
     }
 
     const piece = BitBoard.getPiece(board, holdingPiece);
-    if (
-      piece[0] === PieceType.pawn &&
-      (playingAs === Color.white ? location > 55 : location < 8)
-    ) {
+    if (IsPromotion(location, ...piece)) {
       setPromoting(location);
       return;
     }
 
-    gameplay.movePiece(holdingPiece, location, true);
+    gameplay.movePiece([holdingPiece, location, undefined], true);
   };
   const onPromote = (piece?: PieceType) => {
     if (!holdingPiece || !piece) {
       setPromoting(-1);
       return;
     }
-    gameplay.movePiece(holdingPiece, promoting, true, piece);
+    gameplay.movePiece([holdingPiece, promoting, piece], true);
     setPromoting(-1);
   };
-  const onRewind = (moveIndex: number, backwards = false) => {
-    /* TODO: Special moves like castling & en passant animated when rewind */
-    if (!backwards) {
-      chessBoardRef.current?.setBoard(
-        moveIndex === 0 ? DefaultBoard : pgn[moveIndex - 1].state,
-      );
-      task.wait();
-      chessBoardRef.current?.animateBoard(
-        pgn[moveIndex].from,
-        pgn[moveIndex].to,
-        pgn[moveIndex].promotion
-          ? [pgn[moveIndex].promotion, moveIndex % 2]
-          : undefined,
-      );
-    } else {
-      chessBoardRef.current?.setBoard(
-        moveIndex === 0 ? DefaultBoard : pgn[moveIndex + 1].state,
-      );
-      task.wait();
-      chessBoardRef.current?.animateBoard(
-        pgn[moveIndex].to,
-        pgn[moveIndex].from,
-        pgn[moveIndex].promotion ? [PieceType.pawn, moveIndex % 2] : undefined,
-      );
-    }
-    gameplay.playSFX(pgn[moveIndex].moveType as keyof typeof SoundEffects);
+  const onRewind = (moveIndex: number) => {
+    const prevBoard = moveIndex === 0 ? DefaultBoard : pgn[moveIndex - 1].state;
+    chessBoardRef.current?.setBoard(prevBoard);
+    task.wait();
+    gameplay.movePiece(
+      [pgn[moveIndex].from, pgn[moveIndex].to, pgn[moveIndex].promotion],
+      false,
+      BitBoard.getPiece(prevBoard, pgn[moveIndex].from)[1], // moving piece color
+      prevBoard, // temporary!
+    );
     Atoms.CurrentMove(moveIndex);
     Atoms.PossibleMoves([]);
   };
