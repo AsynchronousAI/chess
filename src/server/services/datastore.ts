@@ -3,6 +3,7 @@ import { t } from "@rbxts/t";
 import { Players } from "@rbxts/services";
 import { Event } from "shared/lifecycles";
 import { createCollection } from "@rbxts/lapis";
+import { Color } from "shared/board";
 
 class TotalMap<K, V> {
   private map = new Map<K, V>();
@@ -46,6 +47,37 @@ const playerStore = createCollection("players", {
     ),
   }),
 });
+const gameStore = createCollection("games", {
+  defaultData: {
+    /* Minified version of src/server/services/gameplay.ts#L16 */
+    player1: 0, // userid
+    player2: 0,
+
+    /* Elo */
+    player1elo: 100,
+    player2elo: 100,
+
+    /* Roles */
+    winner: 3, // either 1 or 2 for player, 0 for none, 3 for draw.
+    color: Color.white, // represents player1 color.
+
+    /* board */
+    board: "",
+    opening: "",
+    moves: [],
+  },
+  validate: t.strictInterface({
+    player1: t.number,
+    player2: t.number,
+    player1elo: t.number,
+    player2elo: t.number,
+    winner: t.number,
+    color: t.union(t.literal(Color.white), t.literal(Color.black)),
+    board: t.string,
+    opening: t.string,
+    moves: t.array(t.strictArray(t.number, t.number, t.optional(t.number))),
+  }),
+});
 
 @Service()
 export class Datastore implements OnStart {
@@ -53,6 +85,7 @@ export class Datastore implements OnStart {
     Player,
     Awaited<ReturnType<typeof playerStore.load>>
   >();
+  public games = gameStore;
 
   @Event(Players.PlayerAdded)
   onPlayer(player: Player) {

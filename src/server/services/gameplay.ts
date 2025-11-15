@@ -7,11 +7,11 @@ import getOpening from "server/openings/getOpening";
 import { Color, IsPromotion, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
-import { DefaultBoard, FEN } from "shared/engine/fen";
+import { DefaultBoard } from "shared/engine/fen";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
-import { PGN } from "shared/engine/pgn";
 import { Datastore } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
+import { FullMove } from "shared/network";
 
 export type Game = {
   /* players */
@@ -37,7 +37,7 @@ export type Game = {
 
   /* board */
   board: BitBoard;
-  pgn: PGN;
+  moves: FullMove[];
   opening: string;
 
   /* evaluation */
@@ -88,7 +88,6 @@ export class Gameplay implements OnStart {
     closure?.(activeGame.board);
 
     /* Board move */
-    const captured = BitBoard.hasPiece(activeGame.board, to);
     if (!promotion) {
       BitBoard.movePiece(activeGame.board, from, to);
     } else {
@@ -98,7 +97,7 @@ export class Gameplay implements OnStart {
     BitBoard.flipTurn(activeGame.board);
 
     /* PGN */
-    PGN.move(activeGame.pgn, activeGame.board, from, to, promotion, captured);
+    activeGame.moves.push([from, to, promotion]);
 
     /* Recompute Opening */
     const opening = getOpening(activeGame.board);
@@ -135,6 +134,7 @@ export class Gameplay implements OnStart {
       );
       activeGame.player1eloDiff = player1EloChange;
       activeGame.player2eloDiff = player2EloChange;
+      this.saveGame(gameId);
     }
 
     /* Broadcast */
@@ -208,6 +208,28 @@ export class Gameplay implements OnStart {
     return [diff1, diff2];
   }
 
+  private async saveGame(gameId: string) {
+    const activeGame = this.Games[gameId];
+    const doc = await this.db.games.load(gameId);
+    const save = {
+      player1: activeGame.player1,
+      player2: activeGame.player2,
+      player1elo: activeGame.player1elo,
+      player2elo: activeGame.player2elo,
+      color: activeGame.color,
+      winner: activeGame.winner,
+      opening: activeGame.opening,
+
+      board: buffer.tostring(activeGame.board),
+      moves: activeGame.moves,
+    };
+    print(save);
+
+    doc.write(save);
+
+    doc.close().catch(warn);
+  }
+
   private patchGame(gameId: string, additional: Partial<Game> = {}) {
     const activeGame = this.Games[gameId];
     Events.PatchGame.fire(this.Trackers[gameId], {
@@ -216,7 +238,7 @@ export class Gameplay implements OnStart {
 
       /* client does not need */
       lastMove: undefined,
-      pgn: undefined,
+      moves: undefined,
       board: undefined,
     });
   }
@@ -256,7 +278,7 @@ export class Gameplay implements OnStart {
 
       /* Board */
       board: BitBoard.branch(DefaultBoard),
-      pgn: PGN.create(),
+      moves: [],
       opening: "Starting Position",
 
       /* Evaluation */

@@ -1,4 +1,4 @@
-import { Color, FILES, Piece, Square } from "shared/board";
+import { Color, Piece, Square } from "shared/board";
 import { Notation } from "./notation";
 import { BitBoard } from "./bitboard";
 import { String } from "@rbxts/luau-polyfill";
