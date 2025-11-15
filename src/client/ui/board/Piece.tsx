@@ -11,7 +11,6 @@ import { generatePosition } from "./shared";
 import { IconPack } from "./images";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
-import { FEN } from "shared/engine/fen";
 
 export interface PieceProps {
   pos: [number, number];

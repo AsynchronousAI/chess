@@ -292,9 +292,7 @@ export class Gameplay implements OnStart {
       this.activeGame,
     );
     useInterval(() => {
-      if (activeGameState !== this.activeGame) {
-        setActiveGame(this.activeGame);
-      }
+      setActiveGame({ ...this.activeGame });
     }, 0.1);
     return activeGameState;
   }

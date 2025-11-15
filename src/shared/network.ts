@@ -17,7 +17,9 @@ interface ServerToClientEvents {
   AssignedGame(gameId: string): void;
 }
 
-interface ClientToServerFunctions {}
+interface ClientToServerFunctions {
+  ListPlayerGames(player: Player): Promise<string[]>;
+}
 interface ServerToClientFunctions {}
 
 export const GlobalEvents = Networking.createEvent<

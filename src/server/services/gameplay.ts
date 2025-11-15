@@ -141,7 +141,6 @@ export class Gameplay implements OnStart {
     Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
     this.patchGame(gameId);
   }
-
   private adjustElo(
     player1: number,
     player2: number,
@@ -207,7 +206,6 @@ export class Gameplay implements OnStart {
 
     return [diff1, diff2];
   }
-
   private async saveGame(gameId: string) {
     const activeGame = this.Games[gameId];
     const doc = await this.db.games.load(gameId);
@@ -225,7 +223,6 @@ export class Gameplay implements OnStart {
 
     doc.close().catch(warn);
   }
-
   private patchGame(gameId: string, additional: Partial<Game> = {}) {
     const activeGame = this.Games[gameId];
     Events.PatchGame.fire(this.Trackers[gameId], {
