@@ -10,6 +10,7 @@
         "@rbxts/better-react-components": "latest",
         "@rbxts/charm": "latest",
         "@rbxts/compiler-types": "latest",
+        "@rbxts/flamework-binary-serializer": "^0.7.0",
         "@rbxts/flamework-react-utils": "^1.0.8",
         "@rbxts/lapis": "^0.3.8",
         "@rbxts/luau-polyfill": "^1.1.3",
@@ -88,6 +89,8 @@
     "@rbxts/charm": ["@rbxts/charm@0.10.0", "", {}, "sha512-pcGpNyqNOcJ7r9UbAjFaUqU0F9Q+wCr4/2kUs8L0hh4dVhUN7t6ur4P7zAMzNuMJQG8YP47a9rq0l0/LlhLuow=="],
 
     "@rbxts/compiler-types": ["@rbxts/compiler-types@3.0.0-types.0", "", {}, "sha512-VGOHJPoL7+56NTatMGqQj3K7xWuzEV+aP4QD5vZiHu+bcff3kiTmtoadaF6NkJrmwfFAvbsd4Dg764ZjWNceag=="],
+
+    "@rbxts/flamework-binary-serializer": ["@rbxts/flamework-binary-serializer@0.7.0", "", { "peerDependencies": { "@flamework/core": "*", "rbxts-transformer-flamework": "*" } }, "sha512-vpnSV7l3/4TFBR9eyk2xJEoTxAMTsQINten+PnQwZGM3/MI26zSLzDV3dzLhdfrwI5xGCn3l1465VGwxz3upfQ=="],
 
     "@rbxts/flamework-react-utils": ["@rbxts/flamework-react-utils@1.0.8", "", { "peerDependencies": { "@flamework/components": "*", "@flamework/core": "*", "@rbxts/pretty-react-hooks": "^0.6.1", "@rbxts/react": "*" } }, "sha512-G3Bs3UuIPqa1Ul+cM+4x1hMNY5b3mipw4LCrbOu+xzPW8TT/v0pS8FH1VcxGcj6v4+zZ/Vl0o0viN1zMJHHKTQ=="],
 

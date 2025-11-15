@@ -219,12 +219,8 @@ export class Gameplay implements OnStart {
       color: activeGame.color,
       winner: activeGame.winner,
       opening: activeGame.opening,
-
-      board: buffer.tostring(activeGame.board),
       moves: activeGame.moves,
     };
-    print(save);
-
     doc.write(save);
 
     doc.close().catch(warn);

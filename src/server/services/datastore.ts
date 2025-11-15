@@ -5,23 +5,6 @@ import { Event } from "shared/lifecycles";
 import { createCollection } from "@rbxts/lapis";
 import { Color } from "shared/board";
 
-class TotalMap<K, V> {
-  private map = new Map<K, V>();
-
-  get(key: K): V {
-    while (!this.map.has(key)) task.wait();
-    return this.map.get(key)!;
-  }
-
-  set(key: K, value: V) {
-    this.map.set(key, value);
-  }
-
-  delete(key: K) {
-    this.map.delete(key);
-  }
-}
-
 const playerStore = createCollection("players", {
   defaultData: {
     rating: {
@@ -62,7 +45,6 @@ const gameStore = createCollection("games", {
     color: Color.white, // represents player1 color.
 
     /* board */
-    board: "",
     opening: "",
     moves: [],
   },
@@ -73,12 +55,27 @@ const gameStore = createCollection("games", {
     player2elo: t.number,
     winner: t.number,
     color: t.union(t.literal(Color.white), t.literal(Color.black)),
-    board: t.string,
     opening: t.string,
     moves: t.array(t.strictArray(t.number, t.number, t.optional(t.number))),
   }),
 });
 
+class TotalMap<K, V> {
+  private map = new Map<K, V>();
+
+  get(key: K): V {
+    while (!this.map.has(key)) task.wait();
+    return this.map.get(key)!;
+  }
+
+  set(key: K, value: V) {
+    this.map.set(key, value);
+  }
+
+  delete(key: K) {
+    this.map.delete(key);
+  }
+}
 @Service()
 export class Datastore implements OnStart {
   public players = new TotalMap<

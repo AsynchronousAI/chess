@@ -31,6 +31,7 @@
     "@rbxts/better-react-components": "latest",
     "@rbxts/charm": "latest",
     "@rbxts/compiler-types": "latest",
+    "@rbxts/flamework-binary-serializer": "^0.7.0",
     "@rbxts/flamework-react-utils": "^1.0.8",
     "@rbxts/lapis": "^0.3.8",
     "@rbxts/luau-polyfill": "^1.1.3",
