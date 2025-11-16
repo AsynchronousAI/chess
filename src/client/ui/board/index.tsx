@@ -74,10 +74,11 @@ export default function Board() {
     const prevBoard = moveIndex === 0 ? DefaultBoard : pgn[moveIndex - 1].state;
     chessBoardRef.current?.setBoard(prevBoard);
     task.wait();
+    /* TODO: Check SFX does not play in explorer, since moves are not simulated then attacked squares cannot be calculated. */
     gameplay.movePiece(
       [pgn[moveIndex].from, pgn[moveIndex].to, pgn[moveIndex].promotion],
       false,
-      BitBoard.getPiece(prevBoard, pgn[moveIndex].from)[1], // moving piece color
+      BitBoard.getPiece(prevBoard, pgn[moveIndex].from)[1],
       prevBoard, // temporary!
     );
     Atoms.CurrentMove(moveIndex);

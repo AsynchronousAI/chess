@@ -4,7 +4,6 @@ import { Players } from "@rbxts/services";
 import { Functions } from "client/network";
 import { usePx } from "./hooks/usePx";
 import { usePlayer } from "./hooks/usePlayer";
-import { Color } from "shared/board";
 
 interface PlayerListProps {
   player: number;

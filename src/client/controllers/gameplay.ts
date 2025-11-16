@@ -43,10 +43,14 @@ export class Gameplay implements OnStart {
       closure?.(board, board !== this.board) || [];
     return { moved, movedTo, moveType };
   }
-  private handleCapture(to: Square, color: Color, save: boolean = true) {
-    let captured = BitBoard.hasPiece(this.board, to);
-    if (captured && save) {
-      const [piece] = BitBoard.getPiece(this.board, to);
+  private handleCapture(
+    to: Square,
+    color: Color,
+    board: BitBoard = this.board,
+  ) {
+    let captured = BitBoard.hasPiece(board, to);
+    if (captured && board === this.board) {
+      const [piece] = BitBoard.getPiece(board, to);
 
       if (color === this.activeGame.color) this.player1Taken.push(piece);
       else this.player2Taken.push(piece);
@@ -81,8 +85,8 @@ export class Gameplay implements OnStart {
       this.chessBoard?.current?.animateBoard(
         from,
         to,
-        promotion ? [promotion, color] : undefined,
-        moved ? [moved, movedTo] : undefined,
+        promotion !== undefined ? [promotion, color] : undefined,
+        moved !== undefined ? [moved, movedTo] : undefined,
       );
     }
   }
@@ -90,17 +94,13 @@ export class Gameplay implements OnStart {
     moveType: string | undefined,
     captured: boolean,
     color: Color,
+    board: BitBoard = this.board,
   ): keyof typeof SoundEffects {
     let sfx: keyof typeof SoundEffects = "Move";
-    const opponentsKing = BitBoard.findPiece(
-      this.board,
-      Piece.king,
-      1 - color,
-    )[0];
-
+    const opponentsKing = BitBoard.findPiece(board, Piece.king, 1 - color)[0];
     if (!opponentsKing) print("No king!");
 
-    if (IsSquareAttacked(this.board, opponentsKing, color)) {
+    if (IsSquareAttacked(board, opponentsKing, color)) {
       sfx = "Check";
     } else if (moveType === "castle") {
       sfx = "Castle";
@@ -171,11 +171,11 @@ export class Gameplay implements OnStart {
     if (!moveData) return;
     const { moved, movedTo, moveType } = moveData;
 
-    const captured = this.handleCapture(to, color, !overrideBoard);
+    const captured = this.handleCapture(to, color, overrideBoard);
     if (!overrideBoard) this.moveOrPromotePiece(from, to, promotion, color);
     this.animateBoard(from, to, promotion, color, moved, movedTo);
 
-    const sfx = this.determineSFX(moveType, captured, color);
+    const sfx = this.determineSFX(moveType, captured, color, overrideBoard);
     this.playSFX(sfx);
 
     if (!overrideBoard)
