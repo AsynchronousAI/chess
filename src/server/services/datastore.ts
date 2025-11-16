@@ -2,7 +2,7 @@ import { OnStart, Service } from "@flamework/core";
 import { t } from "@rbxts/t";
 import { Players } from "@rbxts/services";
 import { Event } from "shared/lifecycles";
-import { createCollection } from "@rbxts/lapis";
+import { createCollection, Document } from "@rbxts/lapis";
 import { Color } from "shared/board";
 
 const playerStore = createCollection("players3", {
@@ -66,6 +66,13 @@ const gameStore = createCollection("games", {
   }),
 });
 
+export type DatastoredGame = ReturnType<
+  Awaited<ReturnType<typeof gameStore.load>>["read"]
+>;
+export type DatastoredPlayer = ReturnType<
+  Awaited<ReturnType<typeof playerStore.load>>["read"]
+>;
+
 class TotalMap<K, V> {
   private map = new Map<K, V>();
 
@@ -84,10 +91,7 @@ class TotalMap<K, V> {
 }
 @Service()
 export class Datastore implements OnStart {
-  public players = new TotalMap<
-    Player,
-    Awaited<ReturnType<typeof playerStore.load>>
-  >();
+  public players = new TotalMap<Player, Document<DatastoredPlayer>>();
   public games = gameStore;
 
   @Event(Players.PlayerAdded)

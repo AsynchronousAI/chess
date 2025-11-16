@@ -1,4 +1,5 @@
 import {
+  Button,
   CanvasGroup,
   Frame,
   Image,
@@ -13,6 +14,8 @@ import { usePx } from "./hooks/usePx";
 import { usePlayer } from "./hooks/usePlayer";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import Atoms from "./atoms";
+import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
+import { Gameplay } from "client/controllers/gameplay";
 
 interface PlayerListProps {
   player: number;
@@ -26,26 +29,31 @@ function PlayerListItem({
   p1Name: string;
   p1Thumbnail: string;
 }) {
+  const gameplay = useFlameworkDependency<Gameplay>();
   const px = usePx();
   const [p2Name, p2Thumbnail] = usePlayer(xGame.user);
 
   return (
-    <Frame
+    <Button
       size={new UDim2(1, 0, 0, px(100))}
       noBackground
       cornerRadius={px(4)}
-      padding={px(3)}
+      padding={px(8)}
       aspectRatio={1.3 + 1.3 + 2 + 0.7}
       layoutOrder={-xGame.date}
       stroke={{
         Color: Color3.fromHex("#262522"),
         Thickness: 1,
+        ApplyStrokeMode: "Border",
+      }}
+      overrideRoblox={{
+        Event: { MouseButton1Click: () => gameplay.loadGame(xGame.gameId) },
       }}
     >
       <ListLayout
         direction={"Horizontal"}
         verticalAlign={"Center"}
-        horizontalAlign={"Left"}
+        horizontalAlign={"Center"}
         padding={px(5)}
       />
 
@@ -105,12 +113,19 @@ function PlayerListItem({
         />
       </Frame>
 
-      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={2} noBackground>
+      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={2.4} noBackground>
+        <ListLayout
+          direction={"Vertical"}
+          verticalAlign={"Center"}
+          horizontalAlign={"Center"}
+          padding={px(5)}
+        />
+
         {/* Moves */}
         <Text
-          text={`${xGame.moves} moves`}
+          text={`${math.floor(xGame.moves / 2)} moves`}
           font={"SourceSansSemibold"}
-          textSize={px(20)}
+          textSize={px(18)}
           size={new UDim2(0.8, 0, 0.25, 0)}
           position={new UDim2(0.15, 0, 0.25, 0)}
           noBackground
@@ -135,7 +150,7 @@ function PlayerListItem({
             "en-us",
           )}
           font={"SourceSansSemibold"}
-          textSize={px(20)}
+          textSize={px(18)}
           size={new UDim2(0.8, 0, 0.25, 0)}
           position={new UDim2(0.15, 0, 0.5, 0)}
           noBackground
@@ -152,6 +167,28 @@ function PlayerListItem({
             image={"rbxassetid://10709789505"}
           />
         </Text>
+
+        {/* Opening
+        <Text
+          text={"Queen's Gambit: Accepted"}
+          font={"SourceSansSemibold"}
+          textSize={px(18)}
+          size={new UDim2(0.8, 0, 0.25, 0)}
+          position={new UDim2(0.15, 0, 0.5, 0)}
+          noBackground
+          textColor={new Color3(0.65, 0.65, 0.65)}
+          textAlign={"Left"}
+        >
+          <Image
+            size={new UDim2(0.8, 0, 0.8, 0)}
+            position={new UDim2(-0.1, 0, 0.5, 0)}
+            anchorPoint={new Vector2(0.5, 0.5)}
+            noBackground
+            aspectRatio={1}
+            imageColor={new Color3(0.5, 0.5, 0.5)}
+            image={"rbxassetid://10709781824"}
+          />
+        </Text> */}
       </Frame>
 
       {/* Win / lose indicator */}
@@ -190,7 +227,7 @@ function PlayerListItem({
           }
         />
       </Frame>
-    </Frame>
+    </Button>
   );
 }
 export default function PlayerList(props: PlayerListProps) {

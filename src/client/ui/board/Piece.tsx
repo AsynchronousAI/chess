@@ -60,6 +60,7 @@ export function Piece(props: PieceProps) {
   /* Events */
   const onDown = () => {
     if (
+      gameplay.locked ||
       Atoms.ViewingPlayer() > 0 ||
       props.locked ||
       props.location === undefined ||

@@ -2,7 +2,7 @@ import { Controller, OnStart } from "@flamework/core";
 import { useInterval } from "@rbxts/pretty-react-hooks";
 import { RefObject, useState } from "@rbxts/react";
 import { Players, SoundService } from "@rbxts/services";
-import { Events } from "client/network";
+import { Events, Functions } from "client/network";
 import Atoms from "client/ui/atoms";
 import { ChessBoardRef } from "client/ui/board/Board";
 import { SoundEffects } from "client/ui/board/sfx";
@@ -29,6 +29,7 @@ export class Gameplay implements OnStart {
   private activeGame: Partial<Game> = {};
   private gameId = "";
   private playingAs = Color.white;
+  public locked = false;
 
   private chessBoard?: React.RefObject<ChessBoardRef>;
   private evalBar?: React.RefObject<EvaluationBarRef>;
@@ -136,9 +137,7 @@ export class Gameplay implements OnStart {
     else if (analysis === "timeout") return "on time";
     return "";
   }
-
-  /* Exported Methods */
-  public newGame() {
+  private clearGame() {
     this.chessBoard?.current?.setBoard(BitBoard.branch(DefaultBoard));
     this.evalBar?.current?.setEval(0);
     this.evalBar?.current?.setMate(0);
@@ -150,8 +149,29 @@ export class Gameplay implements OnStart {
     this.player2Taken = [];
     this.pgn.clear();
 
-    Events.NewGame();
     Atoms.Popup((x) => ({ ...x, open: false }));
+  }
+
+  /* Exported Methods */
+  public newGame() {
+    this.clearGame();
+
+    Events.NewGame();
+  }
+  public async loadGame(gameId: string) {
+    this.clearGame();
+    this.locked = true;
+    this.gameId = gameId;
+
+    const partial = await Functions.RequestGame(gameId);
+    this.activeGame = partial;
+
+    this.activeGame.player1time = -1;
+    this.activeGame.player2time = -1;
+
+    for (const [index, move] of pairs(partial.moves)) {
+      this.movePiece(move, false, index % 2);
+    }
   }
   public playSFX(sfx: keyof typeof SoundEffects) {
     const newAudio = new Instance("Sound", SoundService);

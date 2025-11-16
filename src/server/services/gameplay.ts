@@ -9,7 +9,7 @@ import { GetBestMoveAPI } from "shared/engine/api";
 import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard } from "shared/engine/fen";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
-import { Datastore } from "./datastore";
+import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
 
@@ -238,6 +238,7 @@ export class Gameplay implements OnStart {
       opening: activeGame.opening,
       moves: activeGame.moves,
     };
+    print(gameId, save);
     doc.write(save);
 
     doc.close().catch(warn);
@@ -354,6 +355,15 @@ export class Gameplay implements OnStart {
       moves: x.moves,
       date: x.date,
     }));
+  }
+  @Function(Functions.RequestGame)
+  async requestGame(_: Player, gameId: string): Promise<DatastoredGame> {
+    const document = await this.db.games.load(gameId);
+    const savedGame = document.read();
+    print(gameId, savedGame);
+    document.close();
+
+    return savedGame;
   }
 
   /* Timeout checks */

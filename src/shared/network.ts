@@ -1,6 +1,7 @@
 import { Networking } from "@flamework/networking";
 import { Color, Piece, Square } from "./board";
 import { Game } from "server/services/gameplay";
+import { Datastore, DatastoredGame } from "server/services/datastore";
 
 export type FullMove = [
   Square,
@@ -30,6 +31,7 @@ interface ServerToClientEvents {
 
 interface ClientToServerFunctions {
   ListPlayerGames(player: Player): PlayerSavedGame[];
+  RequestGame(gameId: string): DatastoredGame;
 }
 interface ServerToClientFunctions {}
 

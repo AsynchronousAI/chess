@@ -184,6 +184,7 @@ export function Player({
 
       {/* Clock */}
       <Text
+        visible={time >= 0}
         size={new UDim2(0.2, 0, 1, 0)}
         position={new UDim2(0.8, 0, 0, 0)}
         text={formatTime(time)}
