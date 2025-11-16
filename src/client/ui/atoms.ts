@@ -9,6 +9,7 @@ const Atoms = {
   CurrentMove: atom<number>(0),
   HoldingPiece: atom<Square | undefined>(undefined),
   PossibleMoves: atom<Move[]>([]),
+  ViewingPlayer: atom<number>(0) /* userid */,
   Popup: atom<EndgamePopupProps>({
     title: "",
     rating: 0,

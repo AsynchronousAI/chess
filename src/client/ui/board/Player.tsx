@@ -8,6 +8,7 @@ import { Object } from "@rbxts/luau-polyfill";
 import { useInterval } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../hooks/usePx";
 import { usePlayer } from "../hooks/usePlayer";
+import Atoms from "../atoms";
 
 const formatTime = (seconds: number) => {
   /* incase the visual goes negative, in the time
@@ -226,6 +227,16 @@ export function Player({
           visible={isMyTurn}
         />
       </Text>
+
+      {/* Button */}
+      <textbutton
+        Size={new UDim2(1, 0, 1, 0)}
+        TextTransparency={1}
+        BackgroundTransparency={1}
+        Event={{
+          MouseButton1Click: () => Atoms.ViewingPlayer(userId),
+        }}
+      />
     </Frame>
   );
 }

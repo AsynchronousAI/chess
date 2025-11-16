@@ -10,11 +10,12 @@ import PlayerList from "client/ui/playerList";
 
 function GameRoot() {
   const popup = useAtom(Atoms.Popup);
+  const viewingPlayer = useAtom(Atoms.ViewingPlayer);
 
   return (
     <screengui ZIndexBehavior="Sibling" IgnoreGuiInset>
-      <PlayerList player={Players.LocalPlayer.UserId} />
       <Board />
+      {viewingPlayer > 0 && <PlayerList player={Players.LocalPlayer.UserId} />}
       <EndgamePopup {...popup} />
     </screengui>
   );
