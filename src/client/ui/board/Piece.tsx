@@ -59,7 +59,12 @@ export function Piece(props: PieceProps) {
 
   /* Events */
   const onDown = () => {
-    if (props.locked || props.location === undefined || !props.piece) {
+    if (
+      Atoms.ViewingPlayer() > 0 ||
+      props.locked ||
+      props.location === undefined ||
+      !props.piece
+    ) {
       Atoms.Dragging(false);
       return;
     }

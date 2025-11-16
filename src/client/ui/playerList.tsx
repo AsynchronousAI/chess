@@ -17,6 +17,182 @@ import Atoms from "./atoms";
 interface PlayerListProps {
   player: number;
 }
+function PlayerListItem({
+  xGame,
+  p1Name,
+  p1Thumbnail,
+}: {
+  xGame: Awaited<ReturnType<typeof Functions.ListPlayerGames.invoke>>[number];
+  p1Name: string;
+  p1Thumbnail: string;
+}) {
+  const px = usePx();
+  const [p2Name, p2Thumbnail] = usePlayer(xGame.user);
+
+  return (
+    <Frame
+      size={new UDim2(1, 0, 0, px(100))}
+      noBackground
+      cornerRadius={px(4)}
+      padding={px(3)}
+      aspectRatio={1.3 + 1.3 + 2 + 0.7}
+      layoutOrder={-xGame.date}
+      stroke={{
+        Color: Color3.fromHex("#262522"),
+        Thickness: 1,
+      }}
+    >
+      <ListLayout
+        direction={"Horizontal"}
+        verticalAlign={"Center"}
+        horizontalAlign={"Left"}
+        padding={px(5)}
+      />
+
+      {/* player 1 */}
+      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={1.3} noBackground>
+        <Image
+          image={p1Thumbnail}
+          size={new UDim2(0.7, 0, 0.7, 0)}
+          anchorPoint={new Vector2(0.5, 0.5)}
+          position={new UDim2(0.5, 0, 0.4, 0)}
+          aspectRatio={1}
+          background={"#403E39"}
+          cornerRadius={px(5)}
+          stroke={{
+            Color: new Color3(1, 1, 1),
+            Thickness: 2,
+            Transparency: xGame.score === 1 ? 0.5 : 0.75,
+          }}
+        />
+        <Text
+          text={`${p1Name} <font color="rgb(128,128,128)">(${xGame.myRating})</font>`}
+          font={"SourceSansSemibold"}
+          richText
+          textSize={px(15)}
+          size={new UDim2(1, 0, 0.25, 0)}
+          position={new UDim2(0, 0, 0.75, 0)}
+          noBackground
+          textColor={new Color3(1, 1, 1)}
+        />
+      </Frame>
+
+      {/* player 2  */}
+      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={1.3} noBackground>
+        <Image
+          image={p2Thumbnail}
+          size={new UDim2(0.7, 0, 0.7, 0)}
+          anchorPoint={new Vector2(0.5, 0.5)}
+          position={new UDim2(0.5, 0, 0.4, 0)}
+          aspectRatio={1}
+          background={"#403E39"}
+          cornerRadius={px(5)}
+          stroke={{
+            Color: new Color3(1, 1, 1),
+            Thickness: 2,
+            Transparency: xGame.score === 0 ? 0.5 : 0.75,
+          }}
+        />
+        <Text
+          text={`${p2Name} <font color="rgb(128,128,128)">(${xGame.theirRating})</font>`}
+          font={"SourceSansSemibold"}
+          richText
+          textSize={px(16)}
+          size={new UDim2(1, 0, 0.25, 0)}
+          position={new UDim2(0, 0, 0.75, 0)}
+          noBackground
+          textColor={new Color3(1, 1, 1)}
+        />
+      </Frame>
+
+      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={2} noBackground>
+        {/* Moves */}
+        <Text
+          text={`${xGame.moves} moves`}
+          font={"SourceSansSemibold"}
+          textSize={px(20)}
+          size={new UDim2(0.8, 0, 0.25, 0)}
+          position={new UDim2(0.15, 0, 0.25, 0)}
+          noBackground
+          textColor={new Color3(0.65, 0.65, 0.65)}
+          textAlign={"Left"}
+        >
+          <Image
+            size={new UDim2(0.8, 0, 0.8, 0)}
+            position={new UDim2(-0.1, 0, 0.5, 0)}
+            anchorPoint={new Vector2(0.5, 0.5)}
+            noBackground
+            aspectRatio={1}
+            imageColor={new Color3(0.5, 0.5, 0.5)}
+            image={"rbxassetid://10709768019"}
+          />
+        </Text>
+
+        {/* Date */}
+        <Text
+          text={DateTime.fromUnixTimestamp(xGame.date).FormatLocalTime(
+            "LL",
+            "en-us",
+          )}
+          font={"SourceSansSemibold"}
+          textSize={px(20)}
+          size={new UDim2(0.8, 0, 0.25, 0)}
+          position={new UDim2(0.15, 0, 0.5, 0)}
+          noBackground
+          textColor={new Color3(0.65, 0.65, 0.65)}
+          textAlign={"Left"}
+        >
+          <Image
+            size={new UDim2(0.8, 0, 0.8, 0)}
+            position={new UDim2(-0.1, 0, 0.5, 0)}
+            anchorPoint={new Vector2(0.5, 0.5)}
+            noBackground
+            aspectRatio={1}
+            imageColor={new Color3(0.5, 0.5, 0.5)}
+            image={"rbxassetid://10709789505"}
+          />
+        </Text>
+      </Frame>
+
+      {/* Win / lose indicator */}
+      <Text
+        text={xGame.score === 1 ? "1\n0" : xGame.score === 0 ? "0\n1" : "½\n½"}
+        font={"SourceSansSemibold"}
+        textSize={px(20)}
+        size={new UDim2(0.05, 0, 0.5, 0)}
+        position={new UDim2(0, 0, 0.5, 0)}
+        noBackground
+        textColor={new Color3(0.5, 0.5, 0.5)}
+      />
+      <Frame
+        size={new UDim2(0, px(25), 0, px(25))}
+        background={
+          xGame.score === 1
+            ? "#81B64C"
+            : xGame.score === 0
+              ? "#F6412E"
+              : "#909090"
+        }
+        cornerRadius={px(4)}
+      >
+        <Image
+          size={new UDim2(0.8, 0, 0.8, 0)}
+          position={new UDim2(0.5, 0, 0.5, 0)}
+          anchorPoint={new Vector2(0.5, 0.5)}
+          noBackground
+          imageColor={"#262522"}
+          image={
+            xGame.score === 1
+              ? "rbxassetid://10734924532"
+              : xGame.score === 0
+                ? "rbxassetid://10734896206"
+                : "rbxassetid://10723345990"
+          }
+        />
+      </Frame>
+    </Frame>
+  );
+}
 export default function PlayerList(props: PlayerListProps) {
   const px = usePx();
   const [closeButtonTransparency, closeButtonMotion] = useMotion(0.5);
@@ -39,7 +215,6 @@ export default function PlayerList(props: PlayerListProps) {
     Functions.ListPlayerGames.invoke(
       Players.GetPlayerByUserId(props.player)!,
     ).then((x) => {
-      print(x);
       setGames(x);
     });
   }, [props.player]);
@@ -72,7 +247,7 @@ export default function PlayerList(props: PlayerListProps) {
           noBackground
           textColor={new Color3(1, 1, 1)}
           paddingLeft={px(10)}
-          align={"Left"}
+          textAlign={"Left"}
         />
 
         <Frame
@@ -105,16 +280,16 @@ export default function PlayerList(props: PlayerListProps) {
 
       {/* List */}
       <ScrollingFrame
-        scrollbar={{ imageTransparency: 0.8 }}
         noBackground
-        size={new UDim2(1, 0, 0.875, 0)}
-        position={new UDim2(0, 0, 0.125, 0)}
+        size={new UDim2(1, 0, 0.9, 0)}
+        position={new UDim2(0, 0, 0.1, 0)}
         direction={"Y"}
-        canvasSize={new UDim2(1, 0, 0, 0)}
+        scrollbar={{ imageTransparency: 0.8 }}
+        overrideRoblox={{ ScrollBarThickness: 8 }}
+        canvasSize={new UDim2(1, 0, 1, 0)}
         automaticCanvasSize={"Y"}
       >
         <ListLayout
-          padding={px(10)}
           direction={"Vertical"}
           verticalAlign={"Top"}
           horizontalAlign={"Center"}
@@ -122,165 +297,12 @@ export default function PlayerList(props: PlayerListProps) {
         />
 
         {games.map((xGame) => (
-          <Frame
-            size={new UDim2(1, 0, 0, px(100))}
-            background={"#262522"}
-            cornerRadius={px(4)}
-            padding={px(3)}
-            aspectRatio={1.3 + 1.3 + 2 + 0.7}
-            layoutOrder={-xGame.date}
-          >
-            <ListLayout
-              direction={"Horizontal"}
-              verticalAlign={"Center"}
-              horizontalAlign={"Left"}
-              padding={px(5)}
-            />
-
-            {/* player 1 */}
-            <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={1.3} noBackground>
-              <Image
-                image={p1Thumbnail}
-                size={new UDim2(0.7, 0, 0.7, 0)}
-                anchorPoint={new Vector2(0.5, 0.5)}
-                position={new UDim2(0.5, 0, 0.4, 0)}
-                aspectRatio={1}
-                background={"#403E39"}
-                cornerRadius={px(5)}
-                stroke={{
-                  Color: new Color3(1, 1, 1),
-                  Thickness: 2,
-                  Transparency: xGame.score === 1 ? 0.5 : 0.75,
-                }}
-              />
-              <Text
-                text={`${p1Name} <font color="rgb(128,128,128)">(${xGame.myRating})</font>`}
-                font={"SourceSansSemibold"}
-                richText
-                textSize={px(15)}
-                size={new UDim2(1, 0, 0.25, 0)}
-                position={new UDim2(0, 0, 0.75, 0)}
-                noBackground
-                textColor={new Color3(1, 1, 1)}
-              />
-            </Frame>
-
-            {/* player 2  */}
-            <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={1.3} noBackground>
-              <Image
-                image={p1Thumbnail}
-                size={new UDim2(0.7, 0, 0.7, 0)}
-                anchorPoint={new Vector2(0.5, 0.5)}
-                position={new UDim2(0.5, 0, 0.4, 0)}
-                aspectRatio={1}
-                background={"#403E39"}
-                cornerRadius={px(5)}
-                stroke={{
-                  Color: new Color3(1, 1, 1),
-                  Thickness: 2,
-                  Transparency: xGame.score === 0 ? 0.5 : 0.75,
-                }}
-              />
-              <Text
-                text={`${p1Name} <font color="rgb(128,128,128)">(${xGame.theirRating})</font>`}
-                font={"SourceSansSemibold"}
-                richText
-                textSize={px(16)}
-                size={new UDim2(1, 0, 0.25, 0)}
-                position={new UDim2(0, 0, 0.75, 0)}
-                noBackground
-                textColor={new Color3(1, 1, 1)}
-              />
-            </Frame>
-
-            <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={2} noBackground>
-              {/* Moves */}
-              <Text
-                text={`${xGame.moves} moves`}
-                font={"SourceSansSemibold"}
-                textSize={px(20)}
-                size={new UDim2(0.8, 0, 0.25, 0)}
-                position={new UDim2(0.15, 0, 0.25, 0)}
-                noBackground
-                textColor={new Color3(0.65, 0.65, 0.65)}
-                align={"Left"}
-              >
-                <Image
-                  size={new UDim2(0.8, 0, 0.8, 0)}
-                  position={new UDim2(-0.1, 0, 0.5, 0)}
-                  anchorPoint={new Vector2(0.5, 0.5)}
-                  noBackground
-                  aspectRatio={1}
-                  imageColor={new Color3(0.5, 0.5, 0.5)}
-                  image={"rbxassetid://10709768019"}
-                />
-              </Text>
-
-              {/* Date */}
-              <Text
-                text={DateTime.fromUnixTimestamp(xGame.date).FormatLocalTime(
-                  "LL",
-                  "en-us",
-                )}
-                font={"SourceSansSemibold"}
-                textSize={px(20)}
-                size={new UDim2(0.8, 0, 0.25, 0)}
-                position={new UDim2(0.15, 0, 0.5, 0)}
-                noBackground
-                textColor={new Color3(0.65, 0.65, 0.65)}
-                align={"Left"}
-              >
-                <Image
-                  size={new UDim2(0.8, 0, 0.8, 0)}
-                  position={new UDim2(-0.1, 0, 0.5, 0)}
-                  anchorPoint={new Vector2(0.5, 0.5)}
-                  noBackground
-                  aspectRatio={1}
-                  imageColor={new Color3(0.5, 0.5, 0.5)}
-                  image={"rbxassetid://10709789505"}
-                />
-              </Text>
-            </Frame>
-
-            {/* Win / lose indicator */}
-            <Text
-              text={
-                xGame.score === 1 ? "1\n0" : xGame.score === 0 ? "0\n1" : "½\n½"
-              }
-              font={"SourceSansSemibold"}
-              textSize={px(20)}
-              size={new UDim2(0.05, 0, 0.5, 0)}
-              position={new UDim2(0, 0, 0.5, 0)}
-              noBackground
-              textColor={new Color3(0.5, 0.5, 0.5)}
-            />
-            <Frame
-              size={new UDim2(0, px(25), 0, px(25))}
-              background={
-                xGame.score === 1
-                  ? "#81B64C"
-                  : xGame.score === 0
-                    ? "#F6412E"
-                    : "#909090"
-              }
-              cornerRadius={px(4)}
-            >
-              <Image
-                size={new UDim2(0.8, 0, 0.8, 0)}
-                position={new UDim2(0.5, 0, 0.5, 0)}
-                anchorPoint={new Vector2(0.5, 0.5)}
-                noBackground
-                imageColor={"#262522"}
-                image={
-                  xGame.score === 1
-                    ? "rbxassetid://10734924532"
-                    : xGame.score === 0
-                      ? "rbxassetid://10734896206"
-                      : "rbxassetid://10723345990"
-                }
-              />
-            </Frame>
-          </Frame>
+          <PlayerListItem
+            key={xGame.gameId}
+            xGame={xGame}
+            p1Name={p1Name}
+            p1Thumbnail={p1Thumbnail}
+          />
         ))}
       </ScrollingFrame>
     </CanvasGroup>
