@@ -5,7 +5,7 @@ import { Event } from "shared/lifecycles";
 import { createCollection } from "@rbxts/lapis";
 import { Color } from "shared/board";
 
-const playerStore = createCollection("players", {
+const playerStore = createCollection("players3", {
   defaultData: {
     rating: {
       elo: 1500,
@@ -25,7 +25,13 @@ const playerStore = createCollection("players", {
         elo: t.number,
         rd: t.number,
         score: t.union(t.literal(0), t.literal(0.5), t.literal(1)),
+
+        /* Metadata */
         gameId: t.string,
+        user: t.number,
+        myRating: t.number,
+        moves: t.number,
+        date: t.number,
       }),
     ),
   }),

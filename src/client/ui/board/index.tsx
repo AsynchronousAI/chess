@@ -7,11 +7,9 @@ import {
   Square,
 } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
-import Atoms from "../atoms";
 import { Vector, Wood } from "./images";
 import { Frame } from "@rbxts/better-react-components";
 import { BitBoard } from "shared/engine/bitboard";
-import { usePx } from "../usePx";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { ChessBoard, ChessBoardRef } from "./Board";
 import { DefaultBoard, FEN } from "shared/engine/fen";
@@ -19,6 +17,8 @@ import { Explorer } from "./Explorer";
 import { Player } from "./Player";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
+import { usePx } from "../hooks/usePx";
+import Atoms from "../atoms";
 
 export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);

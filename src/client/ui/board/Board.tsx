@@ -14,17 +14,17 @@ import {
   Square,
 } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
-import { usePx } from "../usePx";
 import { IconPack } from "./images";
 import { Promotion } from "./Promotion";
 import { useAtom } from "@rbxts/react-charm";
-import Atoms from "../atoms";
 import { Piece } from "./Piece";
 import { HttpService, Players, RunService } from "@rbxts/services";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Environment } from "@rbxts/ui-labs";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
+import Atoms from "../atoms";
+import { usePx } from "../hooks/usePx";
 
 export interface ChessBoardProps {
   iconPack: IconPack;

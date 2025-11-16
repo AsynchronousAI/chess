@@ -8,7 +8,7 @@ import {
   Text,
 } from "@rbxts/better-react-components";
 import React from "@rbxts/react";
-import { usePx } from "../usePx";
+import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 

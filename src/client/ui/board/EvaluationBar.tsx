@@ -6,7 +6,7 @@ import React, {
 } from "@rbxts/react";
 import { CanvasGroup, Frame, Text } from "@rbxts/better-react-components";
 import { useMotion } from "@rbxts/pretty-react-hooks";
-import { usePx } from "../usePx";
+import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 

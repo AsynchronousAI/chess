@@ -7,6 +7,17 @@ export type FullMove = [
   Square,
   Piece | undefined,
 ]; /* Piece|undefined is promotion. */
+export interface PlayerSavedGame {
+  /* unlike a normal game this just stores information that will be shown to the user */
+  gameId: string;
+  user: number;
+  score: 0 | 0.5 | 1;
+  myRating: number;
+  theirRating: number;
+  moves: number;
+  date: number;
+}
+
 interface ClientToServerEvents {
   MakeMove(gameId: string, move: FullMove): void;
   NewGame(): void;
@@ -18,7 +29,7 @@ interface ServerToClientEvents {
 }
 
 interface ClientToServerFunctions {
-  ListPlayerGames(player: Player): Promise<string[]>;
+  ListPlayerGames(player: Player): PlayerSavedGame[];
 }
 interface ServerToClientFunctions {}
 

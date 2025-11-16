@@ -1,16 +1,16 @@
 import React, { useEffect } from "@rbxts/react";
 import { Color, Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
-import Atoms from "../atoms";
 import { Frame } from "@rbxts/better-react-components";
 import { default as GetLegalMoves } from "shared/engine/legalMoves";
-import { Image } from "../image";
 import { useMotion, useMouse } from "@rbxts/pretty-react-hooks";
-import { usePx } from "../usePx";
 import { generatePosition } from "./shared";
 import { IconPack } from "./images";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
+import Atoms from "../atoms";
+import { usePx } from "../hooks/usePx";
+import { Image } from "../components/image";
 
 export interface PieceProps {
   pos: [number, number];

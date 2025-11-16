@@ -1,15 +1,15 @@
 import React, { Binding } from "@rbxts/react";
 import { Color, Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
-import Atoms from "../atoms";
 import { CanvasGroup, Frame, ListLayout } from "@rbxts/better-react-components";
-import { Image } from "../image";
 import { useMotion } from "@rbxts/pretty-react-hooks";
-import { usePx } from "../usePx";
 import { Motion } from "@rbxts/ripple";
 import { generatePosition } from "./shared";
 import { BitBoard } from "shared/engine/bitboard";
 import { IconPack } from "./images";
+import { Image } from "../components/image";
+import { usePx } from "../hooks/usePx";
+import Atoms from "../atoms";
 
 export interface PromotionProps {
   location: number;

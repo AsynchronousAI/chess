@@ -1,12 +1,13 @@
 import { useEffect, useState } from "@rbxts/react";
 import { Color, Piece, PieceValues } from "shared/board";
-import { usePx } from "../usePx";
 import { Players } from "@rbxts/services";
 import { Frame, Image, Text } from "@rbxts/better-react-components";
 import React from "@rbxts/react";
 import { IconPack, Vector } from "./images";
 import { Object } from "@rbxts/luau-polyfill";
 import { useInterval } from "@rbxts/pretty-react-hooks";
+import { usePx } from "../hooks/usePx";
+import { usePlayer } from "../hooks/usePlayer";
 
 const formatTime = (seconds: number) => {
   /* incase the visual goes negative, in the time
@@ -72,27 +73,12 @@ export function Player({
   isMyTurn: boolean;
 }) {
   const px = usePx();
-  const [name, setName] = useState("Loading..");
-  const [thumbnail, setThumbnail] = useState("");
+  const [name, thumbnail] = usePlayer(userId);
   const [clockIndex, setClockIndex] = useState(0);
 
   useInterval(() => {
     setClockIndex((c) => (c + 1) % clocks.size());
   }, 0.5);
-
-  useEffect(() => {
-    if (userId > 0) {
-      setName(Players.GetNameFromUserIdAsync(userId));
-      const [content, _success] = Players.GetUserThumbnailAsync(
-        userId,
-        Enum.ThumbnailType.HeadShot,
-        Enum.ThumbnailSize.Size420x420,
-      );
-      setThumbnail(content);
-    } else if (userId < 0) {
-      setName("Bot");
-    }
-  }, [userId]);
 
   /* ["a", "a", "b"] into {"a": 2, "b": 1} */
   const groupedPieces = Object.entries(

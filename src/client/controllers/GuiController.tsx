@@ -6,12 +6,14 @@ import { Players } from "@rbxts/services";
 import Atoms from "client/ui/atoms";
 import Board from "client/ui/board";
 import { EndgamePopup } from "client/ui/endgamePopup";
+import PlayerList from "client/ui/playerList";
 
 function GameRoot() {
   const popup = useAtom(Atoms.Popup);
 
   return (
     <screengui ZIndexBehavior="Sibling" IgnoreGuiInset>
+      <PlayerList player={Players.LocalPlayer.UserId} />
       <Board />
       <EndgamePopup {...popup} />
     </screengui>

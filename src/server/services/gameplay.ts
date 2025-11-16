@@ -1,8 +1,8 @@
 import { OnStart, Service } from "@flamework/core";
 import { Object } from "@rbxts/luau-polyfill";
 import { HttpService, Players } from "@rbxts/services";
-import { Event } from "shared/lifecycles";
-import { Events } from "server/network";
+import { Event, Function } from "shared/lifecycles";
+import { Events, Functions } from "server/network";
 import getOpening from "server/openings/getOpening";
 import { Color, IsPromotion, Piece, Square } from "shared/board";
 import { GetBestMoveAPI } from "shared/engine/api";
@@ -11,7 +11,7 @@ import { DefaultBoard } from "shared/engine/fen";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { Datastore } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
-import { FullMove } from "shared/network";
+import { FullMove, PlayerSavedGame } from "shared/network";
 
 export type Game = {
   /* players */
@@ -171,6 +171,7 @@ export class Gameplay implements OnStart {
     const compute = (
       myRating: PlayerRating,
       opp: PlayerRating,
+      oppUserId: number,
       opponents: OpponentRating[],
       score: number,
     ) => {
@@ -179,6 +180,10 @@ export class Gameplay implements OnStart {
         {
           elo: opp.elo,
           rd: opp.rd,
+          user: oppUserId,
+          myRating: myRating.elo,
+          moves: this.Games[gameId].moves.size(),
+          date: os.time(),
           gameId,
           score,
         },
@@ -187,19 +192,33 @@ export class Gameplay implements OnStart {
       const newRating = computeNewRating(myRating, updatedOpponents);
       newRating.elo = math.clamp(math.floor(newRating.elo), 100, 3500);
       const delta = newRating.elo - myRating.elo;
-      return { newRating, delta };
+      return { newRating, delta, updatedOpponents };
     };
 
     // Player 1
-    const r1 = compute(p1.rating, p2.rating, p1.opponents, score);
+    const r1 = compute(
+      p1.rating,
+      p2.rating,
+      player2user?.UserId ?? -1,
+      p1.opponents,
+      score,
+    );
     p1.rating = r1.newRating;
+    p1.opponents = r1.updatedOpponents as typeof p1.opponents;
     this.db.players.get(player1user).write(p1);
     diff1 = r1.delta;
 
     // Player 2 (if human)
     if (player2user) {
-      const r2 = compute(p2.rating, p1.rating, p2.opponents, 1 - score);
+      const r2 = compute(
+        p2.rating,
+        p1.rating,
+        player1user.UserId,
+        p2.opponents,
+        1 - score,
+      );
       p2.rating = r2.newRating;
+      p2.opponents = r2.updatedOpponents as typeof p2.opponents;
       this.db.players.get(player1user).write(p2);
       diff2 = r2.delta;
     }
@@ -320,6 +339,21 @@ export class Gameplay implements OnStart {
     } else {
       this.AwaitingGame.push(player);
     }
+  }
+  @Function(Functions.ListPlayerGames)
+  requestPlayerGames(_: Player, target: Player): PlayerSavedGame[] {
+    const playerData = this.db.players.get(target).read();
+    const opponents = playerData.opponents;
+
+    return opponents.map((x) => ({
+      gameId: x.gameId,
+      user: x.user,
+      score: x.score,
+      myRating: x.myRating,
+      theirRating: x.elo,
+      moves: x.moves,
+      date: x.date,
+    }));
   }
 
   /* Timeout checks */
