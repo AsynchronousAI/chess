@@ -26,7 +26,7 @@ export default function Board() {
   const currentMove = useAtom(Atoms.CurrentMove);
 
   const px = usePx();
-  const iconPack = Wood;
+  const iconPack = Vector;
 
   const chessBoardRef = useRef<ChessBoardRef>(undefined);
   const evalBarRef = useRef<EvaluationBarRef>(undefined);
@@ -34,7 +34,7 @@ export default function Board() {
   const [promoting, setPromoting] = useState<Square>(-1);
 
   const gameplay = useFlameworkDependency<Gameplay>();
-  const [player1taken, player2taken] = gameplay.useTakenPieces();
+  const takenPieces = gameplay.useTakenPieces();
 
   const board = gameplay.useBoard();
   const pgn = gameplay.usePGN();
@@ -129,9 +129,10 @@ export default function Board() {
           time={activeGame.player2time ?? 0}
           color={1 - (activeGame.color ?? Color.white)}
           valueDifference={
-            GetPieceValues(player2taken) - GetPieceValues(player1taken)
+            GetPieceValues(takenPieces[currentMove]?.[1] ?? []) -
+            GetPieceValues(takenPieces[currentMove]?.[0] ?? [])
           }
-          piecesTaken={player2taken}
+          piecesTaken={takenPieces[currentMove]?.[1] ?? []}
           iconPack={iconPack}
           isMyTurn={!isPlayer1Turn}
         />
@@ -142,9 +143,10 @@ export default function Board() {
           time={activeGame.player1time ?? 0}
           color={activeGame.color ?? Color.white}
           valueDifference={
-            GetPieceValues(player1taken) - GetPieceValues(player2taken)
+            GetPieceValues(takenPieces[currentMove]?.[0] ?? []) -
+            GetPieceValues(takenPieces[currentMove]?.[1] ?? [])
           }
-          piecesTaken={player1taken}
+          piecesTaken={takenPieces[currentMove]?.[0] ?? []}
           iconPack={iconPack}
           isMyTurn={isPlayer1Turn}
         />

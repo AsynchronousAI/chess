@@ -21,8 +21,11 @@ import { FullMove } from "shared/network";
 
 @Controller()
 export class Gameplay implements OnStart {
-  private player1Taken: Piece[] = [];
-  private player2Taken: Piece[] = [];
+  private takenPieces: [Piece[], Piece[]][] = [[[], []]];
+  /* [
+    0: [ [pawn, knight], [rook] ] // move 1, player 1 has a pawn + knight, while player 2 has a rook
+    ]
+  */
 
   private board = BitBoard.branch(DefaultBoard);
   private pgn = PGN.create();
@@ -49,12 +52,24 @@ export class Gameplay implements OnStart {
     color: Color,
     board: BitBoard = this.board,
   ) {
-    let captured = BitBoard.hasPiece(board, to);
-    if (captured && board === this.board) {
-      const [piece] = BitBoard.getPiece(board, to);
+    const captured = BitBoard.hasPiece(board, to);
 
-      if (color === this.activeGame.color) this.player1Taken.push(piece);
-      else this.player2Taken.push(piece);
+    if (board === this.board) {
+      const prev: [Piece[], Piece[]] =
+        this.takenPieces.size() > 0
+          ? [
+              [...this.takenPieces[this.takenPieces.size() - 1][0]],
+              [...this.takenPieces[this.takenPieces.size() - 1][1]],
+            ]
+          : [[], []];
+      this.takenPieces.push(prev);
+    }
+
+    if (captured) {
+      const [piece] = BitBoard.getPiece(board, to);
+      const idx = color === this.activeGame.color ? 0 : 1;
+      if (board === this.board)
+        this.takenPieces[this.takenPieces.size() - 1][idx].push(piece);
     }
     return captured;
   }
@@ -145,8 +160,7 @@ export class Gameplay implements OnStart {
     this.board = BitBoard.branch(DefaultBoard);
     this.activeGame = {};
     this.gameId = "";
-    this.player1Taken = [];
-    this.player2Taken = [];
+    this.takenPieces = [];
     this.pgn.clear();
 
     Atoms.Popup((x) => ({ ...x, open: false }));
@@ -268,18 +282,13 @@ export class Gameplay implements OnStart {
 
   /* Hooks */
   public useTakenPieces() {
-    const [player1TakenState, setPlayer1Taken] = useState<Piece[]>([]);
-    const [player2TakenState, setPlayer2Taken] = useState<Piece[]>([]);
+    const [takenPieces, setTakenPieces] = useState<typeof this.takenPieces>([]);
     useInterval(() => {
-      if (
-        player1TakenState !== this.player1Taken ||
-        player2TakenState !== this.player2Taken
-      ) {
-        setPlayer1Taken(this.player1Taken);
-        setPlayer2Taken(this.player2Taken);
+      if (takenPieces !== this.takenPieces) {
+        setTakenPieces(this.takenPieces);
       }
     }, 0.1);
-    return [player1TakenState, player2TakenState];
+    return takenPieces;
   }
   public useBoard(): BitBoard {
     const [board, setBoard] = useState<BitBoard>(this.board);
