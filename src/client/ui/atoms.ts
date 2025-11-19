@@ -6,7 +6,8 @@ import { EndgamePopupProps } from "./endgamePopup";
 
 const Atoms = {
   Dragging: atom<boolean>(false),
-  CurrentMove: atom<number>(0),
+  CurrentMove: atom<Square>(0),
+  CheckedSquare: atom<Square>(-1),
   HoldingPiece: atom<Square | undefined>(undefined),
   PossibleMoves: atom<Move[]>([]),
   ViewingPlayer: atom<number>(0) /* userid */,

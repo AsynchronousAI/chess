@@ -1,7 +1,7 @@
 import { Color, Piece } from "shared/board";
 
 export type IconPack = Record<Color, Partial<Record<Piece, string>>> &
-  Record<"filled" | "unfilled" | "highlighted", Color3>;
+  Record<"filled" | "unfilled" | "highlighted" | "checked", Color3>;
 
 export const Vector: IconPack = {
   [Color.black]: {
@@ -23,6 +23,7 @@ export const Vector: IconPack = {
   filled: Color3.fromHex("#779569"),
   unfilled: Color3.fromHex("#EFEEE7"),
   highlighted: Color3.fromHex("BFDFF5"),
+  checked: Color3.fromHex("f25c5c"),
 };
 export const Wood: IconPack = {
   [Color.black]: {
@@ -44,4 +45,5 @@ export const Wood: IconPack = {
   filled: Color3.fromHex("#B58863"),
   unfilled: Color3.fromHex("#F0D9B5"),
   highlighted: Color3.fromHex("#F3CE8D"),
+  checked: Color3.fromHex("c95454"),
 };

@@ -106,25 +106,6 @@ export class Gameplay implements OnStart {
       );
     }
   }
-  private determineSFX(
-    moveType: string | undefined,
-    captured: boolean,
-    color: Color,
-    board: BitBoard = this.board,
-  ): keyof typeof SoundEffects {
-    let sfx: keyof typeof SoundEffects = "Move";
-    const opponentsKing = BitBoard.findPiece(board, Piece.king, 1 - color)[0];
-    if (!opponentsKing) print("No king!");
-
-    if (IsSquareAttacked(board, opponentsKing, color)) {
-      sfx = "Check";
-    } else if (moveType === "castle") {
-      sfx = "Castle";
-    } else if (captured) {
-      sfx = "Capture";
-    }
-    return sfx;
-  }
   private pushMove(
     from: Square,
     to: Square,
@@ -209,7 +190,30 @@ export class Gameplay implements OnStart {
     if (!overrideBoard) this.moveOrPromotePiece(from, to, promotion, color);
     this.animateBoard(from, to, promotion, color, moved, movedTo);
 
-    const sfx = this.determineSFX(moveType, captured, color, overrideBoard);
+    const opponentsKing = BitBoard.findPiece(
+      overrideBoard ?? this.board,
+      Piece.king,
+      1 - color,
+    )[0];
+    if (!opponentsKing) print("No king!");
+    const check = IsSquareAttacked(
+      overrideBoard ?? this.board,
+      opponentsKing,
+      color,
+    );
+    Atoms.CheckedSquare(check ? opponentsKing : -1);
+
+    /* SFX */
+    let sfx: keyof typeof SoundEffects = "Move";
+
+    if (check) {
+      sfx = "Check";
+    } else if (moveType === "castle") {
+      sfx = "Castle";
+    } else if (captured) {
+      sfx = "Capture";
+    }
+
     this.playSFX(sfx);
 
     if (!overrideBoard)

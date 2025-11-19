@@ -50,6 +50,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     const possibleMoves = useAtom(Atoms.PossibleMoves);
     const pgn = gameplay.usePGN();
     const currentMove = useAtom(Atoms.CurrentMove);
+    const checked = useAtom(Atoms.CheckedSquare);
 
     const px = usePx();
     const containerRef = useRef<Frame>();
@@ -75,6 +76,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     const squareHighlighted = (loc: Square) =>
       pgn[currentMove] &&
       (pgn[currentMove].to === loc || pgn[currentMove].from === loc);
+    const squareChecked = (loc: Square) => checked === loc;
 
     useEventListener(UIS.TouchEnded, onRelease);
     useEventListener(UIS.InputEnded, (input) => {
@@ -139,9 +141,11 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                   background={
                     squareHighlighted(index)
                       ? props.iconPack.highlighted
-                      : colored
-                        ? props.iconPack.filled
-                        : props.iconPack.unfilled
+                      : squareChecked(index)
+                        ? props.iconPack.checked
+                        : colored
+                          ? props.iconPack.filled
+                          : props.iconPack.unfilled
                   }
                   zIndex={1}
                 >
