@@ -389,7 +389,7 @@ function isInsufficientMaterial(board: any): boolean {
 
 export function AnalyzeMates(
   board: BitBoard,
-): "checkmate" | "stalemate" | "insufficent" | "timeout" | "" {
+): "checkmate" | "stalemate" | "insufficent" | "timeout" | "resign" | "" {
   /* NOTE: timeouts are handled in gameplay.ts, this will not analyze timeouts */
 
   const turn = BitBoard.getTurn(board);

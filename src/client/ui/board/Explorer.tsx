@@ -1,5 +1,4 @@
 import {
-  Button,
   CanvasGroup,
   Frame,
   Image,
@@ -11,11 +10,66 @@ import React from "@rbxts/react";
 import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
+import { useMotion } from "@rbxts/pretty-react-hooks";
 
 export interface ExplorerProps {
   opening: string;
   currentMove: number;
   onRewind: (index: number, backwards?: boolean) => void;
+}
+function ExplorerButton({
+  title,
+  image,
+  callback,
+}: {
+  title: string;
+  image: string;
+  callback: () => void;
+}) {
+  const px = usePx();
+  const [scale, scaleMotion] = useMotion(1);
+  return (
+    <Frame
+      size={scale.map((x) => new UDim2(0.15 * x, 0, 0.15, 0))}
+      aspectRatio={scale}
+      cornerRadius={px(2)}
+      background={"#403E39"}
+      visible={true}
+    >
+      <Image
+        size={new UDim2(0.65, 0, 0.65, 0)}
+        anchorPoint={new Vector2(0, 0.5)}
+        position={new UDim2(0, px(10), 0.5, 0)}
+        imageColor={new Color3(0.75, 0.75, 0.75)}
+        noBackground
+        aspectRatio={1}
+        image={image}
+      />
+      <Text
+        text={title}
+        size={new UDim2(1, 0, 1, 0)}
+        font={"SourceSansBold"}
+        textColor={new Color3(0.75, 0.75, 0.75)}
+        noBackground
+        overrideRoblox={{
+          TextTransparency: scale.map((x) => math.map(x, 1, 3, 1, 0)),
+        }}
+        textSize={px(26)}
+        padding={px(5)}
+        paddingLeft={px(20)}
+      />
+      <textbutton
+        Size={new UDim2(1, 0, 1, 0)}
+        BackgroundTransparency={1}
+        Text=""
+        Event={{
+          MouseButton1Click: () => callback(),
+          MouseEnter: () => scaleMotion.spring(3),
+          MouseLeave: () => scaleMotion.spring(1),
+        }}
+      />
+    </Frame>
+  );
 }
 export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
   const gameplay = useFlameworkDependency<Gameplay>();
@@ -41,7 +95,7 @@ export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
       <ScrollingFrame
         layoutOrder={0}
         noBackground
-        size={new UDim2(1, 0, 1, 0)}
+        size={new UDim2(1, 0, 0.85, 0)}
         canvasSize={new UDim2(1, 0, 0, 0)}
         scrollbar={{
           topImage: "rbxassetid://3062506215",
@@ -143,53 +197,16 @@ export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
           })}
       </ScrollingFrame>
 
-      {[
-        "rbxassetid://10734961526",
-        "rbxassetid://10709768114",
-        "rbxassetid://10709768347",
-        "rbxassetid://10734961809",
-      ].map((imageId, i) => (
-        <Frame
-          key={imageId}
-          layoutOrder={i + 1}
-          size={new UDim2(0.15, 0, 0.15, 0)}
-          aspectRatio={1}
-          cornerRadius={px(2)}
-          background={"#403E39"}
-          visible={false}
-        >
-          <Image
-            size={new UDim2(0.75, 0, 0.75, 0)}
-            anchorPoint={new Vector2(0.5, 0.5)}
-            position={new UDim2(0.5, 0, 0.5, 0)}
-            imageColor={new Color3(0.75, 0.75, 0.75)}
-            noBackground
-            image={imageId}
-          />
-          <textbutton
-            Size={new UDim2(1, 0, 1, 0)}
-            BackgroundTransparency={1}
-            Text=""
-            Event={{
-              MouseButton1Click: () => {
-                if (i === 0) {
-                  /* first move */
-                  onRewind(0);
-                } else if (i === 1) {
-                  /* one move back */
-                  if (currentMove > 0) onRewind(currentMove - 1, true);
-                } else if (i === 2) {
-                  /* one move forward */
-                  if (currentMove < pgn.size() - 1) onRewind(currentMove + 1);
-                } else if (i === 3) {
-                  /* last move */
-                  onRewind(pgn.size() - 1);
-                }
-              },
-            }}
-          />
-        </Frame>
-      ))}
+      <ExplorerButton
+        title={"Resign"}
+        image={"rbxassetid://10723375890"}
+        callback={() => gameplay.resign()}
+      />
+      <ExplorerButton
+        title={"Draw"}
+        image={"rbxassetid://13738539975"}
+        callback={() => gameplay.draw()}
+      />
     </CanvasGroup>
   );
 }

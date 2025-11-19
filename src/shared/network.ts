@@ -22,6 +22,8 @@ export interface PlayerSavedGame {
 interface ClientToServerEvents {
   MakeMove(gameId: string, move: FullMove): void;
   NewGame(): void;
+  Resign(gameId: string): void;
+  Draw(gameId: string): void;
 }
 interface ServerToClientEvents {
   PatchGame(gameStats: Partial<Game>): void;

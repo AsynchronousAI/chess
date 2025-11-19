@@ -131,6 +131,8 @@ export class Gameplay implements OnStart {
     else if (analysis === "stalemate") return "by stalemate";
     else if (analysis === "insufficent") return "by insufficient material";
     else if (analysis === "timeout") return "on time";
+    else if (analysis === "resign") return "by resignation";
+
     return "";
   }
   private clearGame() {
@@ -145,6 +147,12 @@ export class Gameplay implements OnStart {
     this.pgn.clear();
 
     Atoms.Popup((x) => ({ ...x, open: false }));
+  }
+  private playSFX(sfx: keyof typeof SoundEffects) {
+    const newAudio = new Instance("Sound", SoundService);
+    newAudio.SoundId = SoundEffects[sfx];
+    newAudio.Play();
+    newAudio.Ended.Connect(() => newAudio.Destroy());
   }
 
   /* Exported Methods */
@@ -167,12 +175,6 @@ export class Gameplay implements OnStart {
     for (const [index, move] of pairs(partial.moves)) {
       this.movePiece(move, false, index % 2);
     }
-  }
-  public playSFX(sfx: keyof typeof SoundEffects) {
-    const newAudio = new Instance("Sound", SoundService);
-    newAudio.SoundId = SoundEffects[sfx];
-    newAudio.Play();
-    newAudio.Ended.Connect(() => newAudio.Destroy());
   }
   public movePiece(
     move: FullMove,
@@ -218,6 +220,12 @@ export class Gameplay implements OnStart {
 
     if (!overrideBoard)
       this.pushMove(from, to, promotion, captured, sfx, myMove);
+  }
+  public resign() {
+    Events.Resign.fire(this.gameId);
+  }
+  public draw() {
+    Events.Draw.fire(this.gameId);
   }
 
   /* Events */

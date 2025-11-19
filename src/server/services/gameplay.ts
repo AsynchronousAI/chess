@@ -57,6 +57,7 @@ export class Gameplay implements OnStart {
 
   constructor(private readonly db: Datastore) {}
 
+  /* Utilities */
   private async move(
     gameId: string,
     from: Square,
@@ -126,20 +127,26 @@ export class Gameplay implements OnStart {
 
     /* If so, then compute elo change */
     if (activeGame.winner !== 0) {
-      const [player1EloChange, player2EloChange] = this.adjustElo(
-        activeGame.player1,
-        activeGame.player2,
-        activeGame.winner,
-        gameId,
-      );
-      activeGame.player1eloDiff = player1EloChange;
-      activeGame.player2eloDiff = player2EloChange;
-      this.saveGame(gameId);
+      this.endGame(gameId);
     }
 
     /* Broadcast */
     Events.MoveMade.fire(this.Trackers[gameId], [from, to, promotion], turn);
     this.patchGame(gameId);
+
+    if (activeGame.winner !== 0) delete this.Games[gameId];
+  }
+  private endGame(gameId: string) {
+    const activeGame = this.Games[gameId];
+    const [player1EloChange, player2EloChange] = this.adjustElo(
+      activeGame.player1,
+      activeGame.player2,
+      activeGame.winner,
+      gameId,
+    );
+    activeGame.player1eloDiff = player1EloChange;
+    activeGame.player2eloDiff = player2EloChange;
+    this.saveGame(gameId);
   }
   private adjustElo(
     player1: number,
@@ -314,6 +321,7 @@ export class Gameplay implements OnStart {
     }
   }
 
+  /* Callbacks */
   @Event(Events.MakeMove)
   onMoveMade(
     player: Player,
@@ -321,6 +329,7 @@ export class Gameplay implements OnStart {
     [from, to, promotion]: [Square, Square, Piece | undefined],
   ) {
     if (
+      /* TODO: player2 can make a shit move on player1s behalf */
       this.Games[gameId]?.player1 !== player.UserId &&
       this.Games[gameId]?.player2 !== player.UserId
     )
@@ -340,6 +349,18 @@ export class Gameplay implements OnStart {
     } else {
       this.AwaitingGame.push(player);
     }
+  }
+  @Event(Events.Resign)
+  resign(player: Player, gameId: string) {
+    const activeGame = this.Games[gameId];
+    if (!activeGame) return;
+
+    activeGame.analysis = "resign";
+    activeGame.winner = player.UserId === activeGame.player1 ? 2 : 1;
+    this.endGame(gameId);
+    this.patchGame(gameId);
+
+    delete this.Games[gameId];
   }
   @Function(Functions.ListPlayerGames)
   requestPlayerGames(_: Player, target: Player): PlayerSavedGame[] {
