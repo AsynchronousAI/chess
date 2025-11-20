@@ -3,6 +3,7 @@ import { Color, Square } from "shared/board";
 
 import { Move } from "shared/engine/legalMoves";
 import { EndgamePopupProps } from "./endgamePopup";
+import { ConfirmationPopupProps } from "./confirmationPopup";
 
 const Atoms = {
   Dragging: atom<boolean>(false),
@@ -11,7 +12,7 @@ const Atoms = {
   HoldingPiece: atom<Square | undefined>(undefined),
   PossibleMoves: atom<Move[]>([]),
   ViewingPlayer: atom<number>(0) /* userid */,
-  Popup: atom<EndgamePopupProps>({
+  EndgamePopup: atom<EndgamePopupProps>({
     title: "",
     rating: 0,
     ratingChange: 0,
@@ -19,6 +20,12 @@ const Atoms = {
     open: false,
     onNew: () => {},
     onRematch: () => {},
+  }),
+  ConfirmationPopup: atom<ConfirmationPopupProps>({
+    title: "",
+    description: "",
+    open: false,
+    onConfirm: () => {},
   }),
 };
 

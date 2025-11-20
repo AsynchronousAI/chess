@@ -1,7 +1,6 @@
 import React from "@rbxts/react";
 import ReactRoblox from "@rbxts/react-roblox";
 import PlayerList from "../playerList";
-import { Players } from "@rbxts/services";
 
 const controls = {};
 

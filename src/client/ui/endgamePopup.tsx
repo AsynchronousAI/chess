@@ -132,7 +132,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
             MouseLeave: () =>
               closeButtonMotion.spring(0.5, { frequency: 0.15 }),
             MouseButton1Click: () =>
-              Atoms.Popup((p) => ({ ...p, open: false })),
+              Atoms.EndgamePopup((p) => ({ ...p, open: false })),
           }}
         />
       </Frame>

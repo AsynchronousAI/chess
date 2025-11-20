@@ -146,7 +146,7 @@ export class Gameplay implements OnStart {
     this.takenPieces = [];
     this.pgn.clear();
 
-    Atoms.Popup((x) => ({ ...x, open: false }));
+    Atoms.EndgamePopup((x) => ({ ...x, open: false }));
   }
   private playSFX(sfx: keyof typeof SoundEffects) {
     const newAudio = new Instance("Sound", SoundService);
@@ -222,7 +222,12 @@ export class Gameplay implements OnStart {
       this.pushMove(from, to, promotion, captured, sfx, myMove);
   }
   public resign() {
-    Events.Resign.fire(this.gameId);
+    Atoms.ConfirmationPopup({
+      title: "Resign?",
+      description: "",
+      onConfirm: () => Events.Resign.fire(this.gameId),
+      open: true,
+    });
   }
   public draw() {
     Events.Draw.fire(this.gameId);
@@ -251,7 +256,7 @@ export class Gameplay implements OnStart {
         title = "You Win!";
       else title = "You Lose!";
 
-      Atoms.Popup({
+      Atoms.EndgamePopup({
         title,
         description: this.getAnalysisDescription(newGame.analysis),
         rating:
