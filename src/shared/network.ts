@@ -23,12 +23,13 @@ interface ClientToServerEvents {
   MakeMove(gameId: string, move: FullMove): void;
   NewGame(): void;
   Resign(gameId: string): void;
-  Draw(gameId: string): void;
+  Draw(gameId: string, state: boolean): void;
 }
 interface ServerToClientEvents {
   PatchGame(gameStats: Partial<Game>): void;
   MoveMade(move: FullMove, turn: Color): void;
   AssignedGame(gameId: string): void;
+  DrawOffered(): void;
 }
 
 interface ClientToServerFunctions {
@@ -36,7 +37,6 @@ interface ClientToServerFunctions {
   RequestGame(gameId: string): DatastoredGame;
 }
 interface ServerToClientFunctions {}
-
 export const GlobalEvents = Networking.createEvent<
   ClientToServerEvents,
   ServerToClientEvents

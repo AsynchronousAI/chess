@@ -6,7 +6,7 @@ import { Events, Functions } from "client/network";
 import Atoms from "client/ui/atoms";
 import { ChessBoardRef } from "client/ui/board/Board";
 import { SoundEffects } from "client/ui/board/sfx";
-import { Event } from "shared/lifecycles";
+import { Event, Function } from "shared/lifecycles";
 import { Game } from "server/services/gameplay";
 import { Color, Piece, Square } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
@@ -132,6 +132,7 @@ export class Gameplay implements OnStart {
     else if (analysis === "insufficent") return "by insufficient material";
     else if (analysis === "timeout") return "on time";
     else if (analysis === "resign") return "by resignation";
+    else if (analysis === "draw") return "draw by agreement";
 
     return "";
   }
@@ -230,10 +231,25 @@ export class Gameplay implements OnStart {
     });
   }
   public draw() {
-    Events.Draw.fire(this.gameId);
+    Atoms.ConfirmationPopup({
+      title: "Draw?",
+      description: "",
+      onConfirm: () => Events.Draw.fire(this.gameId, true),
+      open: true,
+    });
   }
 
   /* Events */
+  @Event(Events.DrawOffered)
+  drawOffered() {
+    Atoms.ConfirmationPopup({
+      title: "Draw?",
+      description: "Opponent offered a draw",
+      onConfirm: () => Events.Draw.fire(this.gameId, true),
+      onCancel: () => Events.Draw.fire(this.gameId, false),
+      open: true,
+    });
+  }
   @Event(Events.AssignedGame)
   assignedGame(gameId: string) {
     this.gameId = gameId;

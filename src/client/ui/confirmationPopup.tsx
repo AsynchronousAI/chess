@@ -15,6 +15,7 @@ export interface ConfirmationPopupProps {
   description: string;
   open: boolean;
   onConfirm: () => void;
+  onCancel?: () => void;
 }
 
 export function ConfirmationPopup(props: ConfirmationPopupProps) {
@@ -92,8 +93,10 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
         cornerRadius={px(5)}
         overrideRoblox={{
           Event: {
-            MouseButton1Click: () =>
-              Atoms.ConfirmationPopup((x) => ({ ...x, open: false })),
+            MouseButton1Click: () => {
+              Atoms.ConfirmationPopup((x) => ({ ...x, open: false }));
+              props.onCancel?.();
+            },
           },
         }}
       />

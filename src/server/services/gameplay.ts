@@ -18,6 +18,9 @@ export type Game = {
   player1: number; // userid
   player2: number;
 
+  player1draw: boolean;
+  player2draw: boolean;
+
   /* Elo */
   player1elo: number;
   player2elo: number;
@@ -46,7 +49,7 @@ export type Game = {
   mate: number;
 };
 
-const BOT = true;
+const BOT = false;
 const BOT_ELO = 3500;
 
 @Service()
@@ -280,6 +283,9 @@ export class Gameplay implements OnStart {
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
 
+      player1draw: false,
+      player2draw: false,
+
       player1elo: this.db.players.get(player1).read().rating.elo,
       player2elo: player2
         ? this.db.players.get(player2).read().rating.elo
@@ -362,6 +368,40 @@ export class Gameplay implements OnStart {
 
     delete this.Games[gameId];
   }
+  @Event(Events.Draw)
+  draw(player: Player, gameId: string, state: boolean) {
+    const activeGame = this.Games[gameId];
+    if (!activeGame) return false;
+
+    if (state === false) {
+      /* draw declined, remove both states */
+      activeGame.player1draw = false;
+      activeGame.player2draw = false;
+    } else if (player.UserId === activeGame.player1) {
+      activeGame.player1draw = true;
+    } else if (player.UserId === activeGame.player2) {
+      activeGame.player2draw = true;
+    }
+
+    if (activeGame.player1draw && activeGame.player2draw) {
+      /* draw accepted! */
+      print("drawn!");
+      activeGame.analysis = "draw";
+      activeGame.winner = 0;
+      this.endGame(gameId);
+      this.patchGame(gameId);
+
+      delete this.Games[gameId];
+    } else if (activeGame.player1draw !== activeGame.player2draw) {
+      /* one player needs to be sent a draw request */
+      const plr = Players.GetPlayerByUserId(
+        activeGame.player1draw ? activeGame.player2 : activeGame.player1,
+      );
+      if (!plr) return;
+      Events.DrawOffered.fire(plr);
+    }
+  }
+
   @Function(Functions.ListPlayerGames)
   requestPlayerGames(_: Player, target: Player): PlayerSavedGame[] {
     const playerData = this.db.players.get(target).read();
