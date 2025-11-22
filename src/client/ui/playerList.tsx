@@ -323,8 +323,7 @@ export default function PlayerList(props: PlayerListProps) {
         direction={"Y"}
         scrollbar={{ imageTransparency: 0.8 }}
         overrideRoblox={{ ScrollBarThickness: 8 }}
-        canvasSize={new UDim2(1, 0, 1, 0)}
-        automaticCanvasSize={"Y"}
+        canvasSize={new UDim2(1, 0, 0, px(100) * games.size())}
       >
         <ListLayout
           direction={"Vertical"}

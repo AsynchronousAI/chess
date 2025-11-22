@@ -54,7 +54,7 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
         text={props.description}
         position={new UDim2(0, 0, 0.125, 0)}
         size={new UDim2(1, 0, 0.1, 0)}
-        textSize={px(16)}
+        overrideRoblox={{ TextScaled: true }}
         font={"SourceSansSemibold"}
         noBackground
         textColor={new Color3(0.7, 0.7, 0.7)}

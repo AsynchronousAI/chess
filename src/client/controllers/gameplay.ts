@@ -148,6 +148,7 @@ export class Gameplay implements OnStart {
     this.pgn.clear();
 
     Atoms.EndgamePopup((x) => ({ ...x, open: false }));
+    Atoms.CheckedSquare(-1);
   }
   private playSFX(sfx: keyof typeof SoundEffects) {
     const newAudio = new Instance("Sound", SoundService);
