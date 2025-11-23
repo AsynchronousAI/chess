@@ -1,3 +1,5 @@
+--!native
+--!optimize 2
 local actor = script:GetActor()
 local name = actor.Name
 if name == "ActorTemplate" then return end

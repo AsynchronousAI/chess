@@ -240,6 +240,7 @@ export class Gameplay implements OnStart {
   }
   private patchGame(gameId: string, additional: Partial<Game> = {}) {
     const activeGame = this.Games[gameId];
+    if (!activeGame) return;
     Events.PatchGame.fire(this.Trackers[gameId], {
       ...activeGame,
       ...additional,
