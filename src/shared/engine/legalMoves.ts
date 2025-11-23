@@ -440,7 +440,7 @@ export function AnalyzeMates(
   | "resign"
   | "draw"
   | "" {
-  /* NOTE: timeouts are handled in gameplay.ts, this will not analyze timeouts */
+  /* NOTE: timeouts, resigns, and draws are handled in gameplay.ts, this will not analyze them */
 
   const turn = BitBoard.getTurn(board);
   const legalMoves = GetAllLegalMoves(board, turn, true);

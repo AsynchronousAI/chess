@@ -77,20 +77,28 @@ local pst = {
 return function (board: buffer)
     local value = 0
     local hash = BitBoard.hash(board)
-
     if transposition[hash] then
         return transposition[hash]
     end
 
-    for _, d in BitBoard.getAllPieces(board) do
-        local square = d[1]
-        local piece = d[2][1]
-        local color = d[2][2]
 
-        local v = pst[piece][square+1] or 0
+    local mate = ""--libs.LegalMoves.AnalyzeMates(board)
+    if mate == "stalemate" then
+        value = 0
+    elseif mate == "checkmate" then
+        value = if BitBoard.getTurn(board) == 1 then -math.huge else math.huge
+    else
+        for _, d in BitBoard.getAllPieces(board) do
+            local square = d[1]
+            local piece = d[2][1]
+            local color = d[2][2]
 
-        value += v * (if 1 == color then 1 else -1)
+            local v = pst[piece][square+1] or 0
+
+            value += v * (if 1 == color then 1 else -1)
+        end
     end
+
 
     transposition[hash] = value
     return value

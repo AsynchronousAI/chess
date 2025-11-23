@@ -5,7 +5,7 @@ import { Event } from "shared/lifecycles";
 import { createCollection, Document } from "@rbxts/lapis";
 import { Color } from "shared/board";
 
-const playerStore = createCollection("players3", {
+const playerStore = createCollection("players4", {
   defaultData: {
     rating: {
       elo: 1500,
@@ -36,7 +36,7 @@ const playerStore = createCollection("players3", {
     ),
   }),
 });
-const gameStore = createCollection("games", {
+const gameStore = createCollection("games2", {
   defaultData: {
     /* Minified version of src/server/services/gameplay.ts#L16 */
     player1: 0, // userid
