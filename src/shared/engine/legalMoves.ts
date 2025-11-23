@@ -1,5 +1,8 @@
 import { Color, IsSquareBlack, Piece, Square } from "shared/board";
 import { BitBoard } from "./bitboard";
+import { SharedTableRegistry } from "@rbxts/services";
+
+const transposition = SharedTableRegistry.GetSharedTable("transposition");
 
 /* Utility functions */
 function isOnBoard(index: number): boolean {
@@ -326,19 +329,54 @@ export default function GetLegalMoves(
 export function GetAllLegalMoves(
   board: BitBoard,
   turn: Color,
-  checks: boolean = true,
+  checks = true,
+  cache = true,
 ): [Square, Square][] {
   const moves: [Square, Square][] = [];
+
+  /* Exists in cache, convert to local table */
+  const transpositionTbl = transposition[BitBoard.hash(board)];
+  if (transpositionTbl !== undefined) {
+    for (const i of $range(
+      1,
+      SharedTable.size(transpositionTbl as SharedTable),
+    )) {
+      const a = (
+        (transpositionTbl as SharedTable)[i] as SharedTable
+      )[1] as number;
+      const b = (
+        (transpositionTbl as SharedTable)[i] as SharedTable
+      )[2] as number;
+      const c = (
+        (transpositionTbl as SharedTable)[i] as SharedTable
+      )[3] as number;
+      if (c !== turn) continue;
+      moves.push([a, b]);
+    }
+    return moves;
+  }
+
+  /* Generate */
+  const sharedCache = new SharedTable();
   for (const [location, [piece, color]] of BitBoard.getAllPieces(board)) {
-    if (color !== turn) continue;
+    const pushToMoves = color === turn;
+    if (!cache && !pushToMoves)
+      continue; /* no need to go through each move, not caching */
+
     for (const nextLocation of GetLegalMoves(board, location, checks)) {
-      moves.push([location, nextLocation[0]]);
+      if (pushToMoves) moves.push([location, nextLocation[0]]);
+      if (cache)
+        sharedCache[SharedTable.size(sharedCache) + 1] = new SharedTable([
+          location,
+          nextLocation[0],
+          color,
+        ]);
     }
   }
 
+  if (cache) transposition[BitBoard.hash(board)] = sharedCache;
   return moves;
 }
-
 function isInsufficientMaterial(board: any): boolean {
   const pieces: Partial<Record<Piece, number>> = {
     [Piece.king]: 0,

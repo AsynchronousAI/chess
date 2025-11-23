@@ -78,6 +78,7 @@ spawnThreads(40)
 return {
     GetBestMoveLocal = function(board: buffer)
         local index = 0;
+        local start =os.clock()
         local bestEval, depthReached, bestMove = minimaxHost(board, true, 3, 0, function(branch, isMaximizing, maxDepth, depth)
             index = (index%#actors)+1
             local tbl = SharedTable.new();
@@ -90,7 +91,7 @@ return {
             return tbl
         end)
 
-        print("depth: ", depthReached, "eval: ", bestEval)
+        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}`)
         return {
             ["move"] = bestMove,
             ["eval"] = bestEval,
