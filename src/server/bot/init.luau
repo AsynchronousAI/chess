@@ -64,7 +64,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
         bestSequence = `{bestSequence}{libs.Notation.encodeSquare(v[1])}{libs.Notation.encodeSquare(v[2])} `
     end
 
-    return bestScore, maxDepthReached, bestMove, bestSequence
+    return bestScore, maxDepthReached, bestMove, bestSequence, #moves
 end
 
 --[[ Actor Pool ]]
@@ -82,14 +82,14 @@ function spawnThreads(threads)
         actors[i] = clone
     end
 end
-spawnThreads(40)
+spawnThreads(50)
 
 --[[ Return ]]
 return {
     GetBestMoveLocal = function(board: buffer)
         local index = 0;
         local start = os.clock()
-        local bestEval, depthReached, bestMove, sequence = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, 3, 0, function(branch, isMaximizing, maxDepth, depth)
+        local bestEval, depthReached, bestMove, sequence, heads = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, 3, 0, function(branch, isMaximizing, maxDepth, depth)
             index = (index%#actors)+1
             local tbl = SharedTable.new();
             tbl.board = buffer.tostring(branch);
@@ -101,7 +101,7 @@ return {
             return tbl
         end)
 
-        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}, moves: {sequence}`)
+        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}, moves: {sequence}, heads: {heads}`)
         return {
             ["move"] = bestMove,
             ["eval"] = bestEval,
