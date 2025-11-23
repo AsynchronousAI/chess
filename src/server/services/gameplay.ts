@@ -7,7 +7,7 @@ import getOpening from "server/openings/getOpening";
 import { Color, IsPromotion, Piece, Square } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard } from "shared/engine/fen";
-import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
+import { AnalyzeMates } from "shared/engine/legalMoves";
 import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
@@ -72,16 +72,15 @@ export class Gameplay implements OnStart {
     const turn = BitBoard.getTurn(activeGame.board);
     const currentTime = os.clock();
 
-    if (!PerformMove(activeGame.board, [from, to, promotion])) {
-      return;
-    }
-
     /* illegal moves, in future check for promotions also */
     if (
       promotion !== undefined &&
       !IsPromotion(to, ...BitBoard.getPiece(activeGame.board, from))
     ) {
-      print("illegal promotion");
+      return;
+    }
+
+    if (!PerformMove(activeGame.board, [from, to, promotion])) {
       return;
     }
 

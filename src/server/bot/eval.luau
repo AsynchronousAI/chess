@@ -89,13 +89,13 @@ return function (board: buffer)
         value = if BitBoard.getTurn(board) == 1 then -math.huge else math.huge
     else
         for _, d in BitBoard.getAllPieces(board) do
-            local square = d[1]
-            local piece = d[2][1]
             local color = d[2][2]
+            local square = if color == 1 then d[1] else 63 - d[1]
+            local piece = d[2][1]
 
             local v = pst[piece][square+1] or 0
 
-            value += v * (if 1 == color then 1 else -1)
+            value += v * (if color == 1 then 1 else -1)
         end
     end
 

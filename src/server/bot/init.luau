@@ -14,10 +14,10 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
 
     local maxDepthReached = depth
     local bestScore = isMaximizing and -math.huge or math.huge
-    local bestMove = nil
 
     local allLegalMoves = libs.LegalMoves.GetAllLegalMoves(board, libs.BitBoard.getTurn(board))
     local moves = moveOrdering(board, allLegalMoves)
+    local bestMove = moves[1] -- at times, bot doesnt want to move (zugzwang). in that case we do first legal move
     local threads = {}
 
     -- Deploy threads
@@ -43,7 +43,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     end
 
     -- Merge threads back together
-    local sequence
+    local sequence = {}
     for index, thread in threads do
         local currentScore = thread.score;
         local childDepth = thread.depth;
