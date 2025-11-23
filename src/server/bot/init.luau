@@ -4,6 +4,8 @@ local libs = require(script.import)
 local eval = require(script.eval)
 local moveOrdering = require(script.moveOrdering)
 
+local DEPTH = if game:GetService("RunService"):IsStudio() then 3 else 4
+
 --[[ Minimax host ]]
 local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     local score = eval(board)
@@ -89,7 +91,7 @@ return {
     GetBestMoveLocal = function(board: buffer)
         local index = 0;
         local start = os.clock()
-        local bestEval, depthReached, bestMove, sequence, heads = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, 3, 0, function(branch, isMaximizing, maxDepth, depth)
+        local bestEval, depthReached, bestMove, sequence, heads = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, DEPTH, 0, function(branch, isMaximizing, maxDepth, depth)
             index = (index%#actors)+1
             local tbl = SharedTable.new();
             tbl.board = buffer.tostring(branch);
