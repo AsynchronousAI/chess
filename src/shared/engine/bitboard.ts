@@ -1,3 +1,5 @@
+//!native
+//!optimize 2
 import { Color, Piece, Square } from "shared/board";
 
 export type BitBoard = buffer & { readonly brand: unique symbol };

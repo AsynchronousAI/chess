@@ -1,3 +1,6 @@
+--!native
+--!optimize 2
+
 local libs = require(script.Parent.import)
 local Piece = libs.Board.Piece
 local BitBoard = libs.BitBoard
@@ -84,7 +87,7 @@ return function (board: buffer)
         local piece = d[2][1]
         local color = d[2][2]
 
-        local v = pst[piece][square+1]
+        local v = pst[piece][square+1] or 0
 
         value += v * (if 1 == color then 1 else -1)
     end

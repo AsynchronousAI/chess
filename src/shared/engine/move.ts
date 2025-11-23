@@ -1,3 +1,5 @@
+//!native
+//!optimize 2
 import { FullMove } from "shared/network";
 import { BitBoard } from "./bitboard";
 import GetLegalMoves from "./legalMoves";

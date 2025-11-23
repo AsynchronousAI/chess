@@ -1,3 +1,5 @@
+//!native
+//!optimize 2
 import { Color, IsSquareBlack, Piece, Square } from "shared/board";
 import { BitBoard } from "./bitboard";
 import { SharedTableRegistry } from "@rbxts/services";
