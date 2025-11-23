@@ -2,6 +2,7 @@ local libs = require(script.Parent.import)
 local Piece = libs.Board.Piece
 local BitBoard = libs.BitBoard
 
+local transposition = game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
 local pst = {
     [Piece.pawn] = {
         198,198,198,198,198,198,198,
@@ -72,6 +73,11 @@ local pst = {
 
 return function (board: buffer)
     local value = 0
+    local hash = BitBoard.hash(board)
+
+    if transposition[hash] then
+        return transposition[hash]
+    end
 
     for _, d in BitBoard.getAllPieces(board) do
         local square = d[1]
@@ -83,5 +89,6 @@ return function (board: buffer)
         value += v * (if 1 == color then 1 else -1)
     end
 
+    transposition[hash] = value
     return value
 end

@@ -2,7 +2,9 @@ import { Color, IsSquareBlack, Piece, Square } from "shared/board";
 import { BitBoard } from "./bitboard";
 import { SharedTableRegistry } from "@rbxts/services";
 
-const transposition = SharedTableRegistry.GetSharedTable("transposition");
+const transposition = SharedTableRegistry.GetSharedTable(
+  "LegalMovesTransposition",
+);
 
 /* Utility functions */
 function isOnBoard(index: number): boolean {
@@ -335,7 +337,8 @@ export function GetAllLegalMoves(
   const moves: [Square, Square][] = [];
 
   /* Exists in cache, convert to local table */
-  const transpositionTbl = transposition[BitBoard.hash(board)];
+  const hash = BitBoard.hash(board);
+  const transpositionTbl = transposition[hash];
   if (transpositionTbl !== undefined) {
     for (const i of $range(
       1,
@@ -374,7 +377,7 @@ export function GetAllLegalMoves(
     }
   }
 
-  if (cache) transposition[BitBoard.hash(board)] = sharedCache;
+  if (cache) transposition[hash] = sharedCache;
   return moves;
 }
 function isInsufficientMaterial(board: any): boolean {
