@@ -12,6 +12,7 @@ import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
+import { act } from "@rbxts/react-roblox";
 
 export type Game = {
   /* players */
@@ -267,6 +268,7 @@ export class Gameplay implements OnStart {
   }
   private evaluate(gameId: string) {
     const activeGame = this.Games[gameId];
+    if (!activeGame) return;
 
     const best = GetBestMove(activeGame.board, false);
     if (BOT && best.move) this.move(gameId, ...best.move);
