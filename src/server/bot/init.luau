@@ -4,7 +4,7 @@ local libs = require(script.import)
 local eval = require(script.eval)
 local moveOrdering = require(script.moveOrdering)
 
-local DEPTH = if game:GetService("RunService"):IsStudio() then 3 else 4
+local DEPTH = if game:GetService("RunService"):IsStudio() then 3 else 3
 
 --[[ Minimax host ]]
 local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
