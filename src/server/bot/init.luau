@@ -23,7 +23,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     -- Deploy threads
     for index, move in moves do
         local branch = libs.BitBoard.branch(board)
-        libs.Move.PerformMove(branch, move, false)
+        libs.Move.PerformMove(branch, move)
 
         local thread = callback(branch, not isMaximizing, maxDepth, depth + 1)
         threads[index] = thread;
@@ -101,7 +101,7 @@ return {
             return tbl
         end)
 
-        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}, sequence: {sequence}`)
+        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}, moves: {sequence}`)
         return {
             ["move"] = bestMove,
             ["eval"] = bestEval,
