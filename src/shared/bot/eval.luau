@@ -72,7 +72,6 @@ local pst = {
 
 return function (board: buffer)
     local value = 0
-    local turn = BitBoard.getTurn(board)
 
     for _, d in BitBoard.getAllPieces(board) do
         local square = d[1]
@@ -81,7 +80,7 @@ return function (board: buffer)
 
         local v = pst[piece][square+1]
 
-        value += v * (if turn == color then 1 else -1)
+        value += v * (if 1 == color then 1 else -1)
     end
 
     return value
