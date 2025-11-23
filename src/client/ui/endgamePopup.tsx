@@ -111,7 +111,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         textColor={new Color3(0.7, 0.7, 0.7)}
       />
 
-      <Frame
+      {/*<Frame
         size={new UDim2(0.075, 0, 0.075, 0)}
         position={new UDim2(0.91, 0, 0.01, 0)}
         noBackground
@@ -135,7 +135,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
               Atoms.EndgamePopup((p) => ({ ...p, open: false })),
           }}
         />
-      </Frame>
+      </Frame>*/}
 
       <Button
         size={new UDim2(0.8, 0, 0.2, 0)}
