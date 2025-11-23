@@ -2,6 +2,7 @@
 --!optimize 2
 local libs = require(script.import)
 local eval = require(script.eval)
+local moveOrdering = require(script.moveOrdering)
 
 --[[ Minimax host ]]
 local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
@@ -15,7 +16,8 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     local bestScore = isMaximizing and -math.huge or math.huge
     local bestMove = nil
 
-    local moves = libs.LegalMoves.GetAllLegalMoves(board, libs.BitBoard.getTurn(board))
+    local allLegalMoves = libs.LegalMoves.GetAllLegalMoves(board, libs.BitBoard.getTurn(board))
+    local moves = moveOrdering(board, allLegalMoves)
     local threads = {}
 
     -- Deploy threads
