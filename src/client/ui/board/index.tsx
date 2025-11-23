@@ -87,6 +87,7 @@ export default function Board() {
 
   /* Events */
   useEffect(() => gameplay.newGame(), []);
+  useEffect(() => setPromoting(-1), [board]);
 
   const isPlayer1Turn =
     pgn.size() === 0

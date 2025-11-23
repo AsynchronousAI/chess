@@ -10,11 +10,13 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local score = eval(board)
 
     if depth >= maxDepth then
-        return score, depth, nil
+        return score, depth, {}
     end
 
     local maxDepthReached = depth
     local bestScore = if isMaximizing then -math.huge else math.huge
+    local bestMove = 0
+    local bestSequence = {}
 
     local allLegalMoves = libs.LegalMoves.GetAllLegalMoves(board, libs.BitBoard.getTurn(board))
     local moves = moveOrdering(board, allLegalMoves)
@@ -23,16 +25,20 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
         local branch = libs.BitBoard.branch(board)
         libs.Move.PerformMove(branch, move, false)
 
-        local currentScore, childDepth, _ = minimax(branch, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+        local currentScore, childDepth, subSequence = minimax(branch, not isMaximizing, maxDepth, depth + 1, alpha, beta)
 
         if isMaximizing then
             if currentScore > bestScore then
                 bestScore = currentScore
+                bestMove = move
+                bestSequence = subSequence
             end
             alpha = math.max(alpha, bestScore)
         else
             if currentScore < bestScore then
                 bestScore = currentScore
+                bestMove = move
+                bestSequence = subSequence
             end
             beta = math.min(beta, bestScore)
         end
@@ -45,11 +51,18 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
         end
     end
 
-    return bestScore, maxDepthReached
+
+    local branchedSequence = {bestMove}
+    for _, move in bestSequence do
+        table.insert(branchedSequence, move)
+    end
+
+    return bestScore, maxDepthReached, branchedSequence
 end
 
 actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
-    local score, depthReached = minimax(buffer.fromstring(tbl.board), tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
+    local score, depthReached, moveSequence = minimax(buffer.fromstring(tbl.board), tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
     tbl.score = score;
     tbl.depth = depthReached;
+    tbl.moveSequence = SharedTable.new(moveSequence);
 end)

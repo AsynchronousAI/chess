@@ -43,20 +43,28 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     end
 
     -- Merge threads back together
+    local sequence
     for index, thread in threads do
         local currentScore = thread.score;
         local childDepth = thread.depth;
         local move = moves[index];
 
-        if (isMaximizing and currentScore > bestScore) or (not isMaximizing and currentScore < bestScore) then
+        if if isMaximizing then currentScore > bestScore else currentScore < bestScore then
             bestScore = currentScore
             bestMove = move
+            sequence = thread.moveSequence
         end
 
         maxDepthReached = math.max(maxDepthReached, childDepth)
     end
 
-    return bestScore, maxDepthReached, bestMove
+    -- Convert to sequence string
+    local bestSequence = `{libs.Notation.encodeSquare(bestMove[1])}{libs.Notation.encodeSquare(bestMove[2])} `
+    for _, v in sequence do
+        bestSequence = `{bestSequence}{libs.Notation.encodeSquare(v[1])}{libs.Notation.encodeSquare(v[2])} `
+    end
+
+    return bestScore, maxDepthReached, bestMove, bestSequence
 end
 
 --[[ Actor Pool ]]
@@ -80,8 +88,8 @@ spawnThreads(40)
 return {
     GetBestMoveLocal = function(board: buffer)
         local index = 0;
-        local start =os.clock()
-        local bestEval, depthReached, bestMove = minimaxHost(board, true, 3, 0, function(branch, isMaximizing, maxDepth, depth)
+        local start = os.clock()
+        local bestEval, depthReached, bestMove, sequence = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, 3, 0, function(branch, isMaximizing, maxDepth, depth)
             index = (index%#actors)+1
             local tbl = SharedTable.new();
             tbl.board = buffer.tostring(branch);
@@ -93,7 +101,7 @@ return {
             return tbl
         end)
 
-        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}`)
+        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}, sequence: {sequence}`)
         return {
             ["move"] = bestMove,
             ["eval"] = bestEval,
