@@ -19,6 +19,7 @@ import { PGN } from "shared/engine/pgn";
 import { EvaluationBarRef } from "client/ui/board/EvaluationBar";
 import { FullMove } from "shared/network";
 
+/* TODO: implement PerformMove, for DRY */
 @Controller()
 export class Gameplay implements OnStart {
   private takenPieces: [Piece[], Piece[]][] = [[[], []]];

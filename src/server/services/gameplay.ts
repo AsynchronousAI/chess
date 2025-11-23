@@ -12,7 +12,7 @@ import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
 import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
-import { act } from "@rbxts/react-roblox";
+import { PerformMove } from "shared/engine/move";
 
 export type Game = {
   /* players */
@@ -69,11 +69,12 @@ export class Gameplay implements OnStart {
     promotion?: Piece,
   ) {
     const activeGame = this.Games[gameId];
-    const legalMoves = GetLegalMoves(activeGame.board, from, true);
-    const found = legalMoves.find((move) => move[0] === to);
     const turn = BitBoard.getTurn(activeGame.board);
-
     const currentTime = os.clock();
+
+    if (!PerformMove(activeGame.board, [from, to, promotion])) {
+      return;
+    }
 
     /* illegal moves, in future check for promotions also */
     if (
@@ -83,23 +84,6 @@ export class Gameplay implements OnStart {
       print("illegal promotion");
       return;
     }
-    if (!found) {
-      print("illegal move");
-      return;
-    }
-
-    /* Special moves, castling & en passant */
-    const closure = found[1];
-    closure?.(activeGame.board);
-
-    /* Board move */
-    if (!promotion) {
-      BitBoard.movePiece(activeGame.board, from, to);
-    } else {
-      BitBoard.setPiece(activeGame.board, from, 0, 0);
-      BitBoard.setPiece(activeGame.board, to, promotion, turn);
-    }
-    BitBoard.flipTurn(activeGame.board);
 
     /* PGN */
     activeGame.moves.push([from, to, promotion]);
