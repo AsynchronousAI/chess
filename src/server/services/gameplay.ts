@@ -5,7 +5,7 @@ import { Event, Function } from "shared/lifecycles";
 import { Events, Functions } from "server/network";
 import getOpening from "server/openings/getOpening";
 import { Color, IsPromotion, Piece, Square } from "shared/board";
-import { GetBestMoveAPI } from "shared/engine/api";
+import { GetBestMove } from "shared/engine/bot";
 import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard } from "shared/engine/fen";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
@@ -268,7 +268,7 @@ export class Gameplay implements OnStart {
   private evaluate(gameId: string) {
     const activeGame = this.Games[gameId];
 
-    const best = GetBestMoveAPI(activeGame.board);
+    const best = GetBestMove(activeGame.board, false);
     if (BOT && best.move) this.move(gameId, ...best.move);
 
     this.patchGame(gameId, {
