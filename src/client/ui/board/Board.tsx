@@ -72,6 +72,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
         props.onMove(hoveringSquare);
       }
       Atoms.Dragging(false);
+      setHoveringSquare(undefined);
     };
     const squareHighlighted = (loc: Square) =>
       pgn[currentMove] &&
