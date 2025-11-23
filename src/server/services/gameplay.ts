@@ -5,7 +5,6 @@ import { Event, Function } from "shared/lifecycles";
 import { Events, Functions } from "server/network";
 import getOpening from "server/openings/getOpening";
 import { Color, IsPromotion, Piece, Square } from "shared/board";
-import { GetBestMove } from "shared/engine/bot";
 import { BitBoard } from "shared/engine/bitboard";
 import { DefaultBoard } from "shared/engine/fen";
 import GetLegalMoves, { AnalyzeMates } from "shared/engine/legalMoves";
@@ -13,6 +12,7 @@ import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
 import { PerformMove } from "shared/engine/move";
+import { GetBestMove } from "server/bots";
 
 export type Game = {
   /* players */
@@ -254,7 +254,7 @@ export class Gameplay implements OnStart {
     const activeGame = this.Games[gameId];
     if (!activeGame) return;
 
-    const best = GetBestMove(activeGame.board, true);
+    const best = GetBestMove(activeGame.board, false);
     if (BOT && best.move) this.move(gameId, ...best.move);
 
     this.patchGame(gameId, {

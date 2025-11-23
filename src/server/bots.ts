@@ -1,9 +1,8 @@
-import { BitBoard } from "./bitboard";
+import { BitBoard } from "../shared/engine/bitboard";
 import { HttpService } from "@rbxts/services";
-import { Notation } from "./notation";
-import { FEN } from "./fen";
-import { GetBestMoveLocal } from "shared/bot";
-import { BestMoveResponse } from "shared/bot/types";
+import { Notation } from "../shared/engine/notation";
+import { FEN } from "../shared/engine/fen";
+import { BestMoveResponse, GetBestMoveLocal } from "./bot";
 
 function bestMoveAPI(board: BitBoard): BestMoveResponse {
   const fen = FEN.toFEN(board);

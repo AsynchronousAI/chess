@@ -1,9 +1,11 @@
---!native
---!optimize 2
-local libs = require(script.import)
-local eval = require(script.eval)
+local actor = script:GetActor()
+local name = actor.Name
+if name == "ActorTemplate" then return end
 
-function minimax(board, isMaximizing, maxDepth, depth)
+local libs = require(script.Parent.Parent.Parent.import)
+local eval = require(script.Parent.Parent.Parent.eval)
+
+local function minimax(board, isMaximizing, maxDepth, depth)
     local score = eval(board)
 
     if depth >= maxDepth then
@@ -12,7 +14,6 @@ function minimax(board, isMaximizing, maxDepth, depth)
 
     local maxDepthReached = depth
     local bestScore = isMaximizing and -math.huge or math.huge
-    local bestMove = nil
 
     local moves = libs.LegalMoves.GetAllLegalMoves(board, libs.BitBoard.getTurn(board))
     for _, move in moves do
@@ -23,26 +24,16 @@ function minimax(board, isMaximizing, maxDepth, depth)
 
         if (isMaximizing and currentScore > bestScore) or (not isMaximizing and currentScore < bestScore) then
             bestScore = currentScore
-            bestMove = move
         end
 
         maxDepthReached = math.max(maxDepthReached, childDepth)
     end
 
-    return bestScore, maxDepthReached, bestMove
+    return bestScore, maxDepthReached
 end
 
-
-return {
-    GetBestMoveLocal = function(board: buffer)
-        local bestEval, depthReached, bestMove = minimax(board, true, 3, 0)
-
-        print("depth: ", depthReached, "eval: ", bestEval)
-        return {
-            ["move"] = bestMove,
-            ["eval"] = bestEval,
-            ["depth"] = depthReached,
-            ["mate"] = 0,
-        }
-    end,
-}
+actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
+    local score, depthReached = minimax(buffer.fromstring(tbl.board), tbl.isMaximizing, tbl.maxDepth, tbl.depth);
+    tbl.score = score;
+    tbl.depth = depthReached;
+end)
