@@ -36,19 +36,28 @@ export function Piece(props: PieceProps) {
     .map((v) => new UDim2(0, v.X, 0, v.Y));
 
   const [offsetY, offsetYMotion] = useMotion(0);
+  const [rotation, rotationMotion] = useMotion(0);
 
   const [pos, posMotion] = useMotion(
     generatePosition(props.pos, props.playingAs),
   );
-  useEffect(
-    () =>
-      posMotion.tween(generatePosition(props.pos, props.playingAs), {
-        style: Enum.EasingStyle.Quint,
-        time: 0.2,
-      }),
+  useEffect(() => {
+    const generated = generatePosition(props.pos, props.playingAs);
+    if (generated === pos.getValue()) return;
 
-    [props.pos],
-  );
+    posMotion.tween(generated, {
+      style: Enum.EasingStyle.Quint,
+      time: 0.2,
+    });
+    /*rotationMotion.tween(20, {
+      time: 0.1,
+    });
+    task.delay(0.1, () => {
+      rotationMotion.tween(0, {
+        time: 0.1,
+      });
+    });*/
+  }, [props.pos]);
 
   /* Block data */
   const image = props.piece
@@ -90,6 +99,7 @@ export function Piece(props: PieceProps) {
       <Frame
         position={dragging && holdingPiece === props.location ? mousePos : pos}
         size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+        overrideRoblox={{ Rotation: rotation }}
         noBackground
         anchorPoint={
           dragging && holdingPiece === props.location

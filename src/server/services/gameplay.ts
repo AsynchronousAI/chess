@@ -254,7 +254,7 @@ export class Gameplay implements OnStart {
     const activeGame = this.Games[gameId];
     if (!activeGame) return;
 
-    const best = GetBestMove(activeGame.board, false);
+    const best = GetBestMove(activeGame.board, true);
     if (BOT && best.move) this.move(gameId, ...best.move);
 
     this.patchGame(gameId, {
