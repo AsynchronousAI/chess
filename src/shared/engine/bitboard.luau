@@ -55,7 +55,7 @@ function BitBoard.getAllPieces(board)
 	local pieces = {}
 	for rank = 0, 7 do
 		local index = rank * 8
-		for file = 0, 8 do
+		for file = 0, 7 do
 		    local piece = buffer.readu8(board, index);
 			if (piece ~= 0) then
 			    local pieceInfo = binaryToPiece(piece)

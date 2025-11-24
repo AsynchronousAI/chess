@@ -2,7 +2,7 @@
 //!optimize 2
 import { FullMove } from "shared/network";
 import { BitBoard } from "./bitboard";
-import GetLegalMoves from "./legalMoves";
+import GetLegalMoves, { MoveExecutors } from "./legalMoves";
 
 export function PerformMove(board: BitBoard, move: FullMove, flipTurn = true) {
   const legalMoves = GetLegalMoves(board, move[0], true);
@@ -14,8 +14,11 @@ export function PerformMove(board: BitBoard, move: FullMove, flipTurn = true) {
   }
 
   /* Special moves, castling & en passant */
-  const closure = found[1];
-  closure?.(board);
+  const moveType = found[1];
+  const executor = MoveExecutors[moveType];
+  if (executor) {
+    executor(board, move[0], move[1]);
+  }
 
   /* Board move */
   if (!move[2]) {

@@ -14,6 +14,7 @@ import { DefaultBoard } from "shared/engine/fen";
 import GetLegalMoves, {
   AnalyzeMates,
   IsSquareAttacked,
+  MoveExecutors,
 } from "shared/engine/legalMoves";
 import { PGN } from "shared/engine/pgn";
 import { EvaluationBarRef } from "client/ui/board/EvaluationBar";
@@ -43,10 +44,11 @@ export class Gameplay implements OnStart {
     const allMoves = GetLegalMoves(board, from, false);
     const move = allMoves.find((v) => v[0] === to);
     if (!move) return undefined;
-    const closure = move[1];
-    const [moved, movedTo, moveType] =
-      closure?.(board, board !== this.board) || [];
-    return { moved, movedTo, moveType };
+    const moveType = move[1];
+    const executor = MoveExecutors[moveType];
+    const [moved, movedTo, sfxType] =
+      executor?.(board, from, to, board !== this.board) || [];
+    return { moved, movedTo, moveType: sfxType };
   }
   private handleCapture(
     to: Square,

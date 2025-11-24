@@ -10,10 +10,68 @@ local BitBoard = require(script.Parent.bitboard).BitBoard
 local SharedTableRegistry = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").SharedTableRegistry
 local transposition = SharedTableRegistry:GetSharedTable("LegalMovesTransposition")
 
+-- Move Type Enum
+local MoveType = {
+	Normal = 0,
+	EnPassant = 1,
+	CastleKingside = 2,
+	CastleQueenside = 3,
+	PawnDoubleMove = 4,
+}
+
 -- Utility functions
 local function isOnBoard(index)
 	return index >= 0 and index < 64
 end
+
+-- Shared Move Executors
+local MoveExecutors = {
+	[MoveType.Normal] = function(branch, from, to, skip)
+		-- Normal moves don't need special handling
+		return nil
+	end,
+
+	[MoveType.EnPassant] = function(branch, from, to, skip)
+		if not skip then
+			local piece = BitBoard.getPiece(branch, from)
+			local dir = if piece[2] == 0 then 1 else -1
+			local capturedPawnSquare = to - dir * 8
+			BitBoard.setPiece(branch, capturedPawnSquare, Piece.none, 0)
+		end
+		local dir = if BitBoard.getPiece(branch, from)[2] == 0 then 1 else -1
+		return { to - dir * 8, nil }
+	end,
+
+	[MoveType.CastleKingside] = function(branch, from, to, skip)
+		if not skip then
+			local rank = BitBoard.separateSquareIndex(from)[2]
+			local rookFrom = 7 + rank * 8
+			local rookTo = 5 + rank * 8
+			BitBoard.movePiece(branch, rookFrom, rookTo)
+		end
+		local rank = BitBoard.separateSquareIndex(from)[2]
+		return { 7 + rank * 8, 5 + rank * 8, "castle" }
+	end,
+
+	[MoveType.CastleQueenside] = function(branch, from, to, skip)
+		if not skip then
+			local rank = BitBoard.separateSquareIndex(from)[2]
+			local rookFrom = 0 + rank * 8
+			local rookTo = 3 + rank * 8
+			BitBoard.movePiece(branch, rookFrom, rookTo)
+		end
+		local rank = BitBoard.separateSquareIndex(from)[2]
+		return { 0 + rank * 8, 3 + rank * 8, "castle" }
+	end,
+
+	[MoveType.PawnDoubleMove] = function(branch, from, to, skip)
+		if not skip then
+			local oneStep = from + (if BitBoard.getPiece(branch, from)[2] == 0 then 8 else -8)
+			BitBoard.setEnPassant(branch, oneStep)
+		end
+		return nil
+	end,
+}
 
 -- Direction Rules
 local SLIDE_DIRECTIONS = {
@@ -37,17 +95,13 @@ local CUSTOM_DIRECTIONS = {
 		local oneStep = pos + dir * 8
 		local onBoard = isOnBoard(oneStep)
 		if onBoard and not BitBoard.hasPiece(board, oneStep) then
-			table.insert(moves, { oneStep })
+			table.insert(moves, { oneStep, MoveType.Normal })
 
 			-- Two steps from start
 			local twoStep = oneStep + dir * 8
 			local isStarting = pos >= startRank * 8 and pos < startRank * 8 + 8
 			if isStarting and not BitBoard.hasPiece(board, twoStep) then
-				table.insert(moves, { twoStep, function(branch, skip)
-					if not skip then
-						BitBoard.setEnPassant(branch, oneStep)
-					end
-				end })
+				table.insert(moves, { twoStep, MoveType.PawnDoubleMove })
 			end
 		end
 
@@ -66,16 +120,11 @@ local CUSTOM_DIRECTIONS = {
 
 			local target = BitBoard.getPiece(board, newPos)
 			if target[1] ~= 0 and target[2] ~= piece[2] then
-				table.insert(moves, { newPos })
+				table.insert(moves, { newPos, MoveType.Normal })
 			else
 				local enPassantSquare = BitBoard.getEnPassant(board)
 				if enPassantSquare == newPos then
-					table.insert(moves, { newPos, function(branch, skip)
-						if not skip then
-							BitBoard.setPiece(branch, newPos - dir * 8, Piece.none, 0)
-						end
-						return { newPos - dir * 8, nil }
-					end })
+					table.insert(moves, { newPos, MoveType.EnPassant })
 				end
 			end
 		end
@@ -104,20 +153,10 @@ local CUSTOM_DIRECTIONS = {
 		end
 		if BitBoard.getCastlingRights(board, piece[2], true) and isLegalCastle({ 1, 2, 3 }, { 2, 3, 4 }) then
 			-- castle queenside, king goes to c file
-			table.insert(moves, { BitBoard.getSquareIndex(2, rank), function(branch, skip)
-				if not skip then
-					BitBoard.movePiece(branch, 0 + rank * 8, 3 + rank * 8)
-				end
-				return { 0 + rank * 8, 3 + rank * 8, "castle" }
-			end })
+			table.insert(moves, { BitBoard.getSquareIndex(2, rank), MoveType.CastleQueenside })
 		end
 		if BitBoard.getCastlingRights(board, piece[2], false) and isLegalCastle({ 5, 6 }, { 4, 5, 6 }) then
-			table.insert(moves, { BitBoard.getSquareIndex(6, rank), function(branch, skip)
-				if not skip then
-					BitBoard.movePiece(branch, 7 + rank * 8, 5 + rank * 8)
-				end
-				return { 7 + rank * 8, 5 + rank * 8, "castle" }
-			end })
+			table.insert(moves, { BitBoard.getSquareIndex(6, rank), MoveType.CastleKingside })
 		end
 		return moves
 	end,
@@ -187,6 +226,7 @@ function IsSquareAttacked(board, target, attacker)
 	end
 	return Piece.none
 end
+
 local function GetLegalMoves(board, from, checks, turn)
 	checks = checks or true
 	turn = turn or BitBoard.getTurn(board)
@@ -202,13 +242,16 @@ local function GetLegalMoves(board, from, checks, turn)
 	local pushMove = function(newPos)
 		if checks then
 			-- branch + move
-			-- TODO: use move.ts here? DRY
 			local newBoard = BitBoard.branch(board)
 			local pos = newPos[1]
+			local moveType = newPos[2]
+
 			BitBoard.movePiece(newBoard, from, pos)
-			local _result = newPos[2]
-			if _result ~= nil then
-				_result(newBoard)
+
+			-- Execute special move logic
+			local executor = MoveExecutors[moveType]
+			if executor then
+				executor(newBoard, from, pos)
 			end
 
 			-- if the king moved then update it
@@ -224,12 +267,14 @@ local function GetLegalMoves(board, from, checks, turn)
 
 		return
 	end
+
 	if CUSTOM_DIRECTIONS[piece[1]] then
 		local customMoves = CUSTOM_DIRECTIONS[piece[1]](piece, from, board)
 		for _, newPos in customMoves do
 			pushMove(newPos)
 		end
 	end
+
 	if FIXED_DIRECTIONS[piece[1]] ~= nil then
 		local _binding = BitBoard.separateSquareIndex(from)
 		local xOrigin = _binding[1]
@@ -245,10 +290,11 @@ local function GetLegalMoves(board, from, checks, turn)
 			end
 			local target = BitBoard.getPiece(board, newPosition)
 			if target[1] == Piece.none or target[2] ~= piece[2] then
-				pushMove({ newPosition })
+				pushMove({ newPosition, MoveType.Normal })
 			end
 		end
 	end
+
 	if SLIDE_DIRECTIONS[piece[1]] ~= nil then
 		local _binding = BitBoard.separateSquareIndex(from)
 		local fx = _binding[1]
@@ -262,10 +308,10 @@ local function GetLegalMoves(board, from, checks, turn)
 				local location = BitBoard.getSquareIndex(x, y)
 				local target = BitBoard.getPiece(board, location)
 				if target[1] == 0 then
-					pushMove({ location })
+					pushMove({ location, MoveType.Normal })
 				else
 					if target[2] ~= piece[2] then
-						pushMove({ location })
+						pushMove({ location, MoveType.Normal })
 					end
 					break
 				end
@@ -276,6 +322,7 @@ local function GetLegalMoves(board, from, checks, turn)
 	end
 	return moves
 end
+
 local function GetAllLegalMoves(board, turn, checks, cache)
 	if checks == nil then
 		checks = true
@@ -326,6 +373,7 @@ local function GetAllLegalMoves(board, turn, checks, cache)
 	end
 	return moves
 end
+
 local function isInsufficientMaterial(board)
 	local pieces = {
 		[Piece.king] = 0,
@@ -352,11 +400,10 @@ local function isInsufficientMaterial(board)
 	end
 
 	local bishops = pieces[Piece.bishop] or 0
-	local knights = pieces[Piece.bishop] or 0
-	local rooks = pieces[Piece.bishop] or 0
-	local queens = pieces[Piece.bishop] or 0
-	local pawns = pieces[Piece.bishop] or 0
-
+	local knights = pieces[Piece.knight] or 0
+	local rooks = pieces[Piece.rook] or 0
+	local queens = pieces[Piece.queen] or 0
+	local pawns = pieces[Piece.pawn] or 0
 
 	-- Any pawns, rooks, or queens means sufficient material
 	if pawns > 0 or rooks > 0 or queens > 0 then
@@ -383,6 +430,7 @@ local function isInsufficientMaterial(board)
 	end
 	return false
 end
+
 local function AnalyzeMates(board)
 	-- NOTE: timeouts, resigns, and draws are handled in gameplay.ts, this will not analyze them
 	local turn = BitBoard.getTurn(board)
@@ -412,9 +460,12 @@ local function AnalyzeMates(board)
 	end
 	return ""
 end
+
 return {
 	IsSquareAttacked = IsSquareAttacked,
 	default = GetLegalMoves,
 	GetAllLegalMoves = GetAllLegalMoves,
 	AnalyzeMates = AnalyzeMates,
+	MoveType = MoveType,
+	MoveExecutors = MoveExecutors,
 }

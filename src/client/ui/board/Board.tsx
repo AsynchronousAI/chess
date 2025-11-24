@@ -41,7 +41,7 @@ export interface ChessBoardRef {
     from: number,
     to: number,
     as?: [PieceType, Color],
-    closure?: [Square, Square?], // special moves such as en passant and castling use a closure
+    moveResult?: [Square, Square?], // special moves such as en passant and castling
   ) => void;
 }
 export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
@@ -98,7 +98,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
           ]),
         );
       },
-      animateBoard: (from, to, as, closure) => {
+      animateBoard: (from, to, as, moveResult) => {
         setPieces((currentPieces) => {
           for (const piece of currentPieces) {
             if (piece[0] === from) {
@@ -106,8 +106,8 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
               if (as) piece[1] = as;
             } else if (piece[0] === to) {
               piece[1][0] = PieceType.none;
-            } else if (closure !== undefined && piece[0] === closure[0]) {
-              if (closure[1]) piece[0] = closure[1];
+            } else if (moveResult !== undefined && piece[0] === moveResult[0]) {
+              if (moveResult[1]) piece[0] = moveResult[1];
               else piece[1][0] = PieceType.none;
             }
           }
