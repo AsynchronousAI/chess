@@ -11,6 +11,7 @@ return function(board, moves)
         --  promotions
         local piece = libs.BitBoard.getPiece(board, move[1])[1]
         if move[3] == nil and libs.Board.IsPromotion(move[2], piece, color) then
+            -- TODO: bot has the option to not promote still
             table.insert(moves, {move[1], move[2], libs.Board.Piece.knight, 3})
             table.insert(moves, {move[1], move[2], libs.Board.Piece.bishop, 3})
             table.insert(moves, {move[1], move[2], libs.Board.Piece.rook, 4})
