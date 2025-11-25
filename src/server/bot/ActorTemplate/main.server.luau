@@ -9,6 +9,8 @@ local eval = require(script.Parent.Parent.Parent.eval)
 local moveOrdering = require(script.Parent.Parent.Parent.moveOrdering)
 
 local SEQUENCE  = true
+
+local nodes = 0;
 local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local score = eval(board)
 
@@ -27,6 +29,8 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     for _, move in moves do
         local branch = libs.BitBoard.branch(board)
         libs.Move.PerformMove(branch, move)
+
+        nodes += 1;
 
         local currentScore, childDepth, subSequence = minimax(branch, not isMaximizing, maxDepth, depth + 1, alpha, beta)
 
@@ -66,8 +70,11 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
 end
 
 actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
+    nodes = 1;
+
     local score, depthReached, moveSequence = minimax(buffer.fromstring(tbl.board), tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
     tbl.score = score;
     tbl.depth = depthReached;
     tbl.moveSequence = SharedTable.new(if moveSequence then moveSequence else {});
+    tbl.nodes = nodes;
 end)

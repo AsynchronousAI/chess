@@ -45,6 +45,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     end
 
     -- Merge threads back together
+    local nodes = 0;
     local sequence = {}
     for index, thread in threads do
         local currentScore = thread.score;
@@ -57,6 +58,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
             sequence = thread.moveSequence
         end
 
+        nodes += thread.nodes
         maxDepthReached = math.max(maxDepthReached, childDepth)
     end
 
@@ -66,7 +68,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
         bestSequence = `{bestSequence}{libs.Notation.encodeSquare(v[1])}{libs.Notation.encodeSquare(v[2])} `
     end
 
-    return bestScore, maxDepthReached, bestMove, bestSequence, #moves
+    return {score = bestScore, depth = maxDepthReached, bestMove = bestMove, sequence = bestSequence, legalMoves = #moves, nodes = nodes}
 end
 
 --[[ Actor Pool ]]
@@ -91,7 +93,7 @@ return {
     GetBestMoveLocal = function(board: buffer)
         local index = 0;
         local start = os.clock()
-        local bestEval, depthReached, bestMove, sequence, heads = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, DEPTH, 0, function(branch, isMaximizing, maxDepth, depth)
+        local minimaxResults = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, DEPTH, 0, function(branch, isMaximizing, maxDepth, depth)
             index = (index%#actors)+1
             local tbl = SharedTable.new();
             tbl.board = buffer.tostring(branch);
@@ -103,11 +105,11 @@ return {
             return tbl
         end)
 
-        print(`depth: {depthReached}, eval: {bestEval}, time: {os.clock()-start}, moves: {sequence}, heads: {heads}`)
+        print(`depth: {minimaxResults.depth}, eval: {minimaxResults.score}, time: {math.ceil((os.clock()-start)*1000)}ms, moves: {minimaxResults.sequence}, heads: {minimaxResults.legalMoves}, nodes: {minimaxResults.nodes}`)
         return {
-            ["move"] = bestMove,
-            ["eval"] = bestEval,
-            ["depth"] = depthReached,
+            ["move"] = minimaxResults.bestMove,
+            ["eval"] = minimaxResults.score,
+            ["depth"] = minimaxResults.depth,
             ["mate"] = 0,
         }
     end,

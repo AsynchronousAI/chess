@@ -339,11 +339,11 @@ local function GetAllLegalMoves(board, turn, checks, cache)
 			local a = (transpositionTbl[i])[1]
 			local b = (transpositionTbl[i])[2]
 			local c = (transpositionTbl[i])[3]
-			if c ~= turn then
+			local d = (transpositionTbl[i])[4]
+			if d ~= turn then
 				continue
 			end
-			local _arg0 = { a, b }
-			table.insert(moves, _arg0)
+			table.insert(moves, {a,b,nil,c})
 		end
 		return moves
 	end
@@ -360,11 +360,10 @@ local function GetAllLegalMoves(board, turn, checks, cache)
 		end
 		for _1, nextLocation in GetLegalMoves(board, location, checks) do
 			if pushToMoves then
-				local _arg0 = { location, nextLocation[1] }
-				table.insert(moves, _arg0)
+				table.insert(moves, { location, nextLocation[1], nil, nextLocation[2] })
 			end
 			if cache then
-				sharedCache[SharedTable.size(sharedCache) + 1] = SharedTable.new({ location, nextLocation[1], color })
+				sharedCache[SharedTable.size(sharedCache) + 1] = SharedTable.new({ location, nextLocation[1], nextLocation[2], color })
 			end
 		end
 	end

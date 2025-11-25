@@ -1,20 +1,33 @@
 //!native
 //!optimize 2
-import { FullMove } from "shared/network";
 import { BitBoard } from "./bitboard";
-import GetLegalMoves, { MoveExecutors } from "./legalMoves";
+import GetLegalMoves, {
+  GetAllLegalMoves,
+  MoveExecutors,
+  MoveType,
+} from "./legalMoves";
+import { Piece, Square } from "shared/board";
 
-export function PerformMove(board: BitBoard, move: FullMove, flipTurn = true) {
-  const legalMoves = GetLegalMoves(board, move[0], true);
-  const found = legalMoves.find((m) => m[0] === move[1]);
+export function PerformMove(
+  board: BitBoard,
+  move: [Square, Square, Piece?, MoveType?],
+  flipTurn = true,
+) {
   const turn = BitBoard.getTurn(board);
 
-  if (!found) {
-    return false;
+  /* Special moves, castling & en passant */
+  let moveType = move[3];
+  if (moveType === undefined) {
+    const legalMoves = GetLegalMoves(board, move[0], true);
+    const found = legalMoves.find((m) => m[0] === move[1]);
+
+    if (!found) {
+      return false;
+    }
+
+    moveType = found[1];
   }
 
-  /* Special moves, castling & en passant */
-  const moveType = found[1];
   const executor = MoveExecutors[moveType];
   if (executor) {
     executor(board, move[0], move[1]);

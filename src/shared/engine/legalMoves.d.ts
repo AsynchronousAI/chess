@@ -45,7 +45,7 @@ export function GetAllLegalMoves(
   turn: Color,
   checks?: boolean,
   cache?: boolean,
-): [Square, Square][];
+): [Square, Square, undefined, MoveType][];
 export function AnalyzeMates(
   board: BitBoard,
 ):
