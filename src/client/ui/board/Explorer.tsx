@@ -11,6 +11,8 @@ import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 import { useMotion } from "@rbxts/pretty-react-hooks";
+import { RunService } from "@rbxts/services";
+import { PGN } from "shared/engine/pgn";
 
 export interface ExplorerProps {
   opening: string;
@@ -72,8 +74,10 @@ function ExplorerButton({
   );
 }
 export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
-  const gameplay = useFlameworkDependency<Gameplay>();
-  const pgn = gameplay.usePGN();
+  const gameplay = RunService.IsRunning()
+    ? useFlameworkDependency<Gameplay>()
+    : undefined;
+  const pgn = gameplay?.usePGN() ?? PGN.create();
   const px = usePx();
 
   return (
@@ -200,12 +204,12 @@ export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
       <ExplorerButton
         title={"Resign"}
         image={"rbxassetid://10723375890"}
-        callback={() => gameplay.resign()}
+        callback={() => gameplay?.resign()}
       />
       <ExplorerButton
         title={"Draw"}
         image={"rbxassetid://13738539975"}
-        callback={() => gameplay.draw()}
+        callback={() => gameplay?.draw()}
       />
     </CanvasGroup>
   );

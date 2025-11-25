@@ -9,6 +9,9 @@ import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
+import { RunService } from "@rbxts/services";
+import { BitBoard } from "shared/engine/bitboard";
+import { DefaultBoard } from "shared/engine/fen";
 
 export interface EvaluationBarProps {
   size: UDim2;
@@ -22,8 +25,10 @@ export interface EvaluationBarRef {
 
 export const EvaluationBar = forwardRef<EvaluationBarRef, EvaluationBarProps>(
   (props, ref) => {
-    const gameplay = useFlameworkDependency<Gameplay>();
-    const board = gameplay.useBoard();
+    const gameplay = RunService.IsRunning()
+      ? useFlameworkDependency<Gameplay>()
+      : undefined;
+    const board = gameplay?.useBoard() ?? BitBoard.branch(DefaultBoard);
     const px = usePx();
 
     const [evaluation, setEval] = useState(0);

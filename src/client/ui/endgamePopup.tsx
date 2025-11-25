@@ -8,7 +8,6 @@ import {
 import React, { useEffect, useState } from "@rbxts/react";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "./hooks/usePx";
-import Atoms from "./atoms";
 
 export interface EndgamePopupProps {
   title: string;
@@ -16,8 +15,8 @@ export interface EndgamePopupProps {
   rating: number;
   ratingChange: number;
   open: boolean;
-  onNew: () => void;
-  onRematch: () => void;
+  onNew?: () => void;
+  onRematch?: () => void;
 }
 
 const getEloChangeText = (rVal: number, rChange: number) => {

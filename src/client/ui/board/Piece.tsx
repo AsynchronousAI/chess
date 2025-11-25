@@ -11,6 +11,9 @@ import { Gameplay } from "client/controllers/gameplay";
 import Atoms from "../atoms";
 import { usePx } from "../hooks/usePx";
 import { Image } from "../components/image";
+import { RunService } from "@rbxts/services";
+import { BitBoard } from "shared/engine/bitboard";
+import { DefaultBoard } from "shared/engine/fen";
 
 export interface PieceProps {
   pos: [number, number];
@@ -24,8 +27,10 @@ export interface PieceProps {
   containerRef: React.MutableRefObject<Frame | undefined>;
 }
 export function Piece(props: PieceProps) {
-  const gameplay = useFlameworkDependency<Gameplay>();
-  const board = gameplay.useBoard();
+  const gameplay = RunService.IsRunning()
+    ? useFlameworkDependency<Gameplay>()
+    : undefined;
+  const board = gameplay?.useBoard() ?? BitBoard.branch(DefaultBoard);
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const dragging = useAtom(Atoms.Dragging);
 
@@ -69,7 +74,7 @@ export function Piece(props: PieceProps) {
   /* Events */
   const onDown = () => {
     if (
-      gameplay.locked ||
+      gameplay?.locked ||
       Atoms.ViewingPlayer() > 0 ||
       props.locked ||
       props.location === undefined ||

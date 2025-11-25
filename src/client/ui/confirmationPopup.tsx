@@ -14,7 +14,7 @@ export interface ConfirmationPopupProps {
   title: string;
   description: string;
   open: boolean;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   onCancel?: () => void;
 }
 
@@ -75,7 +75,7 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
           Event: {
             MouseButton1Click: () => {
               Atoms.ConfirmationPopup((x) => ({ ...x, open: false }));
-              props.onConfirm();
+              props.onConfirm?.();
             },
           },
         }}

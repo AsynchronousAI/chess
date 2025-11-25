@@ -8,7 +8,7 @@ import {
   Text,
 } from "@rbxts/better-react-components";
 import React, { useEffect, useState } from "@rbxts/react";
-import { Players } from "@rbxts/services";
+import { Players, RunService } from "@rbxts/services";
 import { Functions } from "client/network";
 import { usePx } from "./hooks/usePx";
 import { usePlayer } from "./hooks/usePlayer";
@@ -29,7 +29,9 @@ function PlayerListItem({
   p1Name: string;
   p1Thumbnail: string;
 }) {
-  const gameplay = useFlameworkDependency<Gameplay>();
+  const gameplay = RunService.IsRunning()
+    ? useFlameworkDependency<Gameplay>()
+    : undefined;
   const px = usePx();
   const [p2Name, p2Thumbnail] = usePlayer(xGame.user);
 
@@ -47,7 +49,9 @@ function PlayerListItem({
         ApplyStrokeMode: "Border",
       }}
       overrideRoblox={{
-        Event: { MouseButton1Click: () => gameplay.loadGame(xGame.gameId) },
+        Event: {
+          MouseButton1Click: () => gameplay && gameplay.loadGame(xGame.gameId),
+        },
       }}
     >
       <ListLayout

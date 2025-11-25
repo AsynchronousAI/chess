@@ -19,6 +19,8 @@ import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 import { usePx } from "../hooks/usePx";
 import Atoms from "../atoms";
+import { RunService } from "@rbxts/services";
+import { PGN } from "shared/engine/pgn";
 
 export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);
@@ -33,16 +35,20 @@ export default function Board() {
 
   const [promoting, setPromoting] = useState<Square>(-1);
 
-  const gameplay = useFlameworkDependency<Gameplay>();
-  const takenPieces = gameplay.useTakenPieces();
+  const gameplay = RunService.IsRunning()
+    ? useFlameworkDependency<Gameplay>()
+    : undefined;
+  const takenPieces = gameplay?.useTakenPieces() ?? [];
 
-  const board = gameplay.useBoard();
-  const pgn = gameplay.usePGN();
-  const playingAs = gameplay.usePlayingAs();
-  const activeGame = gameplay.useActiveGame();
+  const board = gameplay?.useBoard() ?? BitBoard.branch(DefaultBoard);
+  const pgn = gameplay?.usePGN() ?? PGN.create();
+  const playingAs = gameplay?.usePlayingAs() ?? Color.white;
+  const activeGame = gameplay?.useActiveGame() ?? {
+    color: Color.white,
+  };
 
-  gameplay.setChessBoard(chessBoardRef);
-  gameplay.setEvaluationBar(evalBarRef);
+  gameplay?.setChessBoard(chessBoardRef);
+  gameplay?.setEvaluationBar(evalBarRef);
 
   /* Handlers */
   const onMove = (location: number) => {
@@ -60,14 +66,14 @@ export default function Board() {
       return;
     }
 
-    gameplay.movePiece([holdingPiece, location, undefined], true);
+    gameplay?.movePiece([holdingPiece, location, undefined], true);
   };
   const onPromote = (piece?: PieceType) => {
     if (!holdingPiece || !piece) {
       setPromoting(-1);
       return;
     }
-    gameplay.movePiece([holdingPiece, promoting, piece], true);
+    gameplay?.movePiece([holdingPiece, promoting, piece], true);
     setPromoting(-1);
   };
   const onRewind = (moveIndex: number) => {
@@ -75,7 +81,7 @@ export default function Board() {
     chessBoardRef.current?.setBoard(prevBoard);
     task.wait();
     /* TODO: Check SFX does not play in explorer, since moves are not simulated then attacked squares cannot be calculated. */
-    gameplay.movePiece(
+    gameplay?.movePiece(
       [pgn[moveIndex].from, pgn[moveIndex].to, pgn[moveIndex].promotion],
       false,
       BitBoard.getPiece(prevBoard, pgn[moveIndex].from)[1],
@@ -86,7 +92,7 @@ export default function Board() {
   };
 
   /* Events */
-  useEffect(() => gameplay.newGame(), []);
+  useEffect(() => gameplay?.newGame(), []);
   useEffect(() => setPromoting(-1), [board]);
 
   const isPlayer1Turn =

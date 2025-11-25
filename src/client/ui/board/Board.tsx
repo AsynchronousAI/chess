@@ -25,6 +25,7 @@ import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 import Atoms from "../atoms";
 import { usePx } from "../hooks/usePx";
+import { PGN } from "shared/engine/pgn";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -46,9 +47,11 @@ export interface ChessBoardRef {
 }
 export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
   (props, ref) => {
-    const gameplay = useFlameworkDependency<Gameplay>();
+    const gameplay = RunService.IsRunning()
+      ? useFlameworkDependency<Gameplay>()
+      : undefined;
     const possibleMoves = useAtom(Atoms.PossibleMoves);
-    const pgn = gameplay.usePGN();
+    const pgn = gameplay?.usePGN() ?? PGN.create();
     const currentMove = useAtom(Atoms.CurrentMove);
     const checked = useAtom(Atoms.CheckedSquare);
 
