@@ -41,13 +41,16 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
       <Frame size={new UDim2(1, 0, 0.235, 0)} background={"#3C3A38"} />
       <Text
         text={props.title}
-        position={new UDim2(0, 0, 0.035, 0)}
+        position={new UDim2(0, 0, 0, 0)}
         size={
-          props.description ? new UDim2(1, 0, 0.1, 0) : new UDim2(1, 0, 0.15, 0)
+          props.description
+            ? new UDim2(1, 0, 0.15, 0)
+            : new UDim2(1, 0, 0.235, 0)
         }
-        textSize={px(30)}
+        padding={px(props.description ? 0 : 3)}
         font={"SourceSansBold"}
         noBackground
+        overrideRoblox={{ TextScaled: true }}
         textColor={new Color3(1, 1, 1)}
       />
       <Text
@@ -62,16 +65,17 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
 
       <Button
         size={new UDim2(0.8, 0, 0.2, 0)}
-        position={new UDim2(0.5, 0, 0.45, 0)}
+        position={new UDim2(0.5, 0, 0.5, 0)}
         anchorPoint={new Vector2(0.5, 0.5)}
         text={"Accept"}
         textColor={new Color3(0.95, 0.95, 0.95)}
         background={"#3C3A38"}
         font={"SourceSansSemibold"}
         autoButtonColor={false}
-        textSize={px(24)}
+        padding={px(5)}
         cornerRadius={px(5)}
         overrideRoblox={{
+          TextScaled: true,
           Event: {
             MouseButton1Click: () => {
               Atoms.ConfirmationPopup((x) => ({ ...x, open: false }));
@@ -82,16 +86,17 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
       />
       <Button
         size={new UDim2(0.8, 0, 0.2, 0)}
-        position={new UDim2(0.5, 0, 0.7, 0)}
+        position={new UDim2(0.5, 0, 0.75, 0)}
         anchorPoint={new Vector2(0.5, 0.5)}
         text={"Decline"}
         textColor={new Color3(0.95, 0.95, 0.95)}
         background={"#3C3A38"}
         font={"SourceSansSemibold"}
         autoButtonColor={false}
-        textSize={px(24)}
+        padding={px(5)}
         cornerRadius={px(5)}
         overrideRoblox={{
+          TextScaled: true,
           Event: {
             MouseButton1Click: () => {
               Atoms.ConfirmationPopup((x) => ({ ...x, open: false }));

@@ -2,7 +2,6 @@ import {
   Button,
   CanvasGroup,
   Frame,
-  Image,
   Text,
 } from "@rbxts/better-react-components";
 import React, { useEffect, useState } from "@rbxts/react";
@@ -83,19 +82,19 @@ export function EndgamePopup(props: EndgamePopupProps) {
       <Frame size={new UDim2(1, 0, 0.235, 0)} background={"#3C3A38"} />
       <Text
         text={props.title}
-        position={new UDim2(0, 0, 0.035, 0)}
-        size={new UDim2(1, 0, 0.1, 0)}
-        textSize={px(30)}
+        position={new UDim2(0, 0, 0, 0)}
+        size={new UDim2(1, 0, 0.15, 0)}
         font={"SourceSansBold"}
         noBackground
+        overrideRoblox={{ TextScaled: true }}
         textColor={new Color3(1, 1, 1)}
       />
       <Text
         text={props.description}
         position={new UDim2(0, 0, 0.125, 0)}
         size={new UDim2(1, 0, 0.1, 0)}
-        textSize={px(16)}
         font={"SourceSansSemibold"}
+        overrideRoblox={{ TextScaled: true }}
         noBackground
         textColor={new Color3(0.7, 0.7, 0.7)}
       />
@@ -147,7 +146,11 @@ export function EndgamePopup(props: EndgamePopupProps) {
         autoButtonColor={false}
         textSize={px(24)}
         cornerRadius={px(5)}
-        overrideRoblox={{ Event: { MouseButton1Click: props.onNew } }}
+        padding={px(5)}
+        overrideRoblox={{
+          TextScaled: true,
+          Event: { MouseButton1Click: props.onNew },
+        }}
       />
       <Button
         size={new UDim2(0.8, 0, 0.2, 0)}
@@ -160,7 +163,11 @@ export function EndgamePopup(props: EndgamePopupProps) {
         autoButtonColor={false}
         textSize={px(24)}
         cornerRadius={px(5)}
-        overrideRoblox={{ Event: { MouseButton1Click: props.onRematch } }}
+        padding={px(5)}
+        overrideRoblox={{
+          TextScaled: true,
+          Event: { MouseButton1Click: props.onRematch },
+        }}
       />
     </CanvasGroup>
   );
