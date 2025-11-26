@@ -4,15 +4,42 @@ local actor = script:GetActor()
 local name = actor.Name
 if name == "ActorTemplate" then return end
 
+local TT = game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
+
 local libs = require(script.Parent.Parent.Parent.import)
 local eval = require(script.Parent.Parent.Parent.eval)
 local moveOrdering = require(script.Parent.Parent.Parent.moveOrdering)
 
 local SEQUENCE  = true
 
+local EXACT = 0
+local LOWERBOUND = 1
+local UPPERBOUND = 2
+
 local nodes = 0;
 local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local score = eval(board)
+    local hash = libs.BitBoard.hash(board)
+
+    -- TT lookup
+    local entry = TT[hash]
+    if entry then
+        -- entry: {depth, score, flag, alpha, beta, bestMove}
+        if entry.depth >= maxDepth - depth then
+            if entry.flag == EXACT then
+                return entry.score, depth, entry.sequence
+            elseif entry.flag == LOWERBOUND and entry.score > alpha then
+                alpha = entry.score
+            elseif entry.flag == UPPERBOUND and entry.score < beta then
+                beta = entry.score
+            end
+
+            if alpha >= beta then
+                return entry.score, depth, entry.sequence
+            end
+        end
+    end
+
 
     if depth >= maxDepth then
         return score, depth, if SEQUENCE then {} else nil
@@ -58,6 +85,7 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
         end
     end
 
+    -- Move sequence
     local branchedSequence
     if bestSequence then
         branchedSequence = {bestMove}
@@ -65,6 +93,25 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
             table.insert(branchedSequence, move)
         end
     end
+
+    -- Transpositions
+    local flag
+    if bestScore <= alpha then
+        flag = UPPERBOUND
+    elseif bestScore >= beta then
+        flag = LOWERBOUND
+    else
+        flag = EXACT
+    end
+
+    TT[hash] = SharedTable.new({
+        depth = maxDepth - depth,
+        score = bestScore,
+        flag = flag,
+        sequence = branchedSequence,
+        bestMove = bestMove,
+    })
+
 
     return bestScore, maxDepthReached, branchedSequence
 end

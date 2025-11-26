@@ -6,6 +6,11 @@ local moveOrdering = require(script.moveOrdering)
 
 local DEPTH = if game:GetService("RunService"):IsStudio() then 3 else 3
 
+local MinimaxTranspositions = game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
+local EvaluationTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
+local LegalMovesTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("LegalMovesTransposition")
+
+
 --[[ Minimax host ]]
 local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     local score = eval(board)
@@ -105,7 +110,17 @@ return {
             return tbl
         end)
 
-        print(`depth: {minimaxResults.depth}, eval: {minimaxResults.score}, time: {math.ceil((os.clock()-start)*1000)}ms, moves: {minimaxResults.sequence}, heads: {minimaxResults.legalMoves}, nodes: {minimaxResults.nodes}`)
+        print(`\n\
+depth: {minimaxResults.depth}\
+eval: {minimaxResults.score}\
+time: {math.ceil((os.clock()-start)*1000)}ms\
+moves: {minimaxResults.sequence}\
+heads: {minimaxResults.legalMoves}\
+nodes: {minimaxResults.nodes}\n\
+minimaxTable: {SharedTable.size(MinimaxTranspositions)}\
+evaluationTable: {SharedTable.size(EvaluationTransposition)}\
+legalMoves: {SharedTable.size(LegalMovesTransposition)}`)
+
         return {
             ["move"] = minimaxResults.bestMove,
             ["eval"] = minimaxResults.score,
