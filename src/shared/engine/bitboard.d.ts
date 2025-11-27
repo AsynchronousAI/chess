@@ -1,53 +1,43 @@
-//!native
-//!optimize 2
 import { Color, Piece, Square } from "shared/board";
-export type BitBoard = buffer;
 
-export const CASTLE_INDEX: Record<Color, [number, number]>;
-export const EN_PASSANT: number;
+export type BitBoard = { side_to_move: Color };
+export type BitBoardSave = {};
+export type Move = {
+  from: Square;
+  to: Square;
+  piece_type: Piece;
+  captured: boolean;
+  promotion: Piece;
+  flags: {};
+};
+
 export namespace BitBoard {
-  export const create: () => BitBoard;
+  export function create(): BitBoard;
 
-  /* internal */
-  export function getSquareIndex(file: number, rank: number): number;
+  export function to_buffer(board: BitBoard): buffer;
+  export function from_buffer(buffer: buffer): BitBoard;
 
-  export function separateSquareIndex(loc: number): [number, number];
-  function binaryToPiece(piece: number): [Piece, Color];
-  function getPieceBinary(pieceType: Piece, color: Color): number;
+  export function from_fen(fen: string): BitBoard;
+  export function to_fen(board: BitBoard): string;
 
-  /* base methods */
-  export function setPiece(
+  export function set_start_position(board: BitBoard): void;
+  export function save_state(board: BitBoard): BitBoardSave;
+  export function update_occupied(board: BitBoard): void;
+
+  export function make_move(board: BitBoard, move: Move): void;
+  export function unmake_move(
     board: BitBoard,
-    location: Square,
-    pieceType: Piece,
-    color: Color,
+    move: Move,
+    save: BitBoardSave,
   ): void;
-  export function getPiece(board: BitBoard, location: Square): [Piece, Color];
-  export function hasPiece(board: BitBoard, location: Square): boolean;
-  export function getAllPieces(board: BitBoard): [Square, [Piece, Color]][];
-  export function movePiece(board: BitBoard, from: Square, to: Square): void;
-  export function breakCastlingRights(
+
+  export function generate_legal_moves(
     board: BitBoard,
-    color: Color,
-    queenSide: boolean,
-  ): void;
-  export function getCastlingRights(
+    filePseudoLegal?: boolean,
+  ): Move[];
+  export function generate_legal_moves_from(
     board: BitBoard,
-    color: Color,
-    queenSide: boolean,
-  ): boolean;
-  export function branch(board: BitBoard): BitBoard;
-  export function findPiece(
-    board: BitBoard,
-    piece: Piece,
-    color: Color,
-  ): Square[];
-  export function getTurn(board: BitBoard): Color;
-  export function flipTurn(board: BitBoard): void;
-  export function getEnPassant(board: BitBoard): Square | undefined;
-  export function setEnPassant(
-    board: BitBoard,
-    square: Square | undefined,
-  ): void;
-  export function hash(board: BitBoard): string;
+    from: Square,
+    filePseudoLegal?: boolean,
+  ): Move[];
 }

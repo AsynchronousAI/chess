@@ -1,12 +1,10 @@
 import { BitBoard } from "../shared/engine/bitboard";
 import { HttpService } from "@rbxts/services";
-import { Notation } from "../shared/engine/notation";
-import { FEN } from "../shared/engine/fen";
 import { BestMoveResponse, GetBestMoveLocal } from "./bot";
 
 function bestMoveAPI(board: BitBoard): BestMoveResponse {
-  const fen = FEN.toFEN(board);
-  const turn = BitBoard.getTurn(board);
+  const fen = BitBoard.to_fen(board);
+  const turn = board.side_to_move;
   const bestMove = HttpService.JSONDecode(
     HttpService.PostAsync(
       "http://localhost:3000",
@@ -35,7 +33,8 @@ function bestMoveAPI(board: BitBoard): BestMoveResponse {
           : -bestMove.mate
         : 0,
     depth: bestMove.depth ?? 0,
-    move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
+    /* TODO: new notation parer for API */
+    //move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
   };
 }
 export function GetBestMove(board: BitBoard, api: boolean) {

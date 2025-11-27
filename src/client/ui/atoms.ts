@@ -1,9 +1,9 @@
 import { atom } from "@rbxts/charm";
-import { Color, Square } from "shared/board";
+import { Square } from "shared/board";
 
-import { Move } from "shared/engine/legalMoves";
 import { EndgamePopupProps } from "./endgamePopup";
 import { ConfirmationPopupProps } from "./confirmationPopup";
+import { Move } from "shared/engine/bitboard";
 
 const Atoms = {
   Dragging: atom<boolean>(false),

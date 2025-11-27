@@ -4,7 +4,6 @@ import C from "./c.json";
 import D from "./d.json";
 import E from "./e.json";
 import { BitBoard } from "shared/engine/bitboard";
-import { FEN } from "shared/engine/fen";
 
 const allOpenings: {
   [key: string]: {
@@ -14,6 +13,6 @@ const allOpenings: {
 } = { ...A, ...B, ...C, ...D, ...E };
 
 export default function getOpening(board: BitBoard) {
-  const lookingFor = FEN.toFEN(board).split(" ")[0];
+  const lookingFor = BitBoard.to_fen(board).split(" ")[0];
   return allOpenings[lookingFor];
 }
