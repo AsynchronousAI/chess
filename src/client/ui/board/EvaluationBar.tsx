@@ -15,6 +15,7 @@ import { DefaultBoard } from "shared/engine/fen";
 
 export interface EvaluationBarProps {
   size: UDim2;
+  position: UDim2;
   analysis: string;
 }
 
@@ -80,6 +81,8 @@ export const EvaluationBar = forwardRef<EvaluationBarRef, EvaluationBarProps>(
     return (
       <CanvasGroup
         size={props.size}
+        anchorPoint={new Vector2(0.5, 0.5)}
+        position={props.position}
         background={"#403E39"}
         cornerRadius={px(2)}
       >

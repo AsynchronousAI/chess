@@ -106,20 +106,20 @@ export default function Board() {
       anchorPoint={new Vector2(0.5, 0.5)}
       background={new Color3(0.1, 0.1, 0.1)}
     >
-      <uilistlayout
-        VerticalAlignment={"Center"}
-        HorizontalAlignment={"Center"}
-        FillDirection={"Horizontal"}
-        Wraps
-        Padding={new UDim(0, px(5))}
-      />
-
       <EvaluationBar
         ref={evalBarRef}
-        size={new UDim2(0.025, 0, 0.975 * 0.85, 0)}
+        size={new UDim2(0, px(40), 0.975 * 0.85, 0)}
+        position={new UDim2(0.05, 0, 0.5, 0)}
         analysis={activeGame.analysis!}
       />
-      <Frame size={new UDim2(1, 0, 0.975, 0)} aspectRatio={1} noBackground>
+      <Frame
+        size={new UDim2(1, 0, 0.975, 0)}
+        position={new UDim2(0.35, 0, 0.5, 0)}
+        anchorPoint={new Vector2(0.5, 0.5)}
+        aspectRatio={1}
+        zIndex={2}
+        noBackground
+      >
         <uilistlayout
           VerticalAlignment={"Center"}
           HorizontalAlignment={"Center"}
@@ -178,6 +178,7 @@ export default function Board() {
       <Explorer
         opening={activeGame.opening ?? "No game"}
         currentMove={currentMove}
+        position={new UDim2(0.85, 0, 0.5, 0)}
         onRewind={onRewind}
       />
     </Frame>

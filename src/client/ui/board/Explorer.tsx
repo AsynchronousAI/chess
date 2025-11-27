@@ -1,7 +1,6 @@
 import {
   CanvasGroup,
   Frame,
-  Image,
   ListLayout,
   ScrollingFrame,
   Text,
@@ -10,70 +9,22 @@ import React from "@rbxts/react";
 import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
-import { useMotion } from "@rbxts/pretty-react-hooks";
 import { RunService } from "@rbxts/services";
 import { PGN } from "shared/engine/pgn";
+import { Button } from "../components/button";
 
 export interface ExplorerProps {
   opening: string;
   currentMove: number;
+  position: UDim2;
   onRewind: (index: number, backwards?: boolean) => void;
 }
-function ExplorerButton({
-  title,
-  image,
-  callback,
-}: {
-  title: string;
-  image: string;
-  callback: () => void;
-}) {
-  const px = usePx();
-  const [scale, scaleMotion] = useMotion(1);
-  return (
-    <Frame
-      size={scale.map((x) => new UDim2(0.15 * x, 0, 0.15, 0))}
-      aspectRatio={scale}
-      cornerRadius={px(2)}
-      background={"#403E39"}
-      visible={true}
-    >
-      <Image
-        size={new UDim2(0.65, 0, 0.65, 0)}
-        anchorPoint={new Vector2(0, 0.5)}
-        position={new UDim2(0, px(10), 0.5, 0)}
-        imageColor={new Color3(0.75, 0.75, 0.75)}
-        noBackground
-        aspectRatio={1}
-        image={image}
-      />
-      <Text
-        text={title}
-        size={new UDim2(1, 0, 1, 0)}
-        font={"SourceSansBold"}
-        textColor={new Color3(0.75, 0.75, 0.75)}
-        noBackground
-        overrideRoblox={{
-          TextTransparency: scale.map((x) => math.map(x, 1, 3, 1, 0)),
-        }}
-        textSize={px(26)}
-        padding={px(5)}
-        paddingLeft={px(20)}
-      />
-      <textbutton
-        Size={new UDim2(1, 0, 1, 0)}
-        BackgroundTransparency={1}
-        Text=""
-        Event={{
-          MouseButton1Click: () => callback(),
-          MouseEnter: () => scaleMotion.spring(3),
-          MouseLeave: () => scaleMotion.spring(1),
-        }}
-      />
-    </Frame>
-  );
-}
-export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
+export function Explorer({
+  opening,
+  currentMove,
+  onRewind,
+  position,
+}: ExplorerProps) {
   const gameplay = RunService.IsRunning()
     ? useFlameworkDependency<Gameplay>()
     : undefined;
@@ -83,7 +34,7 @@ export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
   return (
     <CanvasGroup
       size={new UDim2(0.25, 0, 0.975, 0)}
-      position={new UDim2(0.5, 0, 0.5, 0)}
+      position={position}
       anchorPoint={new Vector2(0.5, 0.5)}
       background={new Color3(0.1, 0.1, 0.1)}
       cornerRadius={px(2)}
@@ -201,12 +152,12 @@ export function Explorer({ opening, currentMove, onRewind }: ExplorerProps) {
           })}
       </ScrollingFrame>
 
-      <ExplorerButton
+      <Button
         title={"Resign"}
         image={"rbxassetid://10723375890"}
         callback={() => gameplay?.resign()}
       />
-      <ExplorerButton
+      <Button
         title={"Draw"}
         image={"rbxassetid://13738539975"}
         callback={() => gameplay?.draw()}
