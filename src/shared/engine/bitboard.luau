@@ -5,12 +5,16 @@ local u64 = require("./int64")
 local Utils = require("./utils")
 local Attacks = require("./attacks")
 local Move = require("./move")
+local Zobrist = require("./zobrist")
+local FEN = require("./fen")
 
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.FILE_A, Utils.FILE_H, Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
 
 local Board = {
-    hash = require("./zobrist")
+    hash = Zobrist,
+    to_fen = FEN.to_fen,
+    from_fen = FEN.from_fen,
 }
 
 function Board.create(blank)
@@ -162,125 +166,6 @@ function Board.from_buffer(buf)
     self.fullmove_number = buffer.readu16(buf, off); off += 2
 
     return self
-end
-
--- FEN
-local piece_map = {
-	P = {color = WHITE, type = PAWN},
-	N = {color = WHITE, type = KNIGHT},
-	B = {color = WHITE, type = BISHOP},
-	R = {color = WHITE, type = ROOK},
-	Q = {color = WHITE, type = QUEEN},
-	K = {color = WHITE, type = KING},
-	p = {color = BLACK, type = PAWN},
-	n = {color = BLACK, type = KNIGHT},
-	b = {color = BLACK, type = BISHOP},
-	r = {color = BLACK, type = ROOK},
-	q = {color = BLACK, type = QUEEN},
-	k = {color = BLACK, type = KING},
-}
-local piece_char = {
-	[WHITE] = { [PAWN]="P", [KNIGHT]="N", [BISHOP]="B", [ROOK]="R", [QUEEN]="Q", [KING]="K"},
-	[BLACK] = { [PAWN]="p", [KNIGHT]="n", [BISHOP]="b", [ROOK]="r", [QUEEN]="q", [KING]="k"},
-}
-
-function Board.from_fen(self)
-	local board = self
-	local parts = {}
-	for part in string.gmatch(fen, "[^ ]+") do
-		table.insert(parts, part)
-	end
-
-	local rows = {}
-	for row in string.gmatch(parts[1], "[^/]+") do
-		table.insert(rows, row)
-	end
-
-	-- clear all bitboards first
-	for _, color in pairs({WHITE, BLACK}) do
-		for _, typ in pairs({PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING}) do
-			board.pieces[color][typ] = u64.ZERO
-		end
-		board.occupied[color] = u64.ZERO
-	end
-	board.occupied.all = u64.ZERO
-
-	for rank = 1, 8 do
-		local file = 0
-		for c in rows[rank]:gmatch(".") do
-			local n = tonumber(c)
-			if n then
-				file = file + n
-			else
-				local info = piece_map[c]
-				if info then
-					local square = (8 - rank) * 8 + file
-					local r = u64.lshift(u64.ONE, square)
-					board.pieces[info.color][info.type] = u64.bor(board.pieces[info.color][info.type], r)
-                    board.occupied[info.color] = u64.bor(board.occupied[info.color], r)
-                    board.occupied.all = u64.bor(board.occupied.all, r)
-				end
-				file = file + 1
-			end
-		end
-	end
-
-	board.side_to_move = (parts[2] == "w") and WHITE or BLACK
-
-	board.castling_rights.white_kingside = parts[3]:find("K") ~= nil
-	board.castling_rights.white_queenside = parts[3]:find("Q") ~= nil
-	board.castling_rights.black_kingside = parts[3]:find("k") ~= nil
-	board.castling_rights.black_queenside = parts[3]:find("q") ~= nil
-
-	board.en_passant_square = (parts[4] ~= "-") and parts[4] or nil
-	board.halfmove_clock = tonumber(parts[5])
-	board.fullmove_number = tonumber(parts[6])
-end
-function Board.to_fen(self)
-	local fen = {}
-	for rank = 8, 1, -1 do
-		local empty = 0
-		for file = 0, 7 do
-			local square = (rank - 1) * 8 + file
-			local piece_found = false
-			for color, color_table in self.pieces do
-				for typ, bb in color_table do
-					if Utils.get_bit(bb, square) then
-						if empty > 0 then
-							table.insert(fen, tostring(empty))
-							empty = 0
-						end
-						table.insert(fen, piece_char[color][typ])
-						piece_found = true
-						break
-					end
-				end
-				if piece_found then break end
-			end
-			if not piece_found then
-				empty = empty + 1
-			end
-		end
-		if empty > 0 then
-			table.insert(fen, tostring(empty))
-		end
-		if rank > 1 then
-			table.insert(fen, "/")
-		end
-	end
-
-	local stm = (self.side_to_move == WHITE) and "w" or "b"
-
-	local castling = ""
-	if self.castling_rights.white_kingside then castling = castling.."K" end
-	if self.castling_rights.white_queenside then castling = castling.."Q" end
-	if self.castling_rights.black_kingside then castling = castling.."k" end
-	if self.castling_rights.black_queenside then castling = castling.."q" end
-	if castling == "" then castling = "-" end
-
-	local ep = self.en_passant_square or "-"
-
-	return table.concat(fen)..(" "..stm.." "..castling.." "..ep.." "..self.halfmove_clock.." "..self.fullmove_number)
 end
 
 -- State
