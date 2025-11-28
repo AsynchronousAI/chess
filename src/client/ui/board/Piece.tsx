@@ -95,7 +95,7 @@ export function Piece(props: PieceProps) {
       const moves = BitBoard.generate_legal_moves_from(
         board,
         props.location,
-        true,
+        false,
         props.playingAs,
       );
       Atoms.PossibleMoves(moves);

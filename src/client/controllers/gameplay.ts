@@ -113,7 +113,7 @@ export class Gameplay implements OnStart {
         BitBoard.generate_legal_moves_from(
           this.board,
           Atoms.HoldingPiece()!,
-          true,
+          false,
           this.playingAs,
         ),
       );
@@ -196,7 +196,7 @@ export class Gameplay implements OnStart {
       Piece.king,
       1 - color,
     );
-    if (!opponentsKing) {
+    if (opponentsKing === undefined || opponentsKing < 0) {
       error("No king!");
     }
 

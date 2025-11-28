@@ -11,34 +11,48 @@ local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NO
 
 local Attacks = {}
 
-local function ray_attacks(square, direction, occupied)
-	local attacks = u64.ZERO
-	local current_square = square
+local function ray_attacks(square, direction, my_occupied, other_occupied)
+    local attacks = u64.ZERO
+    local current = square
 
-	while true do
-		current_square += direction
+    while true do
+        local next_sq = current + direction
 
-		-- Check bounds
-		if current_square < 0 or current_square > 63 then
-			break
-		end
+        -- Board bounds
+        if next_sq < 0 or next_sq > 63 then
+            break
+        end
 
-		-- Check if we crossed a file boundary for horizontal moves
-		local file_diff = math.abs((current_square % 8) - (square % 8))
-		if math.abs(direction) == 1 and file_diff > 1 then
-			break
-		end
+        -- Prevent horizontal wrap
+        if direction == 1 or direction == -1 then
+            if (next_sq // 8) ~= (current // 8) then
+                break
+            end
+        end
 
-		attacks = Utils.set_bit(attacks, current_square)
+        -- Prevent diagonal wrap
+        if direction == 9 or direction == -9 or direction == 7 or direction == -7 then
+            local file_diff = math.abs((next_sq % 8) - (current % 8))
+            if file_diff ~= 1 then
+                break
+            end
+        end
 
-		-- Stop if we hit a piece
-		if Utils.get_bit(occupied, current_square) then
-			break
-		end
-	end
 
-	return attacks
+        if Utils.get_bit(my_occupied, next_sq) then
+            break
+        end
+        attacks = Utils.set_bit(attacks, next_sq)
+        if Utils.get_bit(other_occupied, next_sq) then
+            break
+        end
+
+        current = next_sq
+    end
+
+    return attacks
 end
+
 
 -- Static
 function Attacks.pawn_attacks(square, color)
@@ -91,24 +105,24 @@ function Attacks.king_attacks(square)
 end
 
 -- Sliding
-function Attacks.rook_attacks(square, occupied)
+function Attacks.rook_attacks(square, my_occupied, other_occupied)
 	local attacks = u64.ZERO
-	attacks = u64.bor(attacks, ray_attacks(square, 8, occupied))  -- North
-	attacks = u64.bor(attacks, ray_attacks(square, -8, occupied)) -- South
-	attacks = u64.bor(attacks, ray_attacks(square, 1, occupied))  -- East
-	attacks = u64.bor(attacks, ray_attacks(square, -1, occupied)) -- West
+	attacks = u64.bor(attacks, ray_attacks(square, 8, my_occupied, other_occupied))  -- North
+	attacks = u64.bor(attacks, ray_attacks(square, -8, my_occupied, other_occupied)) -- South
+	attacks = u64.bor(attacks, ray_attacks(square, 1, my_occupied, other_occupied))  -- East
+	attacks = u64.bor(attacks, ray_attacks(square, -1, my_occupied, other_occupied)) -- West
 	return attacks
 end
-function Attacks.bishop_attacks(square, occupied)
+function Attacks.bishop_attacks(square, my_occupied, other_occupied)
 	local attacks = u64.ZERO
-	attacks = u64.bor(attacks, ray_attacks(square, 9, occupied))   -- NE
-	attacks = u64.bor(attacks, ray_attacks(square, 7, occupied))   -- NW
-	attacks = u64.bor(attacks, ray_attacks(square, -7, occupied))  -- SE
-	attacks = u64.bor(attacks, ray_attacks(square, -9, occupied))  -- SW
+	attacks = u64.bor(attacks, ray_attacks(square, 9, my_occupied, other_occupied))   -- NE
+	attacks = u64.bor(attacks, ray_attacks(square, 7, my_occupied, other_occupied))   -- NW
+	attacks = u64.bor(attacks, ray_attacks(square, -7, my_occupied, other_occupied))  -- SE
+	attacks = u64.bor(attacks, ray_attacks(square, -9, my_occupied, other_occupied))  -- SW
 	return attacks
 end
-function Attacks.queen_attacks(square, occupied)
-	return u64.bor(Attacks.rook_attacks(square, occupied), Attacks.bishop_attacks(square, occupied))
+function Attacks.queen_attacks(square, my_occupied, other_occupied)
+	return u64.bor(Attacks.rook_attacks(square, my_occupied, other_occupied), Attacks.bishop_attacks(square, my_occupied, other_occupied))
 end
 
 return Attacks

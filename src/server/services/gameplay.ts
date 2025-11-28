@@ -78,15 +78,12 @@ export class Gameplay implements OnStart {
       return;
     }
 
-    print(BitBoard.to_fen(activeGame.board), from);
     const allMoves = BitBoard.generate_legal_moves_from(
       activeGame.board,
       from,
       false,
-      //fromPiece[1],
     );
     const move = allMoves.find((m) => m.to === to);
-    print(allMoves, move);
     if (!move) {
       return;
     }

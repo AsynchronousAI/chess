@@ -533,7 +533,7 @@ function Board.unmake_move(self, move, previous_state)
 			-- Restore en passant captured pawn
 			local captured_pawn_square = move.to - (if color == WHITE then 8 else -8)
 			self.pieces[opponent][PAWN] = Utils.set_bit(self.pieces[opponent][PAWN], captured_pawn_square)
-		else
+		elseif previous_state.captured_piece_type then
 			-- Restore normally captured piece
 			-- Note: you'd need to store which piece type was captured
 			self.pieces[opponent][previous_state.captured_piece_type] = Utils.set_bit(
@@ -563,7 +563,6 @@ end
 
 -- Move generation
 local function generate_pawn_moves(self, moves, color)
-	color = color or self.side_to_move
 	local pawns = self.pieces[color][PAWN]
 	local empty = u64.bnot(self.occupied.all)
 	local enemies = self.occupied[1 - color]
@@ -633,9 +632,9 @@ local function generate_pawn_moves(self, moves, color)
 	end
 end
 local function generate_piece_moves(self, moves, piece_type, attack_func, color)
-	color = color or self.side_to_move
 	local pieces = self.pieces[color][piece_type]
 	local own_pieces = self.occupied[color]
+	local other_pieces = self.occupied[1 - color]
 
 	while pieces ~= u64.ZERO do
 		local from_square
@@ -645,7 +644,7 @@ local function generate_piece_moves(self, moves, piece_type, attack_func, color)
 		if piece_type == KNIGHT or piece_type == KING then
 			attacks = attack_func(from_square)
 		else
-			attacks = attack_func(from_square, self.occupied.all)
+			attacks = attack_func(from_square, own_pieces, other_pieces)
 		end
 
 		-- Remove moves to squares occupied by own pieces
@@ -655,22 +654,17 @@ local function generate_piece_moves(self, moves, piece_type, attack_func, color)
 			local to_square
 			attacks, to_square = Utils.pop_lsb(attacks)
 
-			local is_capture = Utils.get_bit(self.occupied[1 - color], to_square)
+			local is_capture = Utils.get_bit(other_pieces, to_square)
 			table.insert(moves, Move.new(from_square, to_square, piece_type, is_capture))
 		end
 	end
 end
 function Board.generate_legal_moves(self, filePseudoLegal, color)
-    --local hash = Board.hash(self);
+    color = color or self.side_to_move
+
 	local moves = {}
---[[
-    if LegalMovesTransposition[hash] then
-        for i, v in LegalMovesTransposition[hash] do
-            moves[i] = v
-        end
-        return moves
-    end
-]]
+
+	Board.update_occupied(self)
 	generate_pawn_moves(self, moves, color)
 	generate_piece_moves(self, moves, KNIGHT, Attacks.knight_attacks, color)
 	generate_piece_moves(self, moves, BISHOP, Attacks.bishop_attacks, color)
@@ -679,10 +673,23 @@ function Board.generate_legal_moves(self, filePseudoLegal, color)
 	generate_piece_moves(self, moves, KING, Attacks.king_attacks, color)
 
 	-- TODO: Add castling moves
-	-- TODO: Filter out moves that leave king in check
 
-	--LegalMovesTransposition[hash] = moves;
-	return moves
+	if not filePseudoLegal then
+	    local myKing = Board.find_piece(self, KING, color)
+		if myKing < 0 then return {} end
+	    local filtered_moves = {}
+
+	    for _, move in moves do
+			local branch = Board.clone(self)
+			Board.make_move(branch, move)
+	        if not Board.is_square_attacked(branch, myKing, 1-color) then
+	            table.insert(filtered_moves, move)
+	        end
+	    end
+	    return filtered_moves
+	else
+		return moves
+	end
 end
 function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
     local allMoves = Board.generate_legal_moves(self, filePseudoLegal, color)
@@ -696,10 +703,10 @@ function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
 
     return moves
 end
-function Board.is_square_attacked(self, square, by_color)
-    local opponent = by_color
-
+function Board.is_square_attacked(self, square, opponent)
     -- Pawns
+    local my_occupied = self.occupied[1-opponent]
+    local other_occupied = self.occupied[opponent]
     local pawns = self.pieces[opponent][PAWN]
     local pawn_attacks
 
@@ -729,9 +736,11 @@ function Board.is_square_attacked(self, square, by_color)
 
     -- King
     local king = self.pieces[opponent][KING]
-    local king_sq = 63 - u64.countlz(king)
-    if u64.btest(Attacks.king_attacks(king_sq), r) then
-        return true
+    if king ~= u64.ZERO then
+        local king_sq = 63 - u64.countlz(king)
+        if u64.btest(Attacks.king_attacks(king_sq), r) then
+            return true
+        end
     end
 
     -- Bishops / Queens (diagonals)
@@ -739,7 +748,7 @@ function Board.is_square_attacked(self, square, by_color)
     while bishops ~= u64.ZERO do
         local from_square
         bishops, from_square = Utils.pop_lsb(bishops)
-        if u64.btest(Attacks.bishop_attacks(from_square, self.occupied.all), r) then
+        if u64.btest(Attacks.bishop_attacks(from_square, my_occupied, other_occupied), r) then
             return true
         end
     end
@@ -749,7 +758,7 @@ function Board.is_square_attacked(self, square, by_color)
     while rooks ~= u64.ZERO do
         local from_square
         rooks, from_square = Utils.pop_lsb(rooks)
-        if u64.btest(Attacks.rook_attacks(from_square, self.occupied.all), r) then
+        if u64.btest(Attacks.rook_attacks(from_square, my_occupied, other_occupied), r) then
             return true
         end
     end
