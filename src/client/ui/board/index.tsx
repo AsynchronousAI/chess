@@ -12,7 +12,6 @@ import { Frame } from "@rbxts/better-react-components";
 import { BitBoard } from "shared/engine/bitboard";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { ChessBoard, ChessBoardRef } from "./Board";
-import { DefaultBoard, FEN } from "shared/engine/fen";
 import { Explorer } from "./Explorer";
 import { Player } from "./Player";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
@@ -20,7 +19,6 @@ import { Gameplay } from "client/controllers/gameplay";
 import { usePx } from "../hooks/usePx";
 import Atoms from "../atoms";
 import { RunService } from "@rbxts/services";
-import { PGN } from "shared/engine/pgn";
 
 export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);
@@ -40,8 +38,8 @@ export default function Board() {
     : undefined;
   const takenPieces = gameplay?.useTakenPieces() ?? [];
 
-  const board = gameplay?.useBoard() ?? BitBoard.branch(DefaultBoard);
-  const pgn = gameplay?.usePGN() ?? PGN.create();
+  const board = gameplay?.useBoard() ?? BitBoard.create();
+  const moveHistory = gameplay?.useMoveHistory() ?? [];
   const playingAs = gameplay?.usePlayingAs() ?? Color.white;
   const activeGame = gameplay?.useActiveGame() ?? {
     color: Color.white,
@@ -53,14 +51,14 @@ export default function Board() {
   /* Handlers */
   const onMove = (location: number) => {
     if (
-      !possibleMoves.find((v) => v[0] === location) ||
+      !possibleMoves.find((v) => v.from === location) ||
       holdingPiece === undefined ||
-      BitBoard.getTurn(board) !== playingAs
+      board.side_to_move !== playingAs
     ) {
       return;
     }
 
-    const piece = BitBoard.getPiece(board, holdingPiece);
+    const piece = BitBoard.get_piece(board, holdingPiece)!;
     if (IsPromotion(location, ...piece)) {
       setPromoting(location);
       return;
@@ -77,14 +75,19 @@ export default function Board() {
     setPromoting(-1);
   };
   const onRewind = (moveIndex: number) => {
-    const prevBoard = moveIndex === 0 ? DefaultBoard : pgn[moveIndex - 1].state;
+    const prevBoard =
+      moveIndex === 0 ? BitBoard.create() : moveHistory[moveIndex - 1].state;
     chessBoardRef.current?.setBoard(prevBoard);
     task.wait();
     /* TODO: Check SFX does not play in explorer, since moves are not simulated then attacked squares cannot be calculated. */
     gameplay?.movePiece(
-      [pgn[moveIndex].from, pgn[moveIndex].to, pgn[moveIndex].promotion],
+      [
+        moveHistory[moveIndex].from,
+        moveHistory[moveIndex].to,
+        moveHistory[moveIndex].promotion,
+      ],
       false,
-      BitBoard.getPiece(prevBoard, pgn[moveIndex].from)[1],
+      BitBoard.get_piece(prevBoard, moveHistory[moveIndex].from)![1],
       prevBoard, // temporary!
     );
     Atoms.CurrentMove(moveIndex);
@@ -96,7 +99,7 @@ export default function Board() {
   useEffect(() => setPromoting(-1), [board]);
 
   const isPlayer1Turn =
-    pgn.size() === 0
+    moveHistory.size() === 0
       ? activeGame.color === Color.white
       : currentMove % 2 !== activeGame.color;
   return (
@@ -167,9 +170,11 @@ export default function Board() {
           locked={
             //gameId === "" ||
             activeGame.analysis !== "" ||
-            /* if the PGN is not empty, then if the currentMove is not
+            /* if the move is not empty, then if the currentMove is not
           the last move  (rewinding) */
-            (pgn.size() === 0 ? false : currentMove !== pgn.size() - 1)
+            (moveHistory.size() === 0
+              ? false
+              : currentMove !== moveHistory.size() - 1)
           }
           size={new UDim2(0.85, 0, 0.85, 0)}
         />

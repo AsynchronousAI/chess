@@ -28,6 +28,7 @@ export class Gameplay implements OnStart {
     promotion?: Piece;
     captured: boolean;
     sfx: keyof typeof SoundEffects;
+    state: BitBoard;
   }> = [];
   private activeGame: Partial<Game> = {};
   private gameId = "";
@@ -94,7 +95,14 @@ export class Gameplay implements OnStart {
     sfx: keyof typeof SoundEffects,
     myMove: boolean,
   ) {
-    this.moveHistory.push({ from, to, promotion, captured, sfx });
+    this.moveHistory.push({
+      from,
+      to,
+      promotion,
+      captured,
+      sfx,
+      state: BitBoard.clone(this.board),
+    });
     Atoms.CurrentMove(this.moveHistory.size() - 1);
 
     if (myMove) {

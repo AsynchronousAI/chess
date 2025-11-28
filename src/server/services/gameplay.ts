@@ -6,12 +6,9 @@ import { Events, Functions } from "server/network";
 import getOpening from "server/openings/getOpening";
 import { Color, IsPromotion, Piece, Square } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
-import { DefaultBoard } from "shared/engine/fen";
-import { AnalyzeMates } from "shared/engine/legalMoves";
 import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
-import { PerformMove } from "shared/engine/move";
 import { GetBestMove } from "server/bots";
 
 export type Game = {
@@ -45,7 +42,7 @@ export type Game = {
   opening: string;
 
   /* evaluation */
-  analysis: ReturnType<typeof AnalyzeMates>;
+  analysis: ReturnType<typeof BitBoard.get_game_state>;
   eval: number;
   mate: number;
 };
@@ -69,20 +66,26 @@ export class Gameplay implements OnStart {
     promotion?: Piece,
   ) {
     const activeGame = this.Games[gameId];
-    const turn = BitBoard.getTurn(activeGame.board);
+    const turn = activeGame.board.side_to_move!;
     const currentTime = os.clock();
 
     /* illegal moves, in future check for promotions also */
     if (
       promotion !== undefined &&
-      !IsPromotion(to, ...BitBoard.getPiece(activeGame.board, from))
+      !IsPromotion(to, ...BitBoard.get_piece(activeGame.board, from)!)
     ) {
       return;
     }
 
-    if (!PerformMove(activeGame.board, [from, to, promotion])) {
+    const move = BitBoard.generate_legal_moves_from(
+      activeGame.board,
+      from,
+    ).find((m) => m.to === to);
+    if (!move) {
       return;
     }
+
+    BitBoard.make_move(activeGame.board, move);
 
     /* PGN */
     activeGame.moves.push([from, to, promotion]);
@@ -102,7 +105,7 @@ export class Gameplay implements OnStart {
     activeGame.lastMove = os.clock();
 
     /* Is this an endgame? */
-    activeGame.analysis = AnalyzeMates(activeGame.board);
+    activeGame.analysis = BitBoard.get_game_state(activeGame.board);
     if (activeGame.analysis === "stalemate") {
       activeGame.winner = 3;
     } else if (activeGame.analysis === "checkmate") {
@@ -289,7 +292,7 @@ export class Gameplay implements OnStart {
       color: 0,
 
       /* Board */
-      board: BitBoard.branch(DefaultBoard),
+      board: BitBoard.create(),
       moves: [],
       opening: "Starting Position",
 
@@ -419,7 +422,7 @@ export class Gameplay implements OnStart {
       for (const [id, currentGame] of Object.entries(this.Games)) {
         if (currentGame.analysis !== "") return; /* game ended */
 
-        const currentTurn = BitBoard.getTurn(currentGame.board);
+        const currentTurn = currentGame.board.side_to_move;
 
         let timedOut = 0; /* 1 means player 1, 2 means player 2, 0 means no timeouts */
         if (currentTurn === currentGame.color) {

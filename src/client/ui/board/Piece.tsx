@@ -2,7 +2,6 @@ import React, { useEffect } from "@rbxts/react";
 import { Color, Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import { Frame } from "@rbxts/better-react-components";
-import { default as GetLegalMoves } from "shared/engine/legalMoves";
 import { useMotion, useMouse } from "@rbxts/pretty-react-hooks";
 import { generatePosition } from "./shared";
 import { IconPack } from "./images";
@@ -13,7 +12,6 @@ import { usePx } from "../hooks/usePx";
 import { Image } from "../components/image";
 import { RunService } from "@rbxts/services";
 import { BitBoard } from "shared/engine/bitboard";
-import { DefaultBoard } from "shared/engine/fen";
 
 export interface PieceProps {
   pos: [number, number];
@@ -30,7 +28,7 @@ export function Piece(props: PieceProps) {
   const gameplay = RunService.IsRunning()
     ? useFlameworkDependency<Gameplay>()
     : undefined;
-  const board = gameplay?.useBoard() ?? BitBoard.branch(DefaultBoard);
+  const board = gameplay?.useBoard() ?? BitBoard.create();
   const holdingPiece = useAtom(Atoms.HoldingPiece);
   const dragging = useAtom(Atoms.Dragging);
 
@@ -94,7 +92,12 @@ export function Piece(props: PieceProps) {
       Atoms.HoldingPiece(props.location);
       Atoms.Dragging(true);
       Atoms.PossibleMoves(
-        GetLegalMoves(board, props.location, true, props.playingAs),
+        BitBoard.generate_legal_moves_from(
+          board,
+          props.location,
+          true,
+          props.playingAs,
+        ),
       );
     }
   };

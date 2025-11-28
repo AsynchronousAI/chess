@@ -2,7 +2,7 @@
 --!optimize 2
 
 local u64 = require("./int64")
-local Utils = require("./Utils")
+local Utils = require("./utils")
 local Attacks = require("./attacks")
 local Move = require("./move")
 
@@ -754,11 +754,11 @@ function Board.get_all_pieces(self)
         for typ, bb in piece_table do
             local b = bb
 
-            while not u64.eq(b, u64.ZERO) do
+            while b ~= u64.ZERO do
                 local lsb = 63 - u64.countlz(b)
                 local loc = lsb
                 table.insert(pieces_list, { typ, color, loc })
-                b = u64.band(b, u64.bnot(u64.from_index(lsb)))
+                b = u64.band(b, u64.bnot(u64.lshift(u64.ONE, lsb)))
             end
         end
     end
@@ -803,10 +803,10 @@ function Board.get_game_state(self)
 end
 
 -- Utils
-function BitBoard.separate_square_index(loc: number)
+function Board.separate_square_index(loc: number)
 	return { bit32.band(loc, 7), bit32.arshift(loc, 3) }
 end
-function BitBoard.get_square_index(file: number, rank: number)
+function Board.get_square_index(file: number, rank: number)
 	return bit32.bor(bit32.lshift(rank, 3), file)
 end
 

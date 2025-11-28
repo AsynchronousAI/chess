@@ -1,6 +1,7 @@
 import { BitBoard } from "../shared/engine/bitboard";
 import { HttpService } from "@rbxts/services";
 import { BestMoveResponse, GetBestMoveLocal } from "./bot";
+import { Notation } from "shared/engine/notation";
 
 function bestMoveAPI(board: BitBoard): BestMoveResponse {
   const fen = BitBoard.to_fen(board);

@@ -37,7 +37,7 @@ export function Promotion({
     Motion<number>,
   ][];
 
-  const pos = BitBoard.separateSquareIndex(location);
+  const pos = BitBoard.separate_square_index(location);
 
   return (
     <CanvasGroup

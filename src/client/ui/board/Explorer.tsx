@@ -10,8 +10,8 @@ import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 import { RunService } from "@rbxts/services";
-import { PGN } from "shared/engine/pgn";
 import { Button } from "../components/button";
+import { Notation } from "shared/engine/notation";
 
 export interface ExplorerProps {
   opening: string;
@@ -28,7 +28,7 @@ export function Explorer({
   const gameplay = RunService.IsRunning()
     ? useFlameworkDependency<Gameplay>()
     : undefined;
-  const pgn = gameplay?.usePGN() ?? PGN.create();
+  const moveHistory = gameplay?.useMoveHistory() ?? [];
   const px = usePx();
 
   return (
@@ -78,11 +78,11 @@ export function Explorer({
           layoutOrder={0}
         />
 
-        {pgn
+        {moveHistory
           .filter((_, i) => i % 2 === 0) // only white moves, since black moves will be displayed same place
           .map((move, minimizedIndex) => {
             const index = minimizedIndex * 2;
-            const blackResponse = pgn[index + 1];
+            const blackResponse = moveHistory[index + 1];
             return (
               <Frame
                 layoutOrder={minimizedIndex}
@@ -112,7 +112,10 @@ export function Explorer({
 
                 {/* White move */}
                 <textbutton
-                  Text={move.notation}
+                  Text={
+                    Notation.encodeSquare(move.from) +
+                    Notation.encodeSquare(move.to)
+                  }
                   TextColor3={
                     index === currentMove
                       ? new Color3(1, 1, 1)
@@ -131,7 +134,10 @@ export function Explorer({
                 {/* Black move */}
                 {blackResponse !== undefined && (
                   <textbutton
-                    Text={blackResponse.notation}
+                    Text={
+                      Notation.encodeSquare(blackResponse.from) +
+                      Notation.encodeSquare(blackResponse.to)
+                    }
                     TextColor3={
                       index + 1 === currentMove
                         ? new Color3(1, 1, 1)
