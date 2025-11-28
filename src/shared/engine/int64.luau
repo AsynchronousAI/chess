@@ -644,6 +644,15 @@ local function to_bin_string(u64: vector): string
 	return (string.gsub(to_hex_string(u64), "(.)", HEX_TO_BINARY))
 end
 
+local function to_bin_matrix_string(u64: vector): string
+	local x = to_bin_string(u64)
+	local y = ""
+	for i = 1, #x, 8 do
+		y = y .. x:sub(i, i + 7) .. "\n"
+	end
+	return y
+end
+
 --[=[
 	Returns the provided value parsed as a 64-bit integer. Expects the provided
 	string to contain only the digits 0-9 and will error if it does not.
@@ -762,6 +771,7 @@ return {
 
 	to_hex_string = to_hex_string,
 	to_bin_string = to_bin_string,
+	to_bin_matrix_string = to_bin_matrix_string,
 
 	to_dec_string = to_dec_string,
 	from_dec_string = from_dec_string,

@@ -11,39 +11,30 @@ local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NO
 
 local Attacks = {}
 
-local function ray_attacks(square, direction, my_occupied, other_occupied)
+local function ray_attacks(square, direction, own, other)
     local attacks = u64.ZERO
     local current = square
 
     while true do
+        -- file guards
+        local file = current % 8
+        if direction == 1  and file == 7 then break end
+        if direction == -1 and file == 0 then break end
+        if direction == 9  and file == 7 then break end
+        if direction == 7  and file == 0 then break end
+        if direction == -7 and file == 7 then break end
+        if direction == -9 and file == 0 then break end
+
         local next_sq = current + direction
+        if next_sq < 0 or next_sq > 63 then break end
 
-        -- Board bounds
-        if next_sq < 0 or next_sq > 63 then
+        if Utils.get_bit(own, next_sq) then
             break
         end
 
-        -- Prevent horizontal wrap
-        if direction == 1 or direction == -1 then
-            if (next_sq // 8) ~= (current // 8) then
-                break
-            end
-        end
-
-        -- Prevent diagonal wrap
-        if direction == 9 or direction == -9 or direction == 7 or direction == -7 then
-            local file_diff = math.abs((next_sq % 8) - (current % 8))
-            if file_diff ~= 1 then
-                break
-            end
-        end
-
-
-        if Utils.get_bit(my_occupied, next_sq) then
-            break
-        end
         attacks = Utils.set_bit(attacks, next_sq)
-        if Utils.get_bit(other_occupied, next_sq) then
+
+        if Utils.get_bit(other, next_sq) then
             break
         end
 

@@ -10,6 +10,7 @@ local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils
 local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.FILE_A, Utils.FILE_H, Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
 
 local LegalMovesTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("LegalMovesTransposition")
+local rs = game:GetService("RunService")
 
 local Board = {}
 
@@ -703,67 +704,43 @@ function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
 
     return moves
 end
-function Board.is_square_attacked(self, square, opponent)
-    -- Pawns
-    local my_occupied = self.occupied[1-opponent]
-    local other_occupied = self.occupied[opponent]
-    local pawns = self.pieces[opponent][PAWN]
-    local pawn_attacks
+function Board:is_square_attacked(square, by_color)
+	local occupiedMe = self.occupied[by_color]
+	local myPieces = self.pieces[by_color]
+	local occupiedEnemy = self.occupied[1 - by_color]
 
-    local r = u64.lshift(u64.ONE, square)
+	local pawn_attack_bb = Attacks.pawn_attacks(square, 1 - by_color) -- Reverse color for "from where can pawns attack this square"
+	if u64.btest(myPieces[PAWN], pawn_attack_bb) then
+		return true
+	end
 
-    if opponent == WHITE then
-        pawn_attacks = u64.band(u64.rshift(pawns, 7), NOT_FILE_H)
-        if u64.btest(pawn_attacks, r) then return true end
-        pawn_attacks = u64.band(u64.rshift(pawns, 9), NOT_FILE_A)
-        if u64.btest(pawn_attacks, r) then return true end
-    else
-        pawn_attacks = u64.band(u64.lshift(pawns, 7), NOT_FILE_A)
-        if u64.btest(pawn_attacks, r) then return true end
-        pawn_attacks = u64.band(u64.lshift(pawns, 9), NOT_FILE_H)
-        if u64.btest(pawn_attacks, r) then return true end
-    end
+	-- Check knight attacks
+	local knight_attack_bb = Attacks.knight_attacks(square)
+	if u64.btest(myPieces[KNIGHT], knight_attack_bb) then
+		return true
+	end
 
-    -- Knights
-    local knights = self.pieces[opponent][KNIGHT]
-    while knights ~= u64.ZERO do
-        local from_square
-        knights, from_square = Utils.pop_lsb(knights)
-        if u64.btest(Attacks.knight_attacks(from_square), r) then
-            return true
-        end
-    end
+	-- Check king attacks
+	local king_attack_bb = Attacks.king_attacks(square)
+	if u64.btest(myPieces[KING], king_attack_bb) then
+		return true
+	end
 
-    -- King
-    local king = self.pieces[opponent][KING]
-    if king ~= u64.ZERO then
-        local king_sq = 63 - u64.countlz(king)
-        if u64.btest(Attacks.king_attacks(king_sq), r) then
-            return true
-        end
-    end
+	-- Check bishop/queen diagonal attacks
+	local bishop_attack_bb = Attacks.bishop_attacks(square, occupiedMe, occupiedEnemy)
+	local diagonal_attackers = u64.bor(myPieces[BISHOP], myPieces[QUEEN])
+	if u64.btest(diagonal_attackers, bishop_attack_bb) then
+		return true
+	end
 
-    -- Bishops / Queens (diagonals)
-    local bishops = u64.bor(self.pieces[opponent][BISHOP], self.pieces[opponent][QUEEN])
-    while bishops ~= u64.ZERO do
-        local from_square
-        bishops, from_square = Utils.pop_lsb(bishops)
-        if u64.btest(Attacks.bishop_attacks(from_square, my_occupied, other_occupied), r) then
-            return true
-        end
-    end
+	-- Check rook/queen straight attacks
+	local rook_attack_bb = Attacks.rook_attacks(square, occupiedMe, occupiedEnemy)
+	local straight_attackers = u64.bor(myPieces[ROOK], myPieces[QUEEN])
+	if u64.btest(straight_attackers, rook_attack_bb) then
+		return true
+	end
 
-    -- Rooks / Queens (straight lines)
-    local rooks = u64.bor(self.pieces[opponent][ROOK], self.pieces[opponent][QUEEN])
-    while rooks ~= u64.ZERO do
-        local from_square
-        rooks, from_square = Utils.pop_lsb(rooks)
-        if u64.btest(Attacks.rook_attacks(from_square, my_occupied, other_occupied), r) then
-            return true
-        end
-    end
-
-    return false
+	return false
 end
 
 
