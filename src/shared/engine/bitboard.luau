@@ -9,10 +9,9 @@ local Move = require("./move")
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.FILE_A, Utils.FILE_H, Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
 
-local LegalMovesTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("LegalMovesTransposition")
-local rs = game:GetService("RunService")
-
-local Board = {}
+local Board = {
+    hash = require("./zobrist")
+}
 
 function Board.create(blank)
 	local self = {}
@@ -163,71 +162,6 @@ function Board.from_buffer(buf)
     self.fullmove_number = buffer.readu16(buf, off); off += 2
 
     return self
-end
-
--- Zobrist
-local Zobrist = {}
-Zobrist.piece_square = {}
-Zobrist.castling = {}
-Zobrist.en_passant = {}
-Zobrist.side_to_move = 0
-do
-    math.randomseed(10)
-    local random64 = function()
-        return u64.from_pair(math.random(0, 0xFFFFFFFF), math.random(0, 0xFFFFFFFF))
-    end
-
-    for color = WHITE, BLACK do
-        Zobrist.piece_square[color] = {}
-        for piece = PAWN, KING do
-            Zobrist.piece_square[color][piece] = {}
-            for square = 0, 63 do
-                Zobrist.piece_square[color][piece][square] = random64()
-            end
-        end
-    end
-
-    for i = 1, 4 do
-        Zobrist.castling[i] = random64()
-    end
-    for file = 0, 7 do
-        Zobrist.en_passant[file] = random64()
-    end
-    Zobrist.side_to_move = random64()
-end
-function Board.hash(board)
-    local hash = u64.ZERO
-
-    -- Pieces
-    for color = WHITE, BLACK do
-        for piece = PAWN, KING do
-            local bb = board.pieces[color][piece]
-            while bb ~= u64.ZERO do
-                local square
-                bb, square = Utils.pop_lsb(bb)
-                hash = u64.bxor(hash, Zobrist.piece_square[color][piece][square])
-            end
-        end
-    end
-
-    -- Castling
-    if board.castling_rights.white_kingside then hash = u64.bxor(hash, Zobrist.castling[1]) end
-    if board.castling_rights.white_queenside then hash = u64.bxor(hash, Zobrist.castling[2]) end
-    if board.castling_rights.black_kingside then hash = u64.bxor(hash, Zobrist.castling[3]) end
-    if board.castling_rights.black_queenside then hash = u64.bxor(hash, Zobrist.castling[4]) end
-
-    -- En passant
-    if board.en_passant_square then
-        local file = board.en_passant_square % 8
-        hash = u64.bxor(hash, Zobrist.en_passant[file])
-    end
-
-    -- Side to move
-    if board.side_to_move == WHITE then
-        hash = u64.bxor(hash, Zobrist.side_to_move)
-    end
-
-    return u64.to_byte_string(hash)
 end
 
 -- FEN
