@@ -188,21 +188,6 @@ function Board.set_start_position(self)
 
 	Board.update_occupied(self)
 end
-function Board.save_state(self)
-	-- Save state for unmake_move
-	return {
-		side_to_move = self.side_to_move,
-		en_passant_square = self.en_passant_square,
-		castling_rights = {
-			white_kingside = self.castling_rights.white_kingside,
-			white_queenside = self.castling_rights.white_queenside,
-			black_kingside = self.castling_rights.black_kingside,
-			black_queenside = self.castling_rights.black_queenside,
-		},
-		halfmove_clock = self.halfmove_clock,
-		fullmove_number = self.fullmove_number,
-	}
-end
 function Board.update_occupied(self)
 	self.occupied[WHITE] = u64.ZERO
 	self.occupied[BLACK] = u64.ZERO
@@ -328,57 +313,6 @@ function Board.make_move(self, move)
 	if color == BLACK then
 		self.fullmove_number += 1
 	end
-end
-function Board.unmake_move(self, move, previous_state)
-	-- Restore previous state
-	self.side_to_move = previous_state.side_to_move
-	self.en_passant_square = previous_state.en_passant_square
-	self.castling_rights = previous_state.castling_rights
-	self.halfmove_clock = previous_state.halfmove_clock
-	self.fullmove_number = previous_state.fullmove_number
-
-	local color = self.side_to_move
-	local opponent = 1 - color
-
-	-- Remove piece from destination square
-	local final_piece_type = move.promotion or move.piece_type
-	self.pieces[color][final_piece_type] = Utils.clear_bit(self.pieces[color][final_piece_type], move.to)
-
-	-- Restore piece to original square
-	self.pieces[color][move.piece_type] = Utils.set_bit(self.pieces[color][move.piece_type], move.from)
-
-	-- Restore captured piece
-	if move.captured then
-		if move.flags and move.flags.en_passant then
-			-- Restore en passant captured pawn
-			local captured_pawn_square = move.to - (if color == WHITE then 8 else -8)
-			self.pieces[opponent][PAWN] = Utils.set_bit(self.pieces[opponent][PAWN], captured_pawn_square)
-		elseif previous_state.captured_piece_type then
-			-- Restore normally captured piece
-			-- Note: you'd need to store which piece type was captured
-			self.pieces[opponent][previous_state.captured_piece_type] = Utils.set_bit(
-				self.pieces[opponent][previous_state.captured_piece_type],
-				move.to
-			)
-		end
-	end
-
-	-- Restore castling rook
-	if move.flags and move.flags.castling then
-		local rook_from, rook_to
-		if move.flags.kingside then
-			rook_from = if color == WHITE then 7 else 63
-			rook_to = if color == WHITE then 5 else 61
-		else
-			rook_from = if color == WHITE then 0 else 56
-			rook_to = if color == WHITE then 3 else 59
-		end
-
-		self.pieces[color][ROOK] = Utils.clear_bit(self.pieces[color][ROOK], rook_to)
-		self.pieces[color][ROOK] = Utils.set_bit(self.pieces[color][ROOK], rook_from)
-	end
-
-	Board.update_occupied(self)
 end
 
 -- Move generation
