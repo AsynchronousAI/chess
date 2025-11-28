@@ -81,24 +81,22 @@ return function (board: buffer)
         return transposition[hash]
     end
 
-
     local mate = ""--libs.LegalMoves.AnalyzeMates(board)
     if mate == "stalemate" then
         value = 0
     elseif mate == "checkmate" then
-        value = if BitBoard.getTurn(board) == 1 then -math.huge else math.huge
+        value = if board.side_to_move == 1 then -math.huge else math.huge
     else
-        for _, d in BitBoard.getAllPieces(board) do
-            local color = d[2][2]
-            local square = if color == 1 then d[1] else 63 - d[1]
-            local piece = d[2][1]
+        for _, d in BitBoard.get_all_pieces(board) do
+            local color = d[2]
+            local square = if color == 1 then d[3] else 63 - d[3]
+            local piece = d[1]
 
             local v = pst[piece][square+1] or 0
 
             value += v * (if color == 1 then 1 else -1)
         end
     end
-
 
     transposition[hash] = value
     return value

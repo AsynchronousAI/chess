@@ -1,11 +1,10 @@
-import { BitBoard } from "shared/engine/bitboard";
-import { Piece, Square } from "shared/board";
+import { BitBoard, Move } from "shared/engine/bitboard";
 
 export interface BestMoveResponse {
   eval: number;
   mate: number;
   depth: number;
-  move?: [Square, Square, Piece | undefined];
+  move?: Move;
 }
 
 export function GetBestMoveLocal(board: BitBoard): BestMoveResponse;

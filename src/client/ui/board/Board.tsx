@@ -191,7 +191,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                 </Frame>
 
                 {/* Hitbox */}
-                {possibleMoves.find((v) => v.from === index) && (
+                {possibleMoves.find((v) => v.to === index) && (
                   <>
                     <textbutton
                       key={`${location}-hit`}

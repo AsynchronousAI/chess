@@ -22,15 +22,15 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     local maxDepthReached = depth
     local bestScore = isMaximizing and -math.huge or math.huge
 
-    local allLegalMoves = libs.LegalMoves.GetAllLegalMoves(board, libs.BitBoard.getTurn(board))
+    local allLegalMoves = libs.BitBoard.generate_legal_moves(board, false, board.side_to_move)
     local moves = moveOrdering(board, allLegalMoves)
     local bestMove = moves[1] -- at times, bot doesnt want to move (zugzwang). in that case we do first legal move
     local threads = {}
 
     -- Deploy threads
     for index, move in moves do
-        local branch = libs.BitBoard.branch(board)
-        libs.Move.PerformMove(branch, move)
+        local branch = libs.BitBoard.clone(board)
+        libs.BitBoard.make_move(branch, move)
 
         local thread = callback(branch, not isMaximizing, maxDepth, depth + 1)
         threads[index] = thread;
@@ -68,9 +68,9 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     end
 
     -- Convert to sequence string
-    local bestSequence = `{libs.Notation.encodeSquare(bestMove[1])}{libs.Notation.encodeSquare(bestMove[2])} `
+    local bestSequence = `{libs.Notation.encodeSquare(bestMove.from)}{libs.Notation.encodeSquare(bestMove.to)} `
     for _, v in sequence do
-        bestSequence = `{bestSequence}{libs.Notation.encodeSquare(v[1])}{libs.Notation.encodeSquare(v[2])} `
+        bestSequence = `{bestSequence}{libs.Notation.encodeSquare(v.from)}{libs.Notation.encodeSquare(v.to)} `
     end
 
     return {score = bestScore, depth = maxDepthReached, bestMove = bestMove, sequence = bestSequence, legalMoves = #moves, nodes = nodes}
@@ -95,13 +95,13 @@ spawnThreads(50)
 
 --[[ Return ]]
 return {
-    GetBestMoveLocal = function(board: buffer)
+    GetBestMoveLocal = function(board)
         local index = 0;
         local start = os.clock()
-        local minimaxResults = minimaxHost(board, libs.BitBoard.getTurn(board) == 1, DEPTH, 0, function(branch, isMaximizing, maxDepth, depth)
+        local minimaxResults = minimaxHost(board, board.side_to_move == 1, DEPTH, 0, function(branch, isMaximizing, maxDepth, depth)
             index = (index%#actors)+1
             local tbl = SharedTable.new();
-            tbl.board = buffer.tostring(branch);
+            tbl.board = buffer.tostring(libs.BitBoard.to_buffer(branch));
             tbl.isMaximizing = isMaximizing;
             tbl.maxDepth = maxDepth;
             tbl.depth = depth;

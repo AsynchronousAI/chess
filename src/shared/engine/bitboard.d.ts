@@ -59,7 +59,7 @@ export namespace BitBoard {
     board: BitBoard,
     piece_type: Piece,
     color: Color,
-  ): Array<Square>;
+  ): Square;
 
   export function get_all_pieces(
     board: BitBoard,

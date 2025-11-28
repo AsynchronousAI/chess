@@ -2,7 +2,7 @@ import { BitBoard } from "../shared/engine/bitboard";
 import { HttpService } from "@rbxts/services";
 import { BestMoveResponse, GetBestMoveLocal } from "./bot";
 import { Notation } from "shared/engine/notation";
-
+/*
 function bestMoveAPI(board: BitBoard): BestMoveResponse {
   const fen = BitBoard.to_fen(board);
   const turn = board.side_to_move;
@@ -36,8 +36,8 @@ function bestMoveAPI(board: BitBoard): BestMoveResponse {
     depth: bestMove.depth ?? 0,
     move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
   };
-}
+} */
 export function GetBestMove(board: BitBoard, api: boolean) {
-  if (api) return bestMoveAPI(board);
-  else return GetBestMoveLocal(board);
+  /*if (api) return bestMoveAPI(board);
+  else*/ return GetBestMoveLocal(board);
 }

@@ -91,14 +91,14 @@ export function Piece(props: PieceProps) {
       // pick up
       Atoms.HoldingPiece(props.location);
       Atoms.Dragging(true);
-      Atoms.PossibleMoves(
-        BitBoard.generate_legal_moves_from(
-          board,
-          props.location,
-          true,
-          props.playingAs,
-        ),
+
+      const moves = BitBoard.generate_legal_moves_from(
+        board,
+        props.location,
+        true,
+        props.playingAs,
       );
+      Atoms.PossibleMoves(moves);
     }
   };
 

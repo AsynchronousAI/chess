@@ -9,6 +9,8 @@ local Move = require("./move")
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.FILE_A, Utils.FILE_H, Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
 
+local LegalMovesTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("LegalMovesTransposition")
+
 local Board = {}
 
 function Board.create(blank)
@@ -58,11 +60,18 @@ function Board.create(blank)
 	return self
 end
 function Board.clone(board)
-    -- TODO: test out using table.clone, faster or slower?
-	local bin = Board.to_buffer(board)
-	local new = buffer.create(buffer.len(bin))
-	buffer.copy(new, 0, bin, 0)
-	return new
+	return {
+		pieces = {
+			[WHITE] = table.clone(board.pieces[WHITE]),
+			[BLACK] = table.clone(board.pieces[BLACK])
+		},
+		en_passant_square = board.en_passant_square,
+		halfmove_clock = board.halfmove_clock,
+		fullmove_number = board.fullmove_number,
+		side_to_move = board.side_to_move,
+		castling_rights = table.clone(board.castling_rights),
+		occupied = table.clone(board.occupied),
+	}
 end
 
 -- Encoding, unlike older versions this is designed to be **rapid**, not efficent.
@@ -271,9 +280,10 @@ function Board.from_fen(self)
 				local info = piece_map[c]
 				if info then
 					local square = (8 - rank) * 8 + file
-					board.pieces[info.color][info.type] = u64.bor(board.pieces[info.color][info.type], u64.from_index(square))
-                    board.occupied[info.color] = u64.bor(board.occupied[info.color], u64.from_index(square))
-                    board.occupied.all = u64.bor(board.occupied.all, u64.from_index(square))
+					local r = u64.lshift(u64.ONE, square)
+					board.pieces[info.color][info.type] = u64.bor(board.pieces[info.color][info.type], r)
+                    board.occupied[info.color] = u64.bor(board.occupied[info.color], r)
+                    board.occupied.all = u64.bor(board.occupied.all, r)
 				end
 				file = file + 1
 			end
@@ -651,8 +661,16 @@ local function generate_piece_moves(self, moves, piece_type, attack_func, color)
 	end
 end
 function Board.generate_legal_moves(self, filePseudoLegal, color)
+    --local hash = Board.hash(self);
 	local moves = {}
-
+--[[
+    if LegalMovesTransposition[hash] then
+        for i, v in LegalMovesTransposition[hash] do
+            moves[i] = v
+        end
+        return moves
+    end
+]]
 	generate_pawn_moves(self, moves, color)
 	generate_piece_moves(self, moves, KNIGHT, Attacks.knight_attacks, color)
 	generate_piece_moves(self, moves, BISHOP, Attacks.bishop_attacks, color)
@@ -663,6 +681,7 @@ function Board.generate_legal_moves(self, filePseudoLegal, color)
 	-- TODO: Add castling moves
 	-- TODO: Filter out moves that leave king in check
 
+	--LegalMovesTransposition[hash] = moves;
 	return moves
 end
 function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
@@ -683,16 +702,19 @@ function Board.is_square_attacked(self, square, by_color)
     -- Pawns
     local pawns = self.pieces[opponent][PAWN]
     local pawn_attacks
+
+    local r = u64.lshift(u64.ONE, square)
+
     if opponent == WHITE then
         pawn_attacks = u64.band(u64.rshift(pawns, 7), NOT_FILE_H)
-        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+        if u64.btest(pawn_attacks, r) then return true end
         pawn_attacks = u64.band(u64.rshift(pawns, 9), NOT_FILE_A)
-        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+        if u64.btest(pawn_attacks, r) then return true end
     else
         pawn_attacks = u64.band(u64.lshift(pawns, 7), NOT_FILE_A)
-        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+        if u64.btest(pawn_attacks, r) then return true end
         pawn_attacks = u64.band(u64.lshift(pawns, 9), NOT_FILE_H)
-        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+        if u64.btest(pawn_attacks, r) then return true end
     end
 
     -- Knights
@@ -700,15 +722,15 @@ function Board.is_square_attacked(self, square, by_color)
     while knights ~= u64.ZERO do
         local from_square
         knights, from_square = Utils.pop_lsb(knights)
-        if u64.btest(Attacks.knight_attacks(from_square), u64.from_index(square)) then
+        if u64.btest(Attacks.knight_attacks(from_square), r) then
             return true
         end
     end
 
     -- King
     local king = self.pieces[opponent][KING]
-    local king_sq = u64.lsb(king)
-    if u64.btest(Attacks.king_attacks(king_sq), u64.from_index(square)) then
+    local king_sq = 63 - u64.countlz(king)
+    if u64.btest(Attacks.king_attacks(king_sq), r) then
         return true
     end
 
@@ -717,7 +739,7 @@ function Board.is_square_attacked(self, square, by_color)
     while bishops ~= u64.ZERO do
         local from_square
         bishops, from_square = Utils.pop_lsb(bishops)
-        if u64.btest(Attacks.bishop_attacks(from_square, self.occupied.all), u64.from_index(square)) then
+        if u64.btest(Attacks.bishop_attacks(from_square, self.occupied.all), r) then
             return true
         end
     end
@@ -727,7 +749,7 @@ function Board.is_square_attacked(self, square, by_color)
     while rooks ~= u64.ZERO do
         local from_square
         rooks, from_square = Utils.pop_lsb(rooks)
-        if u64.btest(Attacks.rook_attacks(from_square, self.occupied.all), u64.from_index(square)) then
+        if u64.btest(Attacks.rook_attacks(from_square, self.occupied.all), r) then
             return true
         end
     end
@@ -738,9 +760,10 @@ end
 
 -- Pieces
 function Board.get_piece(self, loc)
+    local search = u64.lshift(u64.ONE, loc)
     for color, pieces in self.pieces do
         for typ, bb in pieces do
-            if not u64.eq(u64.band(bb, u64.from_index(loc)), u64.ZERO) then
+            if u64.band(bb, search) ~= u64.ZERO then
                 return {color, typ}
             end
         end
@@ -767,15 +790,8 @@ function Board.get_all_pieces(self)
 end
 function Board.find_piece(self, piece_type, color)
     local bb = self.pieces[color][piece_type]
-    local squares = {}
-
-    while not u64.eq(bb, u64.ZERO) do
-        local square
-        bb, square = Utils.pop_lsb(bb)
-        table.insert(squares, square)
-    end
-
-    return squares
+    local square = 63-u64.countlz(bb)
+    return square
 end
 
 -- Endgame
@@ -788,7 +804,7 @@ function Board.get_game_state(self)
 
     -- Check if king is in check
     local king_bb = self.pieces[color][KING]
-    local king_square = u64.lsb(king_bb)
+    local king_square = 63 - u64.countlz(king_bb)
     local in_check = Board.is_square_attacked(self, king_square, 1 - color)
 
     if #moves == 0 then
@@ -799,7 +815,7 @@ function Board.get_game_state(self)
         end
     end
 
-    return "none"
+    return ""
 end
 
 -- Utils

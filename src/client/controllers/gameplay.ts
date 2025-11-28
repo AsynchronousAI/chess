@@ -195,8 +195,11 @@ export class Gameplay implements OnStart {
       overrideBoard ?? this.board,
       Piece.king,
       1 - color,
-    )[0];
-    if (!opponentsKing) print("No king!");
+    );
+    if (!opponentsKing) {
+      error("No king!");
+    }
+
     const check = BitBoard.is_square_attacked(
       overrideBoard ?? this.board,
       opponentsKing,

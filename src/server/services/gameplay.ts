@@ -70,17 +70,23 @@ export class Gameplay implements OnStart {
     const currentTime = os.clock();
 
     /* illegal moves, in future check for promotions also */
+    const fromPiece = BitBoard.get_piece(activeGame.board, from);
     if (
-      promotion !== undefined &&
-      !IsPromotion(to, ...BitBoard.get_piece(activeGame.board, from)!)
+      !fromPiece ||
+      (promotion !== undefined && !IsPromotion(to, ...fromPiece))
     ) {
       return;
     }
 
-    const move = BitBoard.generate_legal_moves_from(
+    print(BitBoard.to_fen(activeGame.board), from);
+    const allMoves = BitBoard.generate_legal_moves_from(
       activeGame.board,
       from,
-    ).find((m) => m.to === to);
+      false,
+      //fromPiece[1],
+    );
+    const move = allMoves.find((m) => m.to === to);
+    print(allMoves, move);
     if (!move) {
       return;
     }
@@ -258,7 +264,9 @@ export class Gameplay implements OnStart {
     if (!activeGame) return;
 
     const best = GetBestMove(activeGame.board, false);
-    if (BOT && best.move) this.move(gameId, ...best.move);
+    if (BOT && best.move) {
+      this.move(gameId, best.move.from, best.move.to, best.move.promotion);
+    }
 
     this.patchGame(gameId, {
       eval: best.eval,

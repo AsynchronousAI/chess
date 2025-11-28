@@ -51,14 +51,16 @@ export default function Board() {
   /* Handlers */
   const onMove = (location: number) => {
     if (
-      !possibleMoves.find((v) => v.from === location) ||
+      !possibleMoves.find((v) => v.to === location) ||
       holdingPiece === undefined ||
       board.side_to_move !== playingAs
     ) {
       return;
     }
 
-    const piece = BitBoard.get_piece(board, holdingPiece)!;
+    const piece = BitBoard.get_piece(board, holdingPiece);
+    if (!piece) return;
+
     if (IsPromotion(location, ...piece)) {
       setPromoting(location);
       return;

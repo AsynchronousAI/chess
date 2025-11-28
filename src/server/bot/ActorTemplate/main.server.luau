@@ -47,15 +47,16 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
 
     local maxDepthReached = depth
     local bestScore = if isMaximizing then -math.huge else math.huge
-    local bestMove = 0
+    local bestMove = nil
     local bestSequence = nil
 
-    local allLegalMoves = libs.LegalMoves.GetAllLegalMoves(board, libs.BitBoard.getTurn(board))
+    local allLegalMoves = libs.BitBoard.generate_legal_moves(board, false, board.side_to_move)
     local moves = moveOrdering(board, allLegalMoves)
 
     for _, move in moves do
-        local branch = libs.BitBoard.branch(board)
-        libs.Move.PerformMove(branch, move)
+        -- TODO: try undo_move method
+        local branch = libs.BitBoard.clone(board)
+        libs.BitBoard.make_move(branch, move)
 
         nodes += 1;
 
@@ -119,7 +120,7 @@ end
 actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
     nodes = 1;
 
-    local score, depthReached, moveSequence = minimax(buffer.fromstring(tbl.board), tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
+    local score, depthReached, moveSequence = minimax(libs.BitBoard.from_buffer(buffer.fromstring(tbl.board)), tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
     tbl.score = score;
     tbl.depth = depthReached;
     tbl.moveSequence = SharedTable.new(if moveSequence then moveSequence else {});
