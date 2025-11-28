@@ -25,7 +25,6 @@ import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 import Atoms from "../atoms";
 import { usePx } from "../hooks/usePx";
-import { PGN } from "shared/engine/pgn";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -51,7 +50,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
       ? useFlameworkDependency<Gameplay>()
       : undefined;
     const possibleMoves = useAtom(Atoms.PossibleMoves);
-    const pgn = gameplay?.usePGN() ?? PGN.create();
+    const movehistory = gameplay?.useMoveHistory() ?? [];
     const currentMove = useAtom(Atoms.CurrentMove);
     const checked = useAtom(Atoms.CheckedSquare);
 
@@ -78,8 +77,9 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
       setHoveringSquare(undefined);
     };
     const squareHighlighted = (loc: Square) =>
-      pgn[currentMove] &&
-      (pgn[currentMove].to === loc || pgn[currentMove].from === loc);
+      movehistory[currentMove] &&
+      (movehistory[currentMove].to === loc ||
+        movehistory[currentMove].from === loc);
     const squareChecked = (loc: Square) => checked === loc;
 
     useEventListener(UIS.TouchEnded, onRelease);
@@ -94,26 +94,27 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     useImperativeHandle(ref, () => ({
       setBoard: (board) => {
         setPieces(
-          BitBoard.getAllPieces(board).map(([location, piece]) => [
+          BitBoard.get_all_pieces(board).map(([piece, color, location]) => [
             location,
-            piece,
+            [piece, color],
             HttpService.GenerateGUID(),
           ]),
         );
       },
-      animateBoard: (from, to, as, moveResult) => {
+      animateBoard: (from, to, as) => {
         setPieces((currentPieces) => {
+          // TODO: Procedural movement, for example if we see a rook is missing, and found elsewhere replace that same UUID.
+
+          /* Initial, provided move */
           for (const piece of currentPieces) {
             if (piece[0] === from) {
               piece[0] = to;
               if (as) piece[1] = as;
             } else if (piece[0] === to) {
               piece[1][0] = PieceType.none;
-            } else if (moveResult !== undefined && piece[0] === moveResult[0]) {
-              if (moveResult[1]) piece[0] = moveResult[1];
-              else piece[1][0] = PieceType.none;
             }
           }
+
           return currentPieces;
         });
       },
@@ -130,7 +131,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
         {FILES.map((letter, i) =>
           RANKS.map((number, j) => {
             const location = `${letter}${number}`;
-            const index = BitBoard.getSquareIndex(i, j);
+            const index = BitBoard.get_square_index(i, j);
             const colored = IsSquareBlack(i, j);
 
             const boardJ = props.playingAs ? j : 7 - j;
@@ -190,7 +191,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                 </Frame>
 
                 {/* Hitbox */}
-                {possibleMoves.find((v) => v[0] === index) && (
+                {possibleMoves.find((v) => v.from === index) && (
                   <>
                     <textbutton
                       key={`${location}-hit`}
@@ -231,7 +232,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
 
         {/* Pieces */}
         {pieces.map(([loc, piece, key]) => {
-          const pos = BitBoard.separateSquareIndex(loc);
+          const pos = BitBoard.separate_square_index(loc);
           return (
             <Piece
               key={key}

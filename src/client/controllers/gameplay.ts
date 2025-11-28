@@ -6,21 +6,13 @@ import { Events, Functions } from "client/network";
 import Atoms from "client/ui/atoms";
 import { ChessBoardRef } from "client/ui/board/Board";
 import { SoundEffects } from "client/ui/board/sfx";
-import { Event, Function } from "shared/lifecycles";
+import { Event } from "shared/lifecycles";
 import { Game } from "server/services/gameplay";
 import { Color, Piece, Square } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
-import { DefaultBoard } from "shared/engine/fen";
-import GetLegalMoves, {
-  AnalyzeMates,
-  IsSquareAttacked,
-  MoveExecutors,
-} from "shared/engine/legalMoves";
-import { PGN } from "shared/engine/pgn";
 import { EvaluationBarRef } from "client/ui/board/EvaluationBar";
 import { FullMove } from "shared/network";
 
-/* TODO: implement PerformMove, for DRY */
 @Controller()
 export class Gameplay implements OnStart {
   private takenPieces: [Piece[], Piece[]][] = [[[], []]];
@@ -29,8 +21,14 @@ export class Gameplay implements OnStart {
     ]
   */
 
-  private board = BitBoard.branch(DefaultBoard);
-  private pgn = PGN.create();
+  private board = BitBoard.create();
+  private moveHistory: Array<{
+    from: Square;
+    to: Square;
+    promotion?: Piece;
+    captured: boolean;
+    sfx: keyof typeof SoundEffects;
+  }> = [];
   private activeGame: Partial<Game> = {};
   private gameId = "";
   private playingAs = Color.white;
@@ -41,21 +39,17 @@ export class Gameplay implements OnStart {
 
   /* Methods */
   private findMoveData(from: Square, to: Square, board: BitBoard = this.board) {
-    const allMoves = GetLegalMoves(board, from, false);
-    const move = allMoves.find((v) => v[0] === to);
+    const allMoves = BitBoard.generate_legal_moves_from(board, from, false);
+    const move = allMoves.find((v) => v.to === to);
     if (!move) return undefined;
-    const moveType = move[1];
-    const executor = MoveExecutors[moveType];
-    const [moved, movedTo, sfxType] =
-      executor?.(board, from, to, board !== this.board) || [];
-    return { moved, movedTo, moveType: sfxType };
+    return move;
   }
   private handleCapture(
     to: Square,
     color: Color,
     board: BitBoard = this.board,
   ) {
-    const captured = BitBoard.hasPiece(board, to);
+    const captured = BitBoard.get_piece(board, to);
 
     if (board === this.board) {
       const prev: [Piece[], Piece[]] =
@@ -69,34 +63,18 @@ export class Gameplay implements OnStart {
     }
 
     if (captured) {
-      const [piece] = BitBoard.getPiece(board, to);
+      const piece = captured[0];
       const idx = color === this.activeGame.color ? 0 : 1;
       if (board === this.board)
         this.takenPieces[this.takenPieces.size() - 1][idx].push(piece);
     }
-    return captured;
-  }
-  private moveOrPromotePiece(
-    from: Square,
-    to: Square,
-    promotion: Piece | undefined,
-    color: Color,
-  ) {
-    if (!promotion) {
-      BitBoard.movePiece(this.board, from, to); // normal move
-    } else {
-      BitBoard.setPiece(this.board, from, 0, 0);
-      BitBoard.setPiece(this.board, to, promotion, color);
-    }
-    BitBoard.flipTurn(this.board);
+    return captured ? true : false;
   }
   private animateBoard(
     from: Square,
     to: Square,
     promotion: Piece | undefined,
     color: Color,
-    moved: Piece | undefined,
-    movedTo: Square | undefined,
   ) {
     if (Atoms.Dragging()) {
       this.chessBoard?.current?.setBoard(this.board);
@@ -105,7 +83,6 @@ export class Gameplay implements OnStart {
         from,
         to,
         promotion !== undefined ? [promotion, color] : undefined,
-        moved !== undefined ? [moved, movedTo] : undefined,
       );
     }
   }
@@ -117,19 +94,26 @@ export class Gameplay implements OnStart {
     sfx: keyof typeof SoundEffects,
     myMove: boolean,
   ) {
-    PGN.move(this.pgn, this.board, from, to, promotion, captured, sfx);
-    Atoms.CurrentMove(this.pgn.size() - 1);
+    this.moveHistory.push({ from, to, promotion, captured, sfx });
+    Atoms.CurrentMove(this.moveHistory.size() - 1);
 
     if (myMove) {
       Atoms.PossibleMoves([]);
       Events.MakeMove(this.gameId, [from, to, promotion]);
     } else if (Atoms.HoldingPiece()) {
       Atoms.PossibleMoves(
-        GetLegalMoves(this.board, Atoms.HoldingPiece()!, true, this.playingAs),
+        BitBoard.generate_legal_moves_from(
+          this.board,
+          Atoms.HoldingPiece()!,
+          true,
+          this.playingAs,
+        ),
       );
     }
   }
-  private getAnalysisDescription(analysis: ReturnType<typeof AnalyzeMates>) {
+  private getAnalysisDescription(
+    analysis: ReturnType<typeof BitBoard.get_game_state>,
+  ) {
     if (analysis === "checkmate") return "by checkmate";
     else if (analysis === "stalemate") return "by stalemate";
     else if (analysis === "insufficent") return "by insufficient material";
@@ -140,15 +124,15 @@ export class Gameplay implements OnStart {
     return "";
   }
   private clearGame() {
-    this.chessBoard?.current?.setBoard(BitBoard.branch(DefaultBoard));
+    this.chessBoard?.current?.setBoard(BitBoard.create());
     this.evalBar?.current?.setEval(0);
     this.evalBar?.current?.setMate(0);
 
-    this.board = BitBoard.branch(DefaultBoard);
+    this.board = BitBoard.create();
     this.activeGame = {};
     this.gameId = "";
     this.takenPieces = [];
-    this.pgn.clear();
+    this.moveHistory.clear();
 
     Atoms.EndgamePopup((x) => ({ ...x, open: false }));
     Atoms.CheckedSquare(-1);
@@ -191,19 +175,21 @@ export class Gameplay implements OnStart {
 
     const moveData = this.findMoveData(from, to, overrideBoard);
     if (!moveData) return;
-    const { moved, movedTo, moveType } = moveData;
 
     const captured = this.handleCapture(to, color, overrideBoard);
-    if (!overrideBoard) this.moveOrPromotePiece(from, to, promotion, color);
-    this.animateBoard(from, to, promotion, color, moved, movedTo);
+    if (!overrideBoard) {
+      if (promotion) moveData.promotion = promotion;
+      BitBoard.make_move(this.board, moveData);
+    }
+    this.animateBoard(from, to, promotion, color);
 
-    const opponentsKing = BitBoard.findPiece(
+    const opponentsKing = BitBoard.find_piece(
       overrideBoard ?? this.board,
       Piece.king,
       1 - color,
     )[0];
     if (!opponentsKing) print("No king!");
-    const check = IsSquareAttacked(
+    const check = BitBoard.is_square_attacked(
       overrideBoard ?? this.board,
       opponentsKing,
       color,
@@ -215,7 +201,8 @@ export class Gameplay implements OnStart {
 
     if (check) {
       sfx = "Check";
-    } else if (moveType === "castle") {
+    } else if (/*moveType === "castle"*/ false) {
+      // TODO: use move.flags maybe
       sfx = "Castle";
     } else if (captured) {
       sfx = "Capture";
@@ -259,7 +246,7 @@ export class Gameplay implements OnStart {
     this.gameId = gameId;
     this.activeGame.opening = "Starting Position";
     this.chessBoard?.current?.setBoard(this.board);
-    this.pgn.clear();
+    this.moveHistory.clear();
   }
   @Event(Events.PatchGame)
   patchGame(newGame: Partial<Game>) {
@@ -331,18 +318,18 @@ export class Gameplay implements OnStart {
     const [board, setBoard] = useState<BitBoard>(this.board);
     useInterval(() => {
       if (BitBoard.hash(board) !== BitBoard.hash(this.board))
-        setBoard(BitBoard.branch(this.board));
+        setBoard(BitBoard.clone(this.board));
     }, 0.1);
     return board;
   }
-  public usePGN(): PGN {
-    const [pgn, setPGN] = useState<PGN>(this.pgn);
+  public useMoveHistory(): typeof this.moveHistory {
+    const [mH, setMH] = useState(this.moveHistory);
     useInterval(() => {
-      if (pgn !== this.pgn) {
-        setPGN(this.pgn);
+      if (mH !== this.moveHistory) {
+        setMH(this.moveHistory);
       }
     }, 0.1);
-    return pgn;
+    return mH;
   }
   public usePlayingAs(): Color {
     const [playingAsState, setPlayingAs] = useState<Color>(this.playingAs);
@@ -370,7 +357,7 @@ export class Gameplay implements OnStart {
       if (this.activeGame.analysis !== "") continue;
 
       if (
-        this.pgn.size() === 0
+        this.moveHistory.size() === 0
           ? this.activeGame.color === Color.white
           : Atoms.CurrentMove() % 2 !== this.activeGame.color
       ) {

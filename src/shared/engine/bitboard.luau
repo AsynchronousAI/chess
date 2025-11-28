@@ -11,7 +11,7 @@ local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NO
 
 local Board = {}
 
-function Board.create()
+function Board.create(blank)
 	local self = {}
 
 	-- Bitboards for each piece type and color
@@ -53,7 +53,16 @@ function Board.create()
 	self.halfmove_clock = 0
 	self.fullmove_number = 1
 
+	if not blank then Board.set_start_position(self) end
+
 	return self
+end
+function Board.clone(board)
+    -- TODO: test out using table.clone, faster or slower?
+	local bin = Board.to_buffer(board)
+	local new = buffer.create(buffer.len(bin))
+	buffer.copy(new, 0, bin, 0)
+	return new
 end
 
 -- Encoding, unlike older versions this is designed to be **rapid**, not efficent.
@@ -543,8 +552,8 @@ function Board.unmake_move(self, move, previous_state)
 end
 
 -- Move generation
-local function generate_pawn_moves(self, moves)
-	local color = self.side_to_move
+local function generate_pawn_moves(self, moves, color)
+	color = color or self.side_to_move
 	local pawns = self.pieces[color][PAWN]
 	local empty = u64.bnot(self.occupied.all)
 	local enemies = self.occupied[1 - color]
@@ -613,8 +622,8 @@ local function generate_pawn_moves(self, moves)
 		end
 	end
 end
-local function generate_piece_moves(self, moves, piece_type, attack_func)
-	local color = self.side_to_move
+local function generate_piece_moves(self, moves, piece_type, attack_func, color)
+	color = color or self.side_to_move
 	local pieces = self.pieces[color][piece_type]
 	local own_pieces = self.occupied[color]
 
@@ -641,23 +650,23 @@ local function generate_piece_moves(self, moves, piece_type, attack_func)
 		end
 	end
 end
-function Board.generate_legal_moves(self, filePseudoLegal)
+function Board.generate_legal_moves(self, filePseudoLegal, color)
 	local moves = {}
 
-	generate_pawn_moves(self, moves)
-	generate_piece_moves(self, moves, KNIGHT, Attacks.knight_attacks)
-	generate_piece_moves(self, moves, BISHOP, Attacks.bishop_attacks)
-	generate_piece_moves(self, moves, ROOK, Attacks.rook_attacks)
-	generate_piece_moves(self, moves, QUEEN, Attacks.queen_attacks)
-	generate_piece_moves(self, moves, KING, Attacks.king_attacks)
+	generate_pawn_moves(self, moves, color)
+	generate_piece_moves(self, moves, KNIGHT, Attacks.knight_attacks, color)
+	generate_piece_moves(self, moves, BISHOP, Attacks.bishop_attacks, color)
+	generate_piece_moves(self, moves, ROOK, Attacks.rook_attacks, color)
+	generate_piece_moves(self, moves, QUEEN, Attacks.queen_attacks, color)
+	generate_piece_moves(self, moves, KING, Attacks.king_attacks, color)
 
 	-- TODO: Add castling moves
 	-- TODO: Filter out moves that leave king in check
 
 	return moves
 end
-function Board.generate_legal_moves_from(self, from, filePseudoLegal)
-    local allMoves = Board.generate_legal_moves(self)
+function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
+    local allMoves = Board.generate_legal_moves(self, filePseudoLegal, color)
     local moves = {}
 
     for _, move in allMoves do
@@ -668,5 +677,138 @@ function Board.generate_legal_moves_from(self, from, filePseudoLegal)
 
     return moves
 end
+function Board.is_square_attacked(self, square, by_color)
+    local opponent = by_color
+
+    -- Pawns
+    local pawns = self.pieces[opponent][PAWN]
+    local pawn_attacks
+    if opponent == WHITE then
+        pawn_attacks = u64.band(u64.rshift(pawns, 7), NOT_FILE_H)
+        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+        pawn_attacks = u64.band(u64.rshift(pawns, 9), NOT_FILE_A)
+        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+    else
+        pawn_attacks = u64.band(u64.lshift(pawns, 7), NOT_FILE_A)
+        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+        pawn_attacks = u64.band(u64.lshift(pawns, 9), NOT_FILE_H)
+        if u64.btest(pawn_attacks, u64.from_index(square)) then return true end
+    end
+
+    -- Knights
+    local knights = self.pieces[opponent][KNIGHT]
+    while knights ~= u64.ZERO do
+        local from_square
+        knights, from_square = Utils.pop_lsb(knights)
+        if u64.btest(Attacks.knight_attacks(from_square), u64.from_index(square)) then
+            return true
+        end
+    end
+
+    -- King
+    local king = self.pieces[opponent][KING]
+    local king_sq = u64.lsb(king)
+    if u64.btest(Attacks.king_attacks(king_sq), u64.from_index(square)) then
+        return true
+    end
+
+    -- Bishops / Queens (diagonals)
+    local bishops = u64.bor(self.pieces[opponent][BISHOP], self.pieces[opponent][QUEEN])
+    while bishops ~= u64.ZERO do
+        local from_square
+        bishops, from_square = Utils.pop_lsb(bishops)
+        if u64.btest(Attacks.bishop_attacks(from_square, self.occupied.all), u64.from_index(square)) then
+            return true
+        end
+    end
+
+    -- Rooks / Queens (straight lines)
+    local rooks = u64.bor(self.pieces[opponent][ROOK], self.pieces[opponent][QUEEN])
+    while rooks ~= u64.ZERO do
+        local from_square
+        rooks, from_square = Utils.pop_lsb(rooks)
+        if u64.btest(Attacks.rook_attacks(from_square, self.occupied.all), u64.from_index(square)) then
+            return true
+        end
+    end
+
+    return false
+end
+
+
+-- Pieces
+function Board.get_piece(self, loc)
+    for color, pieces in self.pieces do
+        for typ, bb in pieces do
+            if not u64.eq(u64.band(bb, u64.from_index(loc)), u64.ZERO) then
+                return {color, typ}
+            end
+        end
+    end
+    return nil
+end
+function Board.get_all_pieces(self)
+    local pieces_list = {}
+
+    for color, piece_table in self.pieces do
+        for typ, bb in piece_table do
+            local b = bb
+
+            while not u64.eq(b, u64.ZERO) do
+                local lsb = 63 - u64.countlz(b)
+                local loc = lsb
+                table.insert(pieces_list, { typ, color, loc })
+                b = u64.band(b, u64.bnot(u64.from_index(lsb)))
+            end
+        end
+    end
+
+    return pieces_list
+end
+function Board.find_piece(self, piece_type, color)
+    local bb = self.pieces[color][piece_type]
+    local squares = {}
+
+    while not u64.eq(bb, u64.ZERO) do
+        local square
+        bb, square = Utils.pop_lsb(bb)
+        table.insert(squares, square)
+    end
+
+    return squares
+end
+
+-- Endgame
+function Board.get_game_state(self)
+    -- TODO: Insufficent material
+    local color = self.side_to_move
+
+    -- Generate all legal moves
+    local moves = Board.generate_legal_moves(self, true, color)
+
+    -- Check if king is in check
+    local king_bb = self.pieces[color][KING]
+    local king_square = u64.lsb(king_bb)
+    local in_check = Board.is_square_attacked(self, king_square, 1 - color)
+
+    if #moves == 0 then
+        if in_check then
+            return "checkmate"
+        else
+            return "stalemate"
+        end
+    end
+
+    return "none"
+end
+
+-- Utils
+function BitBoard.separate_square_index(loc: number)
+	return { bit32.band(loc, 7), bit32.arshift(loc, 3) }
+end
+function BitBoard.get_square_index(file: number, rank: number)
+	return bit32.bor(bit32.lshift(rank, 3), file)
+end
+
 
 return {BitBoard = Board} -- for roblox-ts

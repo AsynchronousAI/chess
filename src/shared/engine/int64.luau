@@ -533,7 +533,6 @@ end
 	Additionally, `0 ^ 0` is treated as being `1`.
 ]=]
 local function pow(base: vector, power: number): vector
-	-- TODO: Is there an efficient solution that isn't recursion?
 	if power == 0 then
 		return ONE
 	elseif power % 2 == 1 then
@@ -697,9 +696,6 @@ local function to_dec_string(u64: vector): string
 		end
 	end
 end
-
--- TODO: replace and extract
--- TODO: vararg versions of band, bor, bxor
 
 return {
 	--- A constant representing the 64-bit representation of `0`.

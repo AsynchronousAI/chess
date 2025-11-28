@@ -33,8 +33,7 @@ function bestMoveAPI(board: BitBoard): BestMoveResponse {
           : -bestMove.mate
         : 0,
     depth: bestMove.depth ?? 0,
-    /* TODO: new notation parer for API */
-    //move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
+    move: bestMove.bestmove ? Notation.parseLan(bestMove.bestmove) : undefined,
   };
 }
 export function GetBestMove(board: BitBoard, api: boolean) {
