@@ -7,4 +7,4 @@ export interface BestMoveResponse {
   move?: Move;
 }
 
-export function GetBestMoveLocal(board: BitBoard): BestMoveResponse;
+export function GetBestMove(board: BitBoard): BestMoveResponse;

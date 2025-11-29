@@ -95,7 +95,7 @@ spawnThreads(50)
 
 --[[ Return ]]
 return {
-    GetBestMoveLocal = function(board)
+    GetBestMove = function(board)
         local index = 0;
         local start = os.clock()
         local minimaxResults = minimaxHost(board, board.side_to_move == 1, DEPTH, 0, function(branch, isMaximizing, maxDepth, depth)

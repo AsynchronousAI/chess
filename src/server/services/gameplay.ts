@@ -9,7 +9,7 @@ import { BitBoard } from "shared/engine/bitboard";
 import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
-import { GetBestMove } from "server/bots";
+import { GetBestMove } from "server/bot";
 
 export type Game = {
   /* players */
@@ -260,7 +260,7 @@ export class Gameplay implements OnStart {
     const activeGame = this.Games[gameId];
     if (!activeGame) return;
 
-    const best = GetBestMove(activeGame.board, false);
+    const best = GetBestMove(activeGame.board);
     if (BOT && best.move) {
       this.move(gameId, best.move.from, best.move.to, best.move.promotion);
     }
