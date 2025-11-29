@@ -11,7 +11,7 @@ local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NO
 
 local Attacks = {}
 
-local function ray_attacks(square, direction, own, other)
+local function ray_attacks(square: number, direction: number, own: vector, other: vector): vector
     local attacks = u64.ZERO
     local current = square
 
@@ -46,7 +46,7 @@ end
 
 
 -- Static
-function Attacks.pawn_attacks(square, color)
+function Attacks.pawn_attacks(square: number, color: number): vector
 	local bb = u64.lshift(u64.ONE, square)
 	local attacks = u64.ZERO
 
@@ -64,7 +64,7 @@ function Attacks.pawn_attacks(square, color)
 
 	return attacks
 end
-function Attacks.knight_attacks(square)
+function Attacks.knight_attacks(square: number): vector
 	local bb = u64.lshift(u64.ONE, square)
 	local attacks = u64.ZERO
 
@@ -79,7 +79,7 @@ function Attacks.knight_attacks(square)
 
 	return attacks
 end
-function Attacks.king_attacks(square)
+function Attacks.king_attacks(square: number): vector
 	local bb = u64.lshift(u64.ONE, square)
 	local attacks = u64.ZERO
 
@@ -96,7 +96,7 @@ function Attacks.king_attacks(square)
 end
 
 -- Sliding
-function Attacks.rook_attacks(square, my_occupied, other_occupied)
+function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
 	local attacks = u64.ZERO
 	attacks = u64.bor(attacks, ray_attacks(square, 8, my_occupied, other_occupied))  -- North
 	attacks = u64.bor(attacks, ray_attacks(square, -8, my_occupied, other_occupied)) -- South
@@ -104,7 +104,7 @@ function Attacks.rook_attacks(square, my_occupied, other_occupied)
 	attacks = u64.bor(attacks, ray_attacks(square, -1, my_occupied, other_occupied)) -- West
 	return attacks
 end
-function Attacks.bishop_attacks(square, my_occupied, other_occupied)
+function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
 	local attacks = u64.ZERO
 	attacks = u64.bor(attacks, ray_attacks(square, 9, my_occupied, other_occupied))   -- NE
 	attacks = u64.bor(attacks, ray_attacks(square, 7, my_occupied, other_occupied))   -- NW
@@ -112,7 +112,7 @@ function Attacks.bishop_attacks(square, my_occupied, other_occupied)
 	attacks = u64.bor(attacks, ray_attacks(square, -9, my_occupied, other_occupied))  -- SW
 	return attacks
 end
-function Attacks.queen_attacks(square, my_occupied, other_occupied)
+function Attacks.queen_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
 	return u64.bor(Attacks.rook_attacks(square, my_occupied, other_occupied), Attacks.bishop_attacks(square, my_occupied, other_occupied))
 end
 

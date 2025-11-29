@@ -1,5 +1,6 @@
 --!native
 --!optimize 2
+--!strict
 
 local u64 = require("./int64")
 local Utils = require("./utils")
@@ -25,11 +26,25 @@ local Board = {
     from_buffer = Encoding.from_buffer
 }
 
-function Board.create(blank)
-	local self = {}
+export type Board = {
+    pieces: {[number]: {[number]: vector}},
+    occupied: {[number|"all"]:vector},
+    side_to_move: number,
+    castling_rights: {
+        white_kingside: boolean,
+        white_queenside: boolean,
+        black_kingside: boolean,
+        black_queenside: boolean
+    },
+    en_passant_square: number?,
+    halfmove_clock: number,
+    fullmove_number: number
+}
+function Board.create(blank: boolean?): Board
+	local board = {}
 
 	-- Bitboards for each piece type and color
-	self.pieces = {
+	board.pieces = {
 		[WHITE] = {
 			[PAWN] = u64.ZERO,
 			[KNIGHT] = u64.ZERO,
@@ -49,29 +64,29 @@ function Board.create(blank)
 	}
 
 	-- Combined bitboards
-	self.occupied = {
+	board.occupied = {
 		[WHITE] = u64.ZERO,
 		[BLACK] = u64.ZERO,
 		all = u64.ZERO
 	}
 
 	-- Game state
-	self.side_to_move = WHITE
-	self.castling_rights = {
+	board.side_to_move = WHITE
+	board.castling_rights = {
 		white_kingside = true,
 		white_queenside = true,
 		black_kingside = true,
 		black_queenside = true,
 	}
-	self.en_passant_square = nil -- square index or nil
-	self.halfmove_clock = 0
-	self.fullmove_number = 1
+	board.en_passant_square = nil -- square index or nil
+	board.halfmove_clock = 0
+	board.fullmove_number = 1
 
-	if not blank then Board.set_start_position(self) end
+	if not blank then Board.set_start_position(board) end
 
-	return self
+	return board
 end
-function Board.clone(board)
+function Board.clone(board: Board): Board
 	return {
 		pieces = {
 			[WHITE] = table.clone(board.pieces[WHITE]),
@@ -87,30 +102,30 @@ function Board.clone(board)
 end
 
 -- State
-function Board.set_start_position(self)
+function Board.set_start_position(board: Board)
     -- White pieces
-    self.pieces[WHITE][PAWN]   = u64.from_pair(0x00000000, 0x0000FF00)
-    self.pieces[WHITE][KNIGHT] = u64.from_pair(0x00000000, 0x00000042)
-    self.pieces[WHITE][BISHOP] = u64.from_pair(0x00000000, 0x00000024)
-    self.pieces[WHITE][ROOK]   = u64.from_pair(0x00000000, 0x00000081)
-    self.pieces[WHITE][QUEEN]  = u64.from_pair(0x00000000, 0x00000008)
-    self.pieces[WHITE][KING]   = u64.from_pair(0x00000000, 0x00000010)
+    board.pieces[WHITE][PAWN]   = u64.from_pair(0x00000000, 0x0000FF00)
+    board.pieces[WHITE][KNIGHT] = u64.from_pair(0x00000000, 0x00000042)
+    board.pieces[WHITE][BISHOP] = u64.from_pair(0x00000000, 0x00000024)
+    board.pieces[WHITE][ROOK]   = u64.from_pair(0x00000000, 0x00000081)
+    board.pieces[WHITE][QUEEN]  = u64.from_pair(0x00000000, 0x00000008)
+    board.pieces[WHITE][KING]   = u64.from_pair(0x00000000, 0x00000010)
 
     -- Black pieces
-    self.pieces[BLACK][PAWN]   = u64.from_pair(0x00FF0000, 0x00000000)
-    self.pieces[BLACK][KNIGHT] = u64.from_pair(0x42000000, 0x00000000)
-    self.pieces[BLACK][BISHOP] = u64.from_pair(0x24000000, 0x00000000)
-    self.pieces[BLACK][ROOK]   = u64.from_pair(0x81000000, 0x00000000)
-    self.pieces[BLACK][QUEEN]  = u64.from_pair(0x08000000, 0x00000000)
-    self.pieces[BLACK][KING]   = u64.from_pair(0x10000000, 0x00000000)
+    board.pieces[BLACK][PAWN]   = u64.from_pair(0x00FF0000, 0x00000000)
+    board.pieces[BLACK][KNIGHT] = u64.from_pair(0x42000000, 0x00000000)
+    board.pieces[BLACK][BISHOP] = u64.from_pair(0x24000000, 0x00000000)
+    board.pieces[BLACK][ROOK]   = u64.from_pair(0x81000000, 0x00000000)
+    board.pieces[BLACK][QUEEN]  = u64.from_pair(0x08000000, 0x00000000)
+    board.pieces[BLACK][KING]   = u64.from_pair(0x10000000, 0x00000000)
 
-	Board.update_occupied(self)
+	Board.update_occupied(board)
 end
-function Board.update_occupied(self)
+function Board.update_occupied(board: Board)
     -- We do not use u64.bor in repeat for performance. Using bit32.bor is much faster for mass bit operations. (nearly 2x faster)
 
-    local whitePieces = self.pieces[WHITE]
-    local blackPieces = self.pieces[BLACK]
+    local whitePieces = board.pieces[WHITE]
+    local blackPieces = board.pieces[BLACK]
 
     local wP = whitePieces[PAWN]
     local bP = blackPieces[PAWN]
@@ -131,7 +146,7 @@ function Board.update_occupied(self)
     local bN = blackPieces[KNIGHT]
 
     -- White
-    self.occupied[WHITE] = vector.create(
+    board.occupied[WHITE] = vector.create(
         bit32.bor(
             wP.x,
             wN.x,
@@ -159,7 +174,7 @@ function Board.update_occupied(self)
     )
 
     -- Black
-    self.occupied[BLACK] = vector.create(
+    board.occupied[BLACK] = vector.create(
         bit32.bor(
             bP.x,
             bN.x,
@@ -187,23 +202,23 @@ function Board.update_occupied(self)
     )
 
     -- All
-    self.occupied.all = u64.bor(self.occupied[WHITE], self.occupied[BLACK])
+    board.occupied.all = u64.bor(board.occupied[WHITE], board.occupied[BLACK])
 end
 
 -- Move operation
-function Board.make_move(self, move)
-	local color = self.side_to_move
+function Board.make_move(board: Board, move)
+	local color = board.side_to_move
 	local opponent = 1 - color
 
 	-- Clear the piece from its original square
-	self.pieces[color][move.piece_type] = Utils.clear_bit(self.pieces[color][move.piece_type], move.from)
+	board.pieces[color][move.piece_type] = Utils.clear_bit(board.pieces[color][move.piece_type], move.from)
 
 	-- Handle captures
 	if move.captured then
 		-- Check which piece type was captured
 		for piece_type = PAWN, KING do
-			if Utils.get_bit(self.pieces[opponent][piece_type], move.to) then
-				self.pieces[opponent][piece_type] = Utils.clear_bit(self.pieces[opponent][piece_type], move.to)
+			if Utils.get_bit(board.pieces[opponent][piece_type], move.to) then
+				board.pieces[opponent][piece_type] = Utils.clear_bit(board.pieces[opponent][piece_type], move.to)
 				break
 			end
 		end
@@ -211,55 +226,55 @@ function Board.make_move(self, move)
 		-- Handle en passant capture (captured pawn is not on target square)
 		if move.flags and move.flags.en_passant then
 			local captured_pawn_square = move.to - (if color == WHITE then 8 else -8)
-			self.pieces[opponent][PAWN] = Utils.clear_bit(self.pieces[opponent][PAWN], captured_pawn_square)
+			board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
 		end
 
-		self.halfmove_clock = 0
+		board.halfmove_clock = 0
 	else
-		self.halfmove_clock += 1
+		board.halfmove_clock += 1
 	end
 
 	-- Place the piece on the new square (with promotion if applicable)
 	local final_piece_type = move.promotion or move.piece_type
-	self.pieces[color][final_piece_type] = Utils.set_bit(self.pieces[color][final_piece_type], move.to)
+	board.pieces[color][final_piece_type] = Utils.set_bit(board.pieces[color][final_piece_type], move.to)
 
 	-- Reset halfmove clock on pawn moves
 	if move.piece_type == PAWN then
-		self.halfmove_clock = 0
+		board.halfmove_clock = 0
 	end
 
 	-- Update en passant square
-	self.en_passant_square = nil
+	board.en_passant_square = nil
 	if move.piece_type == PAWN then
 		local move_distance = math.abs(move.to - move.from)
 		if move_distance == 16 then
 			-- Double pawn push, set en passant square
-			self.en_passant_square = if color == WHITE then (move.from + 8) else (move.from - 8)
+			board.en_passant_square = if color == WHITE then (move.from + 8) else (move.from - 8)
 		end
 	end
 
 	-- Update castling rights
 	if move.piece_type == KING then
 		if color == WHITE then
-			self.castling_rights.white_kingside = false
-			self.castling_rights.white_queenside = false
+			board.castling_rights.white_kingside = false
+			board.castling_rights.white_queenside = false
 		else
-			self.castling_rights.black_kingside = false
-			self.castling_rights.black_queenside = false
+			board.castling_rights.black_kingside = false
+			board.castling_rights.black_queenside = false
 		end
 	elseif move.piece_type == ROOK then
 		-- Check if rook moved from starting square
 		if color == WHITE then
 			if move.from == 0 then
-				self.castling_rights.white_queenside = false
+				board.castling_rights.white_queenside = false
 			elseif move.from == 7 then
-				self.castling_rights.white_kingside = false
+				board.castling_rights.white_kingside = false
 			end
 		else
 			if move.from == 56 then
-				self.castling_rights.black_queenside = false
+				board.castling_rights.black_queenside = false
 			elseif move.from == 63 then
-				self.castling_rights.black_kingside = false
+				board.castling_rights.black_kingside = false
 			end
 		end
 	end
@@ -267,13 +282,13 @@ function Board.make_move(self, move)
 	-- Also lose castling rights if rook is captured
 	if move.captured then
 		if move.to == 0 then
-			self.castling_rights.white_queenside = false
+			board.castling_rights.white_queenside = false
 		elseif move.to == 7 then
-			self.castling_rights.white_kingside = false
+			board.castling_rights.white_kingside = false
 		elseif move.to == 56 then
-			self.castling_rights.black_queenside = false
+			board.castling_rights.black_queenside = false
 		elseif move.to == 63 then
-			self.castling_rights.black_kingside = false
+			board.castling_rights.black_kingside = false
 		end
 	end
 
@@ -289,27 +304,27 @@ function Board.make_move(self, move)
 		end
 
 		-- Move the rook
-		self.pieces[color][ROOK] = Utils.clear_bit(self.pieces[color][ROOK], rook_from)
-		self.pieces[color][ROOK] = Utils.set_bit(self.pieces[color][ROOK], rook_to)
+		board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_from)
+		board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_to)
 	end
 
 	-- Update occupied bitboards
-	Board.update_occupied(self)
+	Board.update_occupied(board)
 
 	-- Switch side to move
-	self.side_to_move = opponent
+	board.side_to_move = opponent
 
 	-- Update fullmove number
 	if color == BLACK then
-		self.fullmove_number += 1
+		board.fullmove_number += 1
 	end
 end
 
 -- Move generation
-local function generate_pawn_moves(self, moves, color)
-	local pawns = self.pieces[color][PAWN]
-	local empty = u64.bnot(self.occupied.all)
-	local enemies = self.occupied[1 - color]
+local function generate_pawn_moves(board: Board, moves, color: number)
+	local pawns = board.pieces[color][PAWN]
+	local empty = u64.bnot(board.occupied.all)
+	local enemies = board.occupied[1 - color]
 
 	local push_dir = if color == WHITE then 8 else -8
 	local start_rank = if color == WHITE then RANK_2 else RANK_7
@@ -360,25 +375,25 @@ local function generate_pawn_moves(self, moves, color)
 	add_pawn_moves(right_captures, if color == WHITE then 9 else -9, true)
 
 	-- En passant
-	if self.en_passant_square then
-		local ep_bb = u64.lshift(u64.ONE, self.en_passant_square)
+	if board.en_passant_square then
+		local ep_bb = u64.lshift(u64.ONE, board.en_passant_square)
 		local ep_left = if color == WHITE then u64.rshift(ep_bb, 7) else u64.lshift(ep_bb, 7)
 		local ep_right = if color == WHITE then u64.rshift(ep_bb, 9) else u64.lshift(ep_bb, 9)
 
 		if u64.btest(pawns, ep_left) then
-			local from = self.en_passant_square - (if color == WHITE then 7 else -7)
-			table.insert(moves, Move.new(from, self.en_passant_square, PAWN, true, nil, {en_passant = true}))
+			local from = board.en_passant_square - (if color == WHITE then 7 else -7)
+			table.insert(moves, Move.new(from, board.en_passant_square, PAWN, true, nil, {en_passant = true}))
 		end
 		if u64.btest(pawns, ep_right) then
-			local from = self.en_passant_square - (if color == WHITE then 9 else -9)
-			table.insert(moves, Move.new(from, self.en_passant_square, PAWN, true, nil, {en_passant = true}))
+			local from = board.en_passant_square - (if color == WHITE then 9 else -9)
+			table.insert(moves, Move.new(from, board.en_passant_square, PAWN, true, nil, {en_passant = true}))
 		end
 	end
 end
-local function generate_piece_moves(self, moves, piece_type, attack_func, color)
-	local pieces = self.pieces[color][piece_type]
-	local own_pieces = self.occupied[color]
-	local other_pieces = self.occupied[1 - color]
+local function generate_piece_moves(board: Board, moves, piece_type: number, attack_func: (number, vector?, vector?) -> vector, color: number)
+	local pieces = board.pieces[color][piece_type]
+	local own_pieces = board.occupied[color]
+	local other_pieces = board.occupied[1 - color]
 
 	while pieces ~= u64.ZERO do
 		local from_square
@@ -403,27 +418,27 @@ local function generate_piece_moves(self, moves, piece_type, attack_func, color)
 		end
 	end
 end
-function Board.generate_legal_moves(self, filePseudoLegal, color)
-    color = color or self.side_to_move
+function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, color: number?)
+    color = color or board.side_to_move
 
 	local moves = {}
 
-	generate_pawn_moves(self, moves, color)
-	generate_piece_moves(self, moves, KNIGHT, Attacks.knight_attacks, color)
-	generate_piece_moves(self, moves, BISHOP, Attacks.bishop_attacks, color)
-	generate_piece_moves(self, moves, ROOK, Attacks.rook_attacks, color)
-	generate_piece_moves(self, moves, QUEEN, Attacks.queen_attacks, color)
-	generate_piece_moves(self, moves, KING, Attacks.king_attacks, color)
+	generate_pawn_moves(board, moves, color)
+	generate_piece_moves(board, moves, KNIGHT, Attacks.knight_attacks, color)
+	generate_piece_moves(board, moves, BISHOP, Attacks.bishop_attacks, color)
+	generate_piece_moves(board, moves, ROOK, Attacks.rook_attacks, color)
+	generate_piece_moves(board, moves, QUEEN, Attacks.queen_attacks, color)
+	generate_piece_moves(board, moves, KING, Attacks.king_attacks, color)
 
 	-- TODO: Add castling moves
 
 	if not filePseudoLegal then
-	    local myKing = Board.find_piece(self, KING, color)
+	    local myKing = Board.find_piece(board, KING, color)
 		if myKing < 0 then return {} end
 	    local filtered_moves = {}
 
 	    for _, move in moves do
-			local branch = Board.clone(self)
+			local branch = Board.clone(board)
 			Board.make_move(branch, move)
 	        if not Board.is_square_attacked(branch, myKing, 1-color) then
 	            table.insert(filtered_moves, move)
@@ -434,8 +449,8 @@ function Board.generate_legal_moves(self, filePseudoLegal, color)
 		return moves
 	end
 end
-function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
-    local allMoves = Board.generate_legal_moves(self, filePseudoLegal, color)
+function Board.generate_legal_moves_from(board: Board, from: number, filePseudoLegal: boolean?, color: number?)
+    local allMoves = Board.generate_legal_moves(board, filePseudoLegal, color)
     local moves = {}
 
     for _, move in allMoves do
@@ -446,15 +461,15 @@ function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
 
     return moves
 end
-function Board:is_square_attacked(square, by_color)
+function Board.is_square_attacked(self, square: number, by_color: number)
 	return false
 end
 
 
 -- Pieces
-function Board.get_piece(self, loc)
+function Board.get_piece(board: Board, loc: number)
     local search = u64.lshift(u64.ONE, loc)
-    for color, pieces in self.pieces do
+    for color, pieces in board.pieces do
         for typ, bb in pieces do
             if u64.band(bb, search) ~= u64.ZERO then
                 return {color, typ}
@@ -463,10 +478,10 @@ function Board.get_piece(self, loc)
     end
     return nil
 end
-function Board.get_all_pieces(self)
+function Board.get_all_pieces(board: Board)
     local pieces_list = {}
 
-    for color, piece_table in self.pieces do
+    for color, piece_table in board.pieces do
         for typ, bb in piece_table do
             local b = bb
 
@@ -481,24 +496,24 @@ function Board.get_all_pieces(self)
 
     return pieces_list
 end
-function Board.find_piece(self, piece_type, color)
-    local bb = self.pieces[color][piece_type]
+function Board.find_piece(board: Board, piece_type: number, color: number)
+    local bb = board.pieces[color][piece_type]
     local square = 63-u64.countlz(bb)
     return square
 end
 
 -- Endgame
-function Board.get_game_state(self)
+function Board.get_game_state(board: Board)
     -- TODO: Insufficent material
-    local color = self.side_to_move
+    local color = board.side_to_move
 
     -- Generate all legal moves
-    local moves = Board.generate_legal_moves(self, true, color)
+    local moves = Board.generate_legal_moves(board, true, color)
 
     -- Check if king is in check
-    local king_bb = self.pieces[color][KING]
+    local king_bb = board.pieces[color][KING]
     local king_square = 63 - u64.countlz(king_bb)
-    local in_check = Board.is_square_attacked(self, king_square, 1 - color)
+    local in_check = Board.is_square_attacked(board, king_square, 1 - color)
 
     if #moves == 0 then
         if in_check then

@@ -1,7 +1,19 @@
 import { Color, Piece, Square } from "shared/board";
 
-export type BitBoard = { side_to_move: Color };
-export type BitBoardSave = {};
+export type BitBoard = {
+  side_to_move: Color;
+  /*pieces: Record<Color, Record<Piece, vector>>;
+  occupied: Record<Color | "all", vector>;
+  castling_rights: {
+    white_king_side: boolean;
+    white_queen_side: boolean;
+    black_king_side: boolean;
+    black_queen_side: boolean;
+  };
+  en_passant_square: Square | null;
+  halfmove_clock: number;
+  fullmove_number: number;*/
+};
 export type Move = {
   from: Square;
   to: Square;
@@ -24,15 +36,9 @@ export namespace BitBoard {
   export function to_fen(board: BitBoard): string;
 
   export function set_start_position(board: BitBoard): void;
-  export function save_state(board: BitBoard): BitBoardSave;
   export function update_occupied(board: BitBoard): void;
 
   export function make_move(board: BitBoard, move: Move): void;
-  export function unmake_move(
-    board: BitBoard,
-    move: Move,
-    save: BitBoardSave,
-  ): void;
 
   export function generate_legal_moves(
     board: BitBoard,

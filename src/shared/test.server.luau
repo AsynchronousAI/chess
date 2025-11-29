@@ -28,6 +28,13 @@ local function chess()
     local new2 = bitboard.create()
     bitboard.from_buffer(new2, bitboard.to_buffer(board))
     assert(bitboard.hash(new2) == hash, "Buffer conversion failed")
+
+    -- Cloning
+    local new3 = bitboard.clone(board)
+    assert(bitboard.hash(new3) == hash, "Cloning failed")
+
+    -- Game state
+    print("Game state: ", bitboard.get_game_state(board))
 end
 
 for i = 1, 50 do

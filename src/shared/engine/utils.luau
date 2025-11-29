@@ -30,22 +30,32 @@ local WHITE = 0
 local BLACK = 1
 
 -- Binary Helpers
+local band    = u64.band
+local bnot    = u64.bnot
+local btest   = u64.btest
+local bor     = u64.bor
+local shl     = u64.lshift
+local ZERO    = u64.ZERO
+local ONE     = u64.ONE
+local countrz = u64.countrz
+
 local function get_bit(bb, square)
-	return u64.btest(bb, u64.lshift(u64.ONE, square))
+	return btest(bb, shl(ONE, square))
 end
 local function set_bit(bb, square)
-	return u64.bor(bb, u64.lshift(u64.ONE, square))
+	return bor(bb, shl(ONE, square))
 end
 local function clear_bit(bb, square)
-	return u64.band(bb, u64.bnot(u64.lshift(u64.ONE, square)))
+    return band(bb, bnot(shl(ONE, square)))
 end
 local function pop_lsb(bb)
-	local lsb_index = u64.countrz(bb)
-	return clear_bit(bb, lsb_index), lsb_index
+    local i = countrz(bb)
+    bb = band(bb, bnot(shl(ONE, i)))
+    return bb, i
 end
 local function popcount(bb)
 	local count = 0
-	while bb ~= u64.ZERO do
+	while bb ~= ZERO do
 		bb, _ = pop_lsb(bb)
 		count += 1
 	end
