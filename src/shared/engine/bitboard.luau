@@ -409,7 +409,7 @@ function Board.get_piece(board: Board, loc: number): {[number]: number}?
     for color, pieces in board.pieces do
         for typ, bb in pieces do
             if u64.band(bb, search) ~= u64.ZERO then
-                return {color, typ}
+                return {typ, color}
             end
         end
     end

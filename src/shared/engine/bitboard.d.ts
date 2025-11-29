@@ -2,7 +2,7 @@ import { Color, Piece, Square } from "shared/board";
 
 export type BitBoard = {
   side_to_move: Color;
-  /*pieces: Record<Color, Record<Piece, vector>>;
+  pieces: Record<Color, Record<Piece, vector>>;
   occupied: Record<Color | "all", vector>;
   castling_rights: {
     white_king_side: boolean;
@@ -10,9 +10,9 @@ export type BitBoard = {
     black_king_side: boolean;
     black_queen_side: boolean;
   };
-  en_passant_square: Square | null;
+  en_passant_square?: Square;
   halfmove_clock: number;
-  fullmove_number: number;*/
+  fullmove_number: number;
 };
 export type Move = number;
 
