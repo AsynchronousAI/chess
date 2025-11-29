@@ -12,6 +12,7 @@ import { Color, Piece, Square } from "shared/board";
 import { BitBoard } from "shared/engine/bitboard";
 import { EvaluationBarRef } from "client/ui/board/EvaluationBar";
 import { FullMove } from "shared/network";
+import { Move } from "shared/engine/move";
 
 @Controller()
 export class Gameplay implements OnStart {
@@ -41,7 +42,7 @@ export class Gameplay implements OnStart {
   /* Methods */
   private findMoveData(from: Square, to: Square, board: BitBoard = this.board) {
     const allMoves = BitBoard.generate_legal_moves_from(board, from, false);
-    const move = allMoves.find((v) => v.to === to);
+    const move = allMoves.find((v) => Move.getTo(v) === to);
     if (!move) return undefined;
     return move;
   }
@@ -181,12 +182,12 @@ export class Gameplay implements OnStart {
   ) {
     const [from, to, promotion] = move;
 
-    const moveData = this.findMoveData(from, to, overrideBoard);
+    let moveData = this.findMoveData(from, to, overrideBoard);
     if (!moveData) return;
 
     const captured = this.handleCapture(to, color, overrideBoard);
     if (!overrideBoard) {
-      if (promotion) moveData.promotion = promotion;
+      if (promotion) moveData = Move.setPromotion(moveData, promotion);
       BitBoard.make_move(this.board, moveData);
     }
     this.animateBoard(from, to, promotion, color);

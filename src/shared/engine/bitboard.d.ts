@@ -14,14 +14,7 @@ export type BitBoard = {
   halfmove_clock: number;
   fullmove_number: number;*/
 };
-export type Move = {
-  from: Square;
-  to: Square;
-  piece_type: Piece;
-  captured: boolean;
-  promotion: Piece;
-  flags: {};
-};
+export type Move = number;
 
 export namespace BitBoard {
   export function create(blank?: boolean): BitBoard;

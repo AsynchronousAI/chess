@@ -5,7 +5,7 @@
 local u64 = require("./int64")
 local Utils = require("./utils")
 local Attacks = require("./attacks")
-local Move = require("./move")
+local Move = require("./move").Move
 local Zobrist = require("./zobrist")
 local Encoding = require("./encoding")
 local FEN = require("./fen")
@@ -150,26 +150,34 @@ function Board.update_occupied(board: Board)
 end
 
 -- Move operation
-function Board.make_move(board: Board, move)
+function Board.make_move(board: Board, move: number)
 	local color = board.side_to_move
 	local opponent = 1 - color
 
+	local from = Move.getFrom(move)
+	local to = Move.getTo(move)
+	local piece_type = Move.getPieceType(move)
+	local captured = Move.getCaptured(move)
+	local en_passant = Move.getEnPassant(move)
+	local promotion = Move.getPromotion(move)
+	local castling, kingside = Move.getCastling(move)
+
 	-- Clear the piece from its original square
-	board.pieces[color][move.piece_type] = Utils.clear_bit(board.pieces[color][move.piece_type], move.from)
+	board.pieces[color][piece_type] = Utils.clear_bit(board.pieces[color][piece_type], from)
 
 	-- Handle captures
-	if move.captured then
+	if captured then
 		-- Check which piece type was captured
-		for piece_type = PAWN, KING do
-			if Utils.get_bit(board.pieces[opponent][piece_type], move.to) then
-				board.pieces[opponent][piece_type] = Utils.clear_bit(board.pieces[opponent][piece_type], move.to)
+		for p = PAWN, KING do
+			if Utils.get_bit(board.pieces[opponent][p], to) then
+				board.pieces[opponent][p] = Utils.clear_bit(board.pieces[opponent][p], to)
 				break
 			end
 		end
 
 		-- Handle en passant capture (captured pawn is not on target square)
-		if move.flags and move.flags.en_passant then
-			local captured_pawn_square = move.to - (if color == WHITE then 8 else -8)
+		if en_passant then
+			local captured_pawn_square = to - (if color == WHITE then 8 else -8)
 			board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
 		end
 
@@ -179,26 +187,26 @@ function Board.make_move(board: Board, move)
 	end
 
 	-- Place the piece on the new square (with promotion if applicable)
-	local final_piece_type = move.promotion or move.piece_type
-	board.pieces[color][final_piece_type] = Utils.set_bit(board.pieces[color][final_piece_type], move.to)
+	local final_piece_type = promotion or piece_type
+	board.pieces[color][final_piece_type] = Utils.set_bit(board.pieces[color][final_piece_type], to)
 
 	-- Reset halfmove clock on pawn moves
-	if move.piece_type == PAWN then
+	if piece_type == PAWN then
 		board.halfmove_clock = 0
 	end
 
 	-- Update en passant square
 	board.en_passant_square = nil
-	if move.piece_type == PAWN then
-		local move_distance = math.abs(move.to - move.from)
+	if piece_type == PAWN then
+		local move_distance = math.abs(to - from)
 		if move_distance == 16 then
 			-- Double pawn push, set en passant square
-			board.en_passant_square = if color == WHITE then (move.from + 8) else (move.from - 8)
+			board.en_passant_square = if color == WHITE then (from + 8) else (from - 8)
 		end
 	end
 
 	-- Update castling rights
-	if move.piece_type == KING then
+	if piece_type == KING then
 		if color == WHITE then
 			board.castling_rights.white_kingside = false
 			board.castling_rights.white_queenside = false
@@ -206,40 +214,40 @@ function Board.make_move(board: Board, move)
 			board.castling_rights.black_kingside = false
 			board.castling_rights.black_queenside = false
 		end
-	elseif move.piece_type == ROOK then
+	elseif piece_type == ROOK then
 		-- Check if rook moved from starting square
 		if color == WHITE then
-			if move.from == 0 then
+			if from == 0 then
 				board.castling_rights.white_queenside = false
-			elseif move.from == 7 then
+			elseif from == 7 then
 				board.castling_rights.white_kingside = false
 			end
 		else
-			if move.from == 56 then
+			if from == 56 then
 				board.castling_rights.black_queenside = false
-			elseif move.from == 63 then
+			elseif from == 63 then
 				board.castling_rights.black_kingside = false
 			end
 		end
 	end
 
 	-- Also lose castling rights if rook is captured
-	if move.captured then
-		if move.to == 0 then
+	if captured then
+		if to == 0 then
 			board.castling_rights.white_queenside = false
-		elseif move.to == 7 then
+		elseif to == 7 then
 			board.castling_rights.white_kingside = false
-		elseif move.to == 56 then
+		elseif to == 56 then
 			board.castling_rights.black_queenside = false
-		elseif move.to == 63 then
+		elseif to == 63 then
 			board.castling_rights.black_kingside = false
 		end
 	end
 
 	-- Handle castling moves
-	if move.flags and move.flags.castling then
+	if castling then
 		local rook_from, rook_to
-		if move.flags.kingside then
+		if kingside then
 			rook_from = if color == WHITE then 7 else 63
 			rook_to = if color == WHITE then 5 else 61
 		else -- queenside
@@ -265,7 +273,7 @@ function Board.make_move(board: Board, move)
 end
 
 -- Move generation
-local function generate_pawn_moves(board: Board, moves, color: number)
+local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 	local pawns = board.pieces[color][PAWN]
 	local empty = u64.bnot(board.occupied.all)
 	local enemies = board.occupied[1 - color]
@@ -305,10 +313,10 @@ local function generate_pawn_moves(board: Board, moves, color: number)
 			-- Check for promotion
 			if Utils.get_bit(promo_rank, to_square) then
 				for promo = KNIGHT, QUEEN do
-					table.insert(moves, Move.new(from_square, to_square, PAWN, is_capture, promo))
+					table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
 				end
 			else
-				table.insert(moves, Move.new(from_square, to_square, PAWN, is_capture, nil))
+				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
 			end
 		end
 	end
@@ -326,15 +334,15 @@ local function generate_pawn_moves(board: Board, moves, color: number)
 
 		if u64.btest(pawns, ep_left) then
 			local from = board.en_passant_square - (if color == WHITE then 7 else -7)
-			table.insert(moves, Move.new(from, board.en_passant_square, PAWN, true, nil, {en_passant = true}))
+			table.insert(moves, Move.create(from, board.en_passant_square, PAWN, true, nil, true))
 		end
 		if u64.btest(pawns, ep_right) then
 			local from = board.en_passant_square - (if color == WHITE then 9 else -9)
-			table.insert(moves, Move.new(from, board.en_passant_square, PAWN, true, nil, {en_passant = true}))
+			table.insert(moves, Move.create(from, board.en_passant_square, PAWN, true, nil, true))
 		end
 	end
 end
-local function generate_piece_moves(board: Board, moves, piece_type: number, attack_func: (number, vector, vector) -> vector, color: number)
+local function generate_piece_moves(board: Board, moves: {number}, piece_type: number, attack_func: (number, vector, vector) -> vector, color: number)
 	local pieces = board.pieces[color][piece_type]
 	local own_pieces = board.occupied[color]
 	local other_pieces = board.occupied[1 - color]
@@ -353,11 +361,11 @@ local function generate_piece_moves(board: Board, moves, piece_type: number, att
 			attacks, to_square = Utils.pop_lsb(attacks)
 
 			local is_capture = Utils.get_bit(other_pieces, to_square)
-			table.insert(moves, Move.new(from_square, to_square, piece_type, is_capture))
+			table.insert(moves, Move.create(from_square, to_square, piece_type, is_capture))
 		end
 	end
 end
-function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?)
+function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): {number}
     local color = givenColor or board.side_to_move
 
 	local moves = {}
@@ -393,7 +401,8 @@ function Board.generate_legal_moves_from(board: Board, from: number, filePseudoL
     local moves = {}
 
     for _, move in allMoves do
-        if move.from == from then
+        local moveFrom = Move.getFrom(move)
+        if moveFrom == from then
             table.insert(moves, move)
         end
     end

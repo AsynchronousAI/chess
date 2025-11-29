@@ -25,6 +25,7 @@ import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 import Atoms from "../atoms";
 import { usePx } from "../hooks/usePx";
+import { Move } from "shared/engine/move";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -191,7 +192,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                 </Frame>
 
                 {/* Hitbox */}
-                {possibleMoves.find((v) => v.to === index) && (
+                {possibleMoves.find((v) => Move.getTo(v) === index) && (
                   <>
                     <textbutton
                       key={`${location}-hit`}

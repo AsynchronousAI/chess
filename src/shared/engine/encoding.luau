@@ -3,7 +3,7 @@
 local u64 = require("./int64")
 local Utils = require("./utils")
 
-local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
+local WHITE, BLACK, PAWN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KING
 
 -- unlike older versions this is designed to be **rapid**, not efficent.
 local Encoding = {}

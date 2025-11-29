@@ -19,6 +19,7 @@ import { Gameplay } from "client/controllers/gameplay";
 import { usePx } from "../hooks/usePx";
 import Atoms from "../atoms";
 import { RunService } from "@rbxts/services";
+import { Move } from "shared/engine/move";
 
 export default function Board() {
   const possibleMoves = useAtom(Atoms.PossibleMoves);
@@ -51,7 +52,7 @@ export default function Board() {
   /* Handlers */
   const onMove = (location: number) => {
     if (
-      !possibleMoves.find((v) => v.to === location) ||
+      !possibleMoves.find((v) => Move.getTo(v) === location) ||
       holdingPiece === undefined ||
       board.side_to_move !== playingAs
     ) {

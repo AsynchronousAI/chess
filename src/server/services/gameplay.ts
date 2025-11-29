@@ -10,6 +10,7 @@ import { Datastore, DatastoredGame } from "./datastore";
 import { computeNewRating, OpponentRating, PlayerRating } from "server/glicko2";
 import { FullMove, PlayerSavedGame } from "shared/network";
 import { GetBestMove } from "server/bot";
+import { Move } from "shared/engine/move";
 
 export type Game = {
   /* players */
@@ -83,10 +84,11 @@ export class Gameplay implements OnStart {
       from,
       false,
     );
-    const move = allMoves.find((m) => m.to === to);
+    const move = allMoves.find((m) => Move.getTo(m) === to);
     if (!move) {
       return;
     }
+    print(move, Move.toString(move));
 
     BitBoard.make_move(activeGame.board, move);
 
@@ -262,7 +264,12 @@ export class Gameplay implements OnStart {
 
     const best = GetBestMove(activeGame.board);
     if (BOT && best.move) {
-      this.move(gameId, best.move.from, best.move.to, best.move.promotion);
+      this.move(
+        gameId,
+        Move.getFrom(best.move),
+        Move.getTo(best.move),
+        Move.getPromotion(best.move),
+      );
     }
 
     this.patchGame(gameId, {

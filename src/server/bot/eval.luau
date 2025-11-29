@@ -74,7 +74,7 @@ local pst = {
     }
 }
 
-return function (board: buffer)
+return function (board)
     local value = 0
     local hash = BitBoard.hash(board)
     if transposition[hash] then

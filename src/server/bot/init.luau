@@ -68,9 +68,9 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     end
 
     -- Convert to sequence string
-    local bestSequence = `{libs.Notation.encodeSquare(bestMove.from)}{libs.Notation.encodeSquare(bestMove.to)} `
+    local bestSequence = libs.Move.toString(bestMove) .. " "
     for _, v in sequence do
-        bestSequence = `{bestSequence}{libs.Notation.encodeSquare(v.from)}{libs.Notation.encodeSquare(v.to)} `
+        bestSequence = `{bestSequence}{libs.Move.toString(v)} `
     end
 
     return {score = bestScore, depth = maxDepthReached, bestMove = bestMove, sequence = bestSequence, legalMoves = #moves, nodes = nodes}
