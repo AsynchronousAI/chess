@@ -120,7 +120,10 @@ end
 actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
     nodes = 1;
 
-    local score, depthReached, moveSequence = minimax(libs.BitBoard.from_buffer(buffer.fromstring(tbl.board)), tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
+    local board = libs.BitBoard.create();
+    libs.BitBoard.from_buffer(board, buffer.fromstring(tbl.board));
+
+    local score, depthReached, moveSequence = minimax(board, tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
     tbl.score = score;
     tbl.depth = depthReached;
     tbl.moveSequence = SharedTable.new(if moveSequence then moveSequence else {});
