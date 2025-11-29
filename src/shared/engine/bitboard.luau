@@ -11,7 +11,7 @@ local Encoding = require("./encoding")
 local FEN = require("./fen")
 
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
-local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.FILE_A, Utils.FILE_H, Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
+local RANK_1, RANK_2, RANK_7, RANK_8, NOT_FILE_A, NOT_FILE_H = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.NOT_FILE_A, Utils.NOT_FILE_H
 
 local Board = {
     hash = Zobrist,
@@ -28,7 +28,7 @@ local Board = {
 
 export type Board = {
     pieces: {[number]: {[number]: vector}},
-    occupied: {[number|"all"]:vector},
+    occupied: {[number]:vector, all: vector},
     side_to_move: number,
     castling_rights: {
         white_kingside: boolean,
@@ -41,46 +41,46 @@ export type Board = {
     fullmove_number: number
 }
 function Board.create(blank: boolean?): Board
-	local board = {}
+    local board: Board = {
+        -- Bitboards for each piece type and color
+        pieces = {
+            [WHITE] = {
+                [PAWN] = u64.ZERO,
+                [KNIGHT] = u64.ZERO,
+                [BISHOP] = u64.ZERO,
+                [ROOK] = u64.ZERO,
+                [QUEEN] = u64.ZERO,
+                [KING] = u64.ZERO,
+            },
+            [BLACK] = {
+                [PAWN] = u64.ZERO,
+                [KNIGHT] = u64.ZERO,
+                [BISHOP] = u64.ZERO,
+                [ROOK] = u64.ZERO,
+                [QUEEN] = u64.ZERO,
+                [KING] = u64.ZERO,
+            }
+        },
 
-	-- Bitboards for each piece type and color
-	board.pieces = {
-		[WHITE] = {
-			[PAWN] = u64.ZERO,
-			[KNIGHT] = u64.ZERO,
-			[BISHOP] = u64.ZERO,
-			[ROOK] = u64.ZERO,
-			[QUEEN] = u64.ZERO,
-			[KING] = u64.ZERO,
-		},
-		[BLACK] = {
-			[PAWN] = u64.ZERO,
-			[KNIGHT] = u64.ZERO,
-			[BISHOP] = u64.ZERO,
-			[ROOK] = u64.ZERO,
-			[QUEEN] = u64.ZERO,
-			[KING] = u64.ZERO,
-		}
-	}
+        -- Occupied bitboards (initialized empty)
+        occupied = {
+            [WHITE] = u64.ZERO,
+            [BLACK] = u64.ZERO,
+            all = u64.ZERO,
+        },
 
-	-- Combined bitboards
-	board.occupied = {
-		[WHITE] = u64.ZERO,
-		[BLACK] = u64.ZERO,
-		all = u64.ZERO
-	}
-
-	-- Game state
-	board.side_to_move = WHITE
-	board.castling_rights = {
-		white_kingside = true,
-		white_queenside = true,
-		black_kingside = true,
-		black_queenside = true,
-	}
-	board.en_passant_square = nil -- square index or nil
-	board.halfmove_clock = 0
-	board.fullmove_number = 1
+        -- Game state
+        side_to_move = WHITE,
+        castling_rights = {
+            white_kingside = true,
+            white_queenside = true,
+            black_kingside = true,
+            black_queenside = true,
+        },
+        en_passant_square = nil, -- square index or nil
+        halfmove_clock = 0,
+        fullmove_number = 1,
+    }
 
 	if not blank then Board.set_start_position(board) end
 
@@ -122,83 +122,27 @@ function Board.set_start_position(board: Board)
 	Board.update_occupied(board)
 end
 function Board.update_occupied(board: Board)
-    -- We do not use u64.bor in repeat for performance. Using bit32.bor is much faster for mass bit operations. (nearly 2x faster)
-
     local whitePieces = board.pieces[WHITE]
     local blackPieces = board.pieces[BLACK]
 
-    local wP = whitePieces[PAWN]
-    local bP = blackPieces[PAWN]
-
-    local wK = whitePieces[KING]
-    local bK = blackPieces[KING]
-
-    local wQ = whitePieces[QUEEN]
-    local bQ = blackPieces[QUEEN]
-
-    local wR = whitePieces[ROOK]
-    local bR = blackPieces[ROOK]
-
-    local wB = whitePieces[BISHOP]
-    local bB = blackPieces[BISHOP]
-
-    local wN = whitePieces[KNIGHT]
-    local bN = blackPieces[KNIGHT]
-
     -- White
-    board.occupied[WHITE] = vector.create(
-        bit32.bor(
-            wP.x,
-            wN.x,
-            wB.x,
-            wR.x,
-            wQ.x,
-            wK.x
-        ),
-        bit32.bor(
-            wP.y,
-            wN.y,
-            wB.y,
-            wR.y,
-            wQ.y,
-            wK.y
-        ),
-        bit32.bor(
-            wP.z,
-            wN.z,
-            wB.z,
-            wR.z,
-            wQ.z,
-            wK.z
-        )
+    board.occupied[WHITE] = u64.hex_bor(
+        whitePieces[PAWN],
+        whitePieces[KNIGHT],
+        whitePieces[BISHOP],
+        whitePieces[ROOK],
+        whitePieces[QUEEN],
+        whitePieces[KING]
     )
 
     -- Black
-    board.occupied[BLACK] = vector.create(
-        bit32.bor(
-            bP.x,
-            bN.x,
-            bB.x,
-            bR.x,
-            bQ.x,
-            bK.x
-        ),
-        bit32.bor(
-            bP.y,
-            bN.y,
-            bB.y,
-            bR.y,
-            bQ.y,
-            bK.y
-        ),
-        bit32.bor(
-            bP.z,
-            bN.z,
-            bB.z,
-            bR.z,
-            bQ.z,
-            bK.z
-        )
+    board.occupied[BLACK] = u64.hex_bor(
+        blackPieces[PAWN],
+        blackPieces[KNIGHT],
+        blackPieces[BISHOP],
+        blackPieces[ROOK],
+        blackPieces[QUEEN],
+        blackPieces[KING]
     )
 
     -- All
@@ -390,7 +334,7 @@ local function generate_pawn_moves(board: Board, moves, color: number)
 		end
 	end
 end
-local function generate_piece_moves(board: Board, moves, piece_type: number, attack_func: (number, vector?, vector?) -> vector, color: number)
+local function generate_piece_moves(board: Board, moves, piece_type: number, attack_func: (number, vector, vector) -> vector, color: number)
 	local pieces = board.pieces[color][piece_type]
 	local own_pieces = board.occupied[color]
 	local other_pieces = board.occupied[1 - color]
@@ -399,12 +343,7 @@ local function generate_piece_moves(board: Board, moves, piece_type: number, att
 		local from_square
 		pieces, from_square = Utils.pop_lsb(pieces)
 
-		local attacks
-		if piece_type == KNIGHT or piece_type == KING then
-			attacks = attack_func(from_square)
-		else
-			attacks = attack_func(from_square, own_pieces, other_pieces)
-		end
+		local attacks = attack_func(from_square, own_pieces, other_pieces)
 
 		-- Remove moves to squares occupied by own pieces
 		attacks = u64.band(attacks, u64.bnot(own_pieces))
@@ -418,8 +357,8 @@ local function generate_piece_moves(board: Board, moves, piece_type: number, att
 		end
 	end
 end
-function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, color: number?)
-    color = color or board.side_to_move
+function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?)
+    local color = givenColor or board.side_to_move
 
 	local moves = {}
 
@@ -467,7 +406,7 @@ end
 
 
 -- Pieces
-function Board.get_piece(board: Board, loc: number)
+function Board.get_piece(board: Board, loc: number): {[number]: number}?
     local search = u64.lshift(u64.ONE, loc)
     for color, pieces in board.pieces do
         for typ, bb in pieces do

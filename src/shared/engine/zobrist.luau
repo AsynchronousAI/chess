@@ -63,7 +63,7 @@ return function(board)
     end
 
     -- Side to move
-    if board.side_to_move == WHITE then
+    if board.side_to_move == Utils.WHITE then
         hash = bit32.bxor(hash, Zobrist.side_to_move)
     end
 

@@ -146,13 +146,22 @@ local function band(lhs: vector, rhs: vector): vector
 end
 
 --[=[
-	Computes the bitwise OR of the two provide values.
+	Computes the bitwise OR of the two provided values.
 
 	This does not accept a vararg like the `bit32` equivalent for performance
 	reasons.
 ]=]
 local function bor(lhs: vector, rhs: vector): vector
 	return vector.create(bit32.bor(lhs.x, rhs.x), bit32.bor(lhs.y, rhs.y), bit32.bor(lhs.z, rhs.z))
+end
+
+--[=[
+	Computes the bitwise OR of the six provided values.
+
+	This exists for performance when performing repeat `bor`, especially when doing a binary or with multiple pieces for example.
+]=]
+local function hex_bor(a: vector, b: vector, c: vector, d: vector, e: vector, f: vector): vector
+	return vector.create(bit32.bor(a.x, b.x, c.x, d.x, e.x, f.x), bit32.bor(a.y, b.y, c.y, d.y, e.y, f.y), bit32.bor(a.z, b.z, c.z, d.z, e.z, f.z))
 end
 
 --[=[
@@ -742,6 +751,7 @@ return {
 
 	band = band,
 	bor = bor,
+	hex_bor = hex_bor,
 	bxor = bxor,
 	btest = btest,
 

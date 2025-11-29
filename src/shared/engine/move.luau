@@ -1,8 +1,6 @@
 --!native
 --!optimize 2
 
-local u64 = require("./int64")
-
 local Move = {}
 Move.__index = Move
 
