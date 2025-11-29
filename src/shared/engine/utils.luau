@@ -47,6 +47,9 @@ do
     end
 end
 
+local function unit_board(square)
+    return BIT_MASKS[square]
+end
 local function get_bit(bb, square)
 	return btest(bb, BIT_MASKS[square])
 end
@@ -116,6 +119,7 @@ return {
     pop_lsb = pop_lsb,
     popcount = popcount,
     iterate_bits = iterate_bits,
+    unit_board = unit_board,
 
     separate_square_index = separate_square_index,
     get_square_index = get_square_index

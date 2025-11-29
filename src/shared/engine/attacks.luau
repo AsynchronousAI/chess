@@ -21,7 +21,54 @@ local RAY_SW = {}
 local KNIGHT_MOVES = {}
 local KING_MOVES = {}
 
--- Initialize precomputed rays
+-- Bulk movements
+function Attacks.bulk_pawn_attacks(bb: vector, color: number): vector
+	local attacks = u64.ZERO
+
+	if color == WHITE then
+		attacks = u64.bor(
+			u64.band(u64.lshift(bb, 7), NOT_FILE_H),
+			u64.band(u64.lshift(bb, 9), NOT_FILE_A)
+		)
+	else
+		attacks = u64.bor(
+			u64.band(u64.rshift(bb, 7), NOT_FILE_A),
+			u64.band(u64.rshift(bb, 9), NOT_FILE_H)
+		)
+	end
+
+	return attacks
+end
+function Attacks.bulk_knight_attacks(bb: vector): vector
+    local attacks = u64.ZERO;
+
+    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 17), NOT_FILE_A))
+    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 15), NOT_FILE_H))
+    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 10), NOT_FILE_AB))
+    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 6), NOT_FILE_GH))
+    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 17), NOT_FILE_H))
+    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 15), NOT_FILE_A))
+    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 10), NOT_FILE_GH))
+    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 6), NOT_FILE_AB))
+
+    return attacks
+end
+function Attacks.bulk_king_attacks(bb: vector): vector
+    local attacks = u64.ZERO;
+
+    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 1), NOT_FILE_A))
+	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 1), NOT_FILE_H))
+	attacks = u64.bor(attacks, u64.lshift(bb, 8))
+	attacks = u64.bor(attacks, u64.rshift(bb, 8))
+	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 9), NOT_FILE_A))
+	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 7), NOT_FILE_H))
+	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 9), NOT_FILE_H))
+	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 7), NOT_FILE_A))
+
+	return attacks
+end
+
+-- Initialize precomputed rays & knight/king movement
 do
 	for square = 0, 63 do
 		RAY_NORTH[square] = u64.ZERO
@@ -32,37 +79,15 @@ do
 		RAY_NW[square] = u64.ZERO
 		RAY_SE[square] = u64.ZERO
 		RAY_SW[square] = u64.ZERO
-		KNIGHT_MOVES[square] = u64.ZERO
-		KING_MOVES[square] = u64.ZERO
 
-		local bb = u64.lshift(u64.ONE, square)
+		local bb = Utils.unit_board(square)
 
 		local rank = math.floor(square / 8)
 		local file = square % 8
 
-		-- Knight
-		do
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 17), NOT_FILE_A))
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 15), NOT_FILE_H))
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 10), NOT_FILE_AB))
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 6), NOT_FILE_GH))
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 17), NOT_FILE_H))
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 15), NOT_FILE_A))
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 10), NOT_FILE_GH))
-    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 6), NOT_FILE_AB))
-		end
-
-		-- King
-		do
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.lshift(bb, 1), NOT_FILE_A))
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.rshift(bb, 1), NOT_FILE_H))
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.lshift(bb, 8))
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.rshift(bb, 8))
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.lshift(bb, 9), NOT_FILE_A))
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.lshift(bb, 7), NOT_FILE_H))
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.rshift(bb, 9), NOT_FILE_H))
-			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.rshift(bb, 7), NOT_FILE_A))
-		end
+		-- Knight & king
+		KNIGHT_MOVES[square] = Attacks.bulk_knight_attacks(bb)
+		KING_MOVES[square] = Attacks.bulk_king_attacks(bb)
 
 		-- North
 		for r = rank + 1, 7 do
@@ -118,6 +143,14 @@ do
 	end
 end
 
+-- Singular attacks (precomputed)
+function Attacks.knight_attacks(square: number): vector
+    return KNIGHT_MOVES[square]
+end
+function Attacks.king_attacks(square: number): vector
+	return KING_MOVES[square]
+end
+
 -- Compute attacks in a direction using countlz/countrz
 local function ray_attack_positive(ray: vector, occupied: vector): vector
     local blockers = u64.band(ray, occupied)
@@ -129,8 +162,6 @@ local function ray_attack_positive(ray: vector, occupied: vector): vector
     local attack = u64.band(ray, u64.bor(mask, u64.sub(mask, u64.ONE)))
     return attack
 end
-
-
 local function ray_attack_negative(ray: vector, occupied: vector): vector
     local blockers = u64.band(ray, occupied)
     if blockers == u64.ZERO then
@@ -140,34 +171,6 @@ local function ray_attack_negative(ray: vector, occupied: vector): vector
     local mask = u64.lshift(u64.ONE, blocker_square)
     local attack = u64.band(ray, u64.bnot(u64.sub(mask, u64.ONE)))
     return attack
-end
-
--- Static attacks (unchanged)
-function Attacks.pawn_attacks(square: number, color: number): vector
-	local bb = u64.lshift(u64.ONE, square)
-	local attacks = u64.ZERO
-
-	if color == WHITE then
-		attacks = u64.bor(
-			u64.band(u64.lshift(bb, 7), NOT_FILE_H),
-			u64.band(u64.lshift(bb, 9), NOT_FILE_A)
-		)
-	else
-		attacks = u64.bor(
-			u64.band(u64.rshift(bb, 7), NOT_FILE_A),
-			u64.band(u64.rshift(bb, 9), NOT_FILE_H)
-		)
-	end
-
-	return attacks
-end
-
-function Attacks.knight_attacks(square: number): vector
-    return KNIGHT_MOVES[square]
-end
-
-function Attacks.king_attacks(square: number): vector
-	return KING_MOVES[square]
 end
 
 -- Optimized sliding attacks using CLZ/CTZ
@@ -187,7 +190,6 @@ function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupie
 	-- Remove our own pieces from attacks
 	return u64.band(attacks, u64.bnot(my_occupied))
 end
-
 function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
 	local occupied = u64.bor(my_occupied, other_occupied)
 	local attacks = u64.ZERO
@@ -204,7 +206,6 @@ function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occup
 	-- Remove our own pieces from attacks
 	return u64.band(attacks, u64.bnot(my_occupied))
 end
-
 function Attacks.queen_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
 	return u64.bor(
 		Attacks.rook_attacks(square, my_occupied, other_occupied),

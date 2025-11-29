@@ -291,7 +291,7 @@ local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 	double_push_targets = u64.band(u64.band(double_push_targets, empty),
 		if color == WHITE then u64.lshift(start_rank, 16) else u64.rshift(start_rank, 16))
 
-	-- Captures
+	-- Captures. This does not use attacks because performing that in bulk will not let us know of the from square.
 	local left_captures, right_captures
 	if color == WHITE then
 		left_captures = u64.band(u64.lshift(pawns, 7), NOT_FILE_H)
@@ -408,14 +408,33 @@ function Board.generate_legal_moves_from(board: Board, from: number, filePseudoL
     return moves
 end
 function Board.is_square_attacked(board: Board, square: number, by_color: number): boolean
-    local legalMoves = Board.generate_legal_moves(board, true, by_color)
+    local pieces = board.pieces[by_color]
+    local myOccupancy = board.occupied[by_color]
+    local enemyOccupancy = board.occupied[1-by_color]
 
-    for _, move in legalMoves do
-        if Move.getTo(move) == square then
-            return true
-        end
+    local slidingAttacks = u64.ZERO
+    for i, bb in {pieces[ROOK], pieces[BISHOP], pieces[QUEEN]} do
+        Utils.iterate_bits(bb, function(s)
+            if i == 1 then
+                slidingAttacks = u64.bor(slidingAttacks, Attacks.rook_attacks(s, myOccupancy, enemyOccupancy))
+            elseif i == 2 then
+                slidingAttacks = u64.bor(slidingAttacks, Attacks.bishop_attacks(s, myOccupancy, enemyOccupancy))
+            elseif i == 3 then
+                slidingAttacks = u64.bor(slidingAttacks, Attacks.queen_attacks(s, myOccupancy, enemyOccupancy))
+            end
+        end)
     end
-    return false
+
+    local attackBitboard = u64.hex_bor(
+        Attacks.bulk_pawn_attacks(pieces[PAWN], by_color),
+        Attacks.bulk_knight_attacks(pieces[KNIGHT]),
+        Attacks.bulk_king_attacks(pieces[KING]),
+        slidingAttacks,
+        u64.ZERO, -- would be better to use 4 in a hex-bor than individual bor
+        u64.ZERO
+    )
+
+    return Utils.get_bit(attackBitboard, square)
 end
 
 
@@ -452,12 +471,12 @@ function Board.find_piece(board: Board, piece_type: number, color: number): numb
 end
 
 -- Endgame
-function Board.get_game_state(board: Board)
+function Board.get_game_state(board: Board, providedMoves: {number}?)
     -- TODO: Insufficent material
     local color = board.side_to_move
 
     -- Generate all legal moves
-    local moves = Board.generate_legal_moves(board, false, color)
+    local moves = providedMoves or Board.generate_legal_moves(board, false, color)
 
     -- Check if king is in check
     local king_square = Board.find_piece(board, KING, color)

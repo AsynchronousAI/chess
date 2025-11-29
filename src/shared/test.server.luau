@@ -12,10 +12,10 @@ local function chess()
     while true do
         s+=1
         local legal_moves = bitboard.generate_legal_moves(board)
-        bitboard.make_move(board, legal_moves[math.random(1,#legal_moves)])
-
-        state = bitboard.get_game_state(board)
+        state = bitboard.get_game_state(board, legal_moves)
         if state ~= "" then break end
+
+        bitboard.make_move(board, legal_moves[math.random(1,#legal_moves)])
     end
 
     -- Zobrist hashing
