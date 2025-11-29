@@ -327,7 +327,7 @@ local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 	add_pawn_moves(right_captures, if color == WHITE then 9 else -9, true)
 
 	-- En passant
-	if board.en_passant_square then
+	if board.en_passant_square and board.en_passant_square>0 then
 		local ep_bb = u64.lshift(u64.ONE, board.en_passant_square)
 		local ep_left = if color == WHITE then u64.rshift(ep_bb, 7) else u64.lshift(ep_bb, 7)
 		local ep_right = if color == WHITE then u64.rshift(ep_bb, 9) else u64.lshift(ep_bb, 9)
@@ -368,7 +368,7 @@ end
 function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): {number}
     local color = givenColor or board.side_to_move
 
-	local moves = {}
+	local moves = table.create(30)
 
 	generate_pawn_moves(board, moves, color)
 	generate_piece_moves(board, moves, KNIGHT, Attacks.knight_attacks, color)

@@ -1,5 +1,6 @@
 local bitboard = require("./engine/bitboard").BitBoard
 
+local s = 0
 local function chess()
     -- Init
     local board = bitboard.create()
@@ -11,6 +12,7 @@ local function chess()
         local legal_moves = bitboard.generate_legal_moves(board)
         if #legal_moves == 0 then break end
         bitboard.make_move(board, legal_moves[math.random(1,#legal_moves)])
+        s+=1
     end
 
     -- Zobrist hashing
@@ -40,3 +42,4 @@ end
 for i = 1, 50 do
     chess()
 end
+print(s, "samples")

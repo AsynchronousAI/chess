@@ -91,7 +91,7 @@ function spawnThreads(threads)
         actors[i] = clone
     end
 end
-spawnThreads(50)
+spawnThreads(40)
 
 --[[ Return ]]
 return {

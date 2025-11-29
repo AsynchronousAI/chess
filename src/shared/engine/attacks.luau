@@ -18,6 +18,9 @@ local RAY_NW = {}
 local RAY_SE = {}
 local RAY_SW = {}
 
+local KNIGHT_MOVES = {}
+local KING_MOVES = {}
+
 -- Initialize precomputed rays
 do
 	for square = 0, 63 do
@@ -29,9 +32,37 @@ do
 		RAY_NW[square] = u64.ZERO
 		RAY_SE[square] = u64.ZERO
 		RAY_SW[square] = u64.ZERO
+		KNIGHT_MOVES[square] = u64.ZERO
+		KING_MOVES[square] = u64.ZERO
+
+		local bb = u64.lshift(u64.ONE, square)
 
 		local rank = math.floor(square / 8)
 		local file = square % 8
+
+		-- Knight
+		do
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 17), NOT_FILE_A))
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 15), NOT_FILE_H))
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 10), NOT_FILE_AB))
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.lshift(bb, 6), NOT_FILE_GH))
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 17), NOT_FILE_H))
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 15), NOT_FILE_A))
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 10), NOT_FILE_GH))
+    		KNIGHT_MOVES[square] = u64.bor(KNIGHT_MOVES[square], u64.band(u64.rshift(bb, 6), NOT_FILE_AB))
+		end
+
+		-- King
+		do
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.lshift(bb, 1), NOT_FILE_A))
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.rshift(bb, 1), NOT_FILE_H))
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.lshift(bb, 8))
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.rshift(bb, 8))
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.lshift(bb, 9), NOT_FILE_A))
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.lshift(bb, 7), NOT_FILE_H))
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.rshift(bb, 9), NOT_FILE_H))
+			KING_MOVES[square] = u64.bor(KING_MOVES[square], u64.band(u64.rshift(bb, 7), NOT_FILE_A))
+		end
 
 		-- North
 		for r = rank + 1, 7 do
@@ -132,35 +163,11 @@ function Attacks.pawn_attacks(square: number, color: number): vector
 end
 
 function Attacks.knight_attacks(square: number): vector
-	local bb = u64.lshift(u64.ONE, square)
-	local attacks = u64.ZERO
-
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 17), NOT_FILE_A))
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 15), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 10), NOT_FILE_AB))
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 6), NOT_FILE_GH))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 17), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 15), NOT_FILE_A))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 10), NOT_FILE_GH))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 6), NOT_FILE_AB))
-
-	return attacks
+    return KNIGHT_MOVES[square]
 end
 
 function Attacks.king_attacks(square: number): vector
-	local bb = u64.lshift(u64.ONE, square)
-	local attacks = u64.ZERO
-
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 1), NOT_FILE_A))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 1), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.lshift(bb, 8))
-	attacks = u64.bor(attacks, u64.rshift(bb, 8))
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 9), NOT_FILE_A))
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 7), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 9), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 7), NOT_FILE_A))
-
-	return attacks
+	return KING_MOVES[square]
 end
 
 -- Optimized sliding attacks using CLZ/CTZ
