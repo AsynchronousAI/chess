@@ -43,7 +43,7 @@ local countrz = u64.countrz
 local BIT_MASKS = {}
 do
     for i = 0, 63 do
-        BIT_MASKS[i] = shl(u64.ONE, i)
+        BIT_MASKS[i] = shl(ONE, i)
     end
 end
 

@@ -368,9 +368,9 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 
 	-- TODO: Add castling moves
 
-	local myKing = Board.find_piece(board, KING, color)
-	if myKing < 0 then
-	    return {}
+	local headKingPos = Board.find_piece(board, KING, color)
+	if not headKingPos then
+	    error("No king!")
 	end
 	if filePseudoLegal then return moves end
 
@@ -379,7 +379,15 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
     for _, move in moves do
 		local branch = Board.clone(board)
 		Board.make_move(branch, move)
-        if not Board.is_square_attacked(branch, myKing, 1-color) then
+
+		-- Is this move moving the king?
+		local kingPos = headKingPos
+		if Move.getPieceType(move) == KING then
+			kingPos = Move.getTo(move)
+		end
+
+		local check = Board.is_square_attacked(branch, kingPos, 1-color)
+        if not check then
             table.insert(filtered_moves, move)
         end
     end
@@ -436,9 +444,10 @@ function Board.get_all_pieces(board: Board)
 
     return pieces_list
 end
-function Board.find_piece(board: Board, piece_type: number, color: number)
+function Board.find_piece(board: Board, piece_type: number, color: number): number?
     local bb = board.pieces[color][piece_type]
     local square = 63-u64.countlz(bb)
+    if square == -1 then return nil end
     return square
 end
 
@@ -448,14 +457,12 @@ function Board.get_game_state(board: Board)
     local color = board.side_to_move
 
     -- Generate all legal moves
-    local moves = Board.generate_legal_moves(board, true, color)
+    local moves = Board.generate_legal_moves(board, false, color)
 
     -- Check if king is in check
-    local king_bb = board.pieces[color][KING]
-    local king_square = 63 - u64.countlz(king_bb)
-    if king_square == -1 then
-        print("No king!")
-        return "checkmate"
+    local king_square = Board.find_piece(board, KING, color)
+    if not king_square then
+        error("No king!")
     end
 
     local in_check = Board.is_square_attacked(board, king_square, 1 - color)
@@ -466,6 +473,11 @@ function Board.get_game_state(board: Board)
         else
             return "stalemate"
         end
+    end
+
+    -- 50-move rule: draw if 50 full moves (100 halfmoves) without pawn move or capture
+    if board.halfmove_clock >= 100 then
+        return "draw_50_move_rule"
     end
 
     return ""

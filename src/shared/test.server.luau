@@ -8,11 +8,14 @@ local function chess()
     print("Original hash: ", bitboard.hash(board)) -- hash
 
     -- Legal moves
+    local state
     while true do
-        local legal_moves = bitboard.generate_legal_moves(board)
-        if #legal_moves == 0 then break end
-        bitboard.make_move(board, legal_moves[math.random(1,#legal_moves)])
         s+=1
+        local legal_moves = bitboard.generate_legal_moves(board)
+        bitboard.make_move(board, legal_moves[math.random(1,#legal_moves)])
+
+        state = bitboard.get_game_state(board)
+        if state ~= "" then break end
     end
 
     -- Zobrist hashing
@@ -36,7 +39,7 @@ local function chess()
     assert(bitboard.hash(new3) == hash, "Cloning failed")
 
     -- Game state
-    print("Game state: ", bitboard.get_game_state(board))
+    print("Game state: ", state)
 end
 
 for i = 1, 50 do

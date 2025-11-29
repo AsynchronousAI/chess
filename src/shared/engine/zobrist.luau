@@ -2,7 +2,6 @@
 --!optimize 2
 
 local Utils = require("./utils")
-local u64 = require("./int64")
 
 local Zobrist = {}
 Zobrist.piece_square = {}
@@ -11,7 +10,7 @@ Zobrist.en_passant = {}
 Zobrist.side_to_move = 0
 
 do
-    math.randomseed(10)
+    math.randomseed(67)
     local random = function()
         return math.random(0, 0xFFFFFFFF)
     end
