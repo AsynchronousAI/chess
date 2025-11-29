@@ -42,11 +42,9 @@ return function(board)
     for color = Utils.WHITE, Utils.BLACK do
         for piece = Utils.PAWN, Utils.KING do
             local bb = board.pieces[color][piece]
-            while bb ~= u64.ZERO do
-                local square
-                bb, square = Utils.pop_lsb(bb)
+            Utils.iterate_bits(bb, function(square)
                 hash = bit32.bxor(hash, Zobrist.piece_square[color][piece][square])
-            end
+            end)
         end
     end
 

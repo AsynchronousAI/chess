@@ -39,18 +39,26 @@ local ZERO    = u64.ZERO
 local ONE     = u64.ONE
 local countrz = u64.countrz
 
+-- Precomputed masks
+local BIT_MASKS = {}
+do
+    for i = 0, 63 do
+        BIT_MASKS[i] = shl(u64.ONE, i)
+    end
+end
+
 local function get_bit(bb, square)
-	return btest(bb, shl(ONE, square))
+	return btest(bb, BIT_MASKS[square])
 end
 local function set_bit(bb, square)
-	return bor(bb, shl(ONE, square))
+	return bor(bb, BIT_MASKS[square])
 end
 local function clear_bit(bb, square)
-    return band(bb, bnot(shl(ONE, square)))
+    return band(bb, bnot(BIT_MASKS[square]))
 end
 local function pop_lsb(bb)
     local i = countrz(bb)
-    bb = band(bb, bnot(shl(ONE, i)))
+    bb = band(bb, bnot(BIT_MASKS[i]))
     return bb, i
 end
 local function popcount(bb)
@@ -61,6 +69,14 @@ local function popcount(bb)
 	end
 	return count
 end
+function iterate_bits(bb, callback)
+    while bb ~= u64.ZERO do
+        local index = u64.countrz(bb)
+        callback(index)
+        bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, index)))
+    end
+end
+
 
 -- Utils
 local function separate_square_index(loc: number)
@@ -99,6 +115,7 @@ return {
     clear_bit = clear_bit,
     pop_lsb = pop_lsb,
     popcount = popcount,
+    iterate_bits = iterate_bits,
 
     separate_square_index = separate_square_index,
     get_square_index = get_square_index

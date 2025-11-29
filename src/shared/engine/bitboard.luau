@@ -305,9 +305,7 @@ local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 
 	-- Generate moves
 	local function add_pawn_moves(targets, from_offset, is_capture)
-		while targets ~= u64.ZERO do
-			local to_square
-			targets, to_square = Utils.pop_lsb(targets)
+	    Utils.iterate_bits(targets, function(to_square: number)
 			local from_square = to_square - from_offset
 
 			-- Check for promotion
@@ -318,7 +316,7 @@ local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 			else
 				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
 			end
-		end
+		end)
 	end
 
 	add_pawn_moves(push_targets, push_dir, false)
@@ -343,27 +341,18 @@ local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 	end
 end
 local function generate_piece_moves(board: Board, moves: {number}, piece_type: number, attack_func: (number, vector, vector) -> vector, color: number)
-	local pieces = board.pieces[color][piece_type]
 	local own_pieces = board.occupied[color]
 	local other_pieces = board.occupied[1 - color]
 
-	while pieces ~= u64.ZERO do
-		local from_square
-		pieces, from_square = Utils.pop_lsb(pieces)
+	Utils.iterate_bits(board.pieces[color][piece_type], function(from_square)
+        local attacks = attack_func(from_square, own_pieces, other_pieces)
+        attacks = u64.band(attacks, u64.bnot(own_pieces))
 
-		local attacks = attack_func(from_square, own_pieces, other_pieces)
-
-		-- Remove moves to squares occupied by own pieces
-		attacks = u64.band(attacks, u64.bnot(own_pieces))
-
-		while attacks ~= u64.ZERO do
-			local to_square
-			attacks, to_square = Utils.pop_lsb(attacks)
-
-			local is_capture = Utils.get_bit(other_pieces, to_square)
-			table.insert(moves, Move.create(from_square, to_square, piece_type, is_capture))
-		end
-	end
+        Utils.iterate_bits(attacks, function(to_square)
+            local is_capture = Utils.get_bit(other_pieces, to_square)
+            table.insert(moves, Move.create(from_square, to_square, piece_type, is_capture))
+        end)
+    end)
 end
 function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): {number}
     local color = givenColor or board.side_to_move
@@ -431,14 +420,9 @@ function Board.get_all_pieces(board: Board)
 
     for color, piece_table in board.pieces do
         for typ, bb in piece_table do
-            local b = bb
-
-            while b ~= u64.ZERO do
-                local lsb = 63 - u64.countlz(b)
-                local loc = lsb
+            Utils.iterate_bits(bb, function(loc)
                 table.insert(pieces_list, { typ, color, loc })
-                b = u64.band(b, u64.bnot(u64.lshift(u64.ONE, lsb)))
-            end
+            end)
         end
     end
 
