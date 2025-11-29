@@ -17,13 +17,10 @@ print("Move hash: ", hash)
 local new1 = bitboard.create()
 local fen = bitboard.to_fen(board)
 bitboard.from_fen(new1, fen)
-print(fen)
-assert(bitboard.hash(new1) == hash)
+print("Move FEN: ", fen)
+assert(bitboard.hash(new1) == hash, "FEN conversion failed")
 
 -- Buffers
 local new2 = bitboard.create()
 bitboard.from_buffer(new2, bitboard.to_buffer(board))
-for i, v in new2 do
-    print(i, v, board[i])
-end
-assert(bitboard.hash(new2) == hash)
+assert(bitboard.hash(new2) == hash, "Buffer conversion failed")

@@ -15,8 +15,7 @@ function Encoding.to_buffer(self)
 
     -- Helper for writing a u64
     local function writeU64(value)
-        local tmp = u64.to_buffer(value)
-        buffer.copy(buf, off, tmp, 0, 8)
+        u64.write_to_buffer(buf, value, off)
         off += 8
     end
 
