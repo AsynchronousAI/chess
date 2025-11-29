@@ -368,22 +368,23 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 
 	-- TODO: Add castling moves
 
-	if not filePseudoLegal then
-	    local myKing = Board.find_piece(board, KING, color)
-		if myKing < 0 then return {} end
-	    local filtered_moves = {}
-
-	    for _, move in moves do
-			local branch = Board.clone(board)
-			Board.make_move(branch, move)
-	        if not Board.is_square_attacked(branch, myKing, 1-color) then
-	            table.insert(filtered_moves, move)
-	        end
-	    end
-	    return filtered_moves
-	else
-		return moves
+	local myKing = Board.find_piece(board, KING, color)
+	if myKing < 0 then
+	    return {}
 	end
+	if filePseudoLegal then return moves end
+
+    local filtered_moves = {}
+
+    for _, move in moves do
+		local branch = Board.clone(board)
+		Board.make_move(branch, move)
+        if not Board.is_square_attacked(branch, myKing, 1-color) then
+            table.insert(filtered_moves, move)
+        end
+    end
+
+    return filtered_moves
 end
 function Board.generate_legal_moves_from(board: Board, from: number, filePseudoLegal: boolean?, color: number?)
     local allMoves = Board.generate_legal_moves(board, filePseudoLegal, color)
@@ -398,8 +399,15 @@ function Board.generate_legal_moves_from(board: Board, from: number, filePseudoL
 
     return moves
 end
-function Board.is_square_attacked(self, square: number, by_color: number)
-	return false
+function Board.is_square_attacked(board: Board, square: number, by_color: number): boolean
+    local legalMoves = Board.generate_legal_moves(board, true, by_color)
+
+    for _, move in legalMoves do
+        if Move.getTo(move) == square then
+            return true
+        end
+    end
+    return false
 end
 
 
@@ -445,6 +453,11 @@ function Board.get_game_state(board: Board)
     -- Check if king is in check
     local king_bb = board.pieces[color][KING]
     local king_square = 63 - u64.countlz(king_bb)
+    if king_square == -1 then
+        print("No king!")
+        return "checkmate"
+    end
+
     local in_check = Board.is_square_attacked(board, king_square, 1 - color)
 
     if #moves == 0 then
