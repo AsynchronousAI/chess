@@ -29,7 +29,7 @@ local KING = 5
 local WHITE = 0
 local BLACK = 1
 
--- Helpers
+-- Binary Helpers
 local function get_bit(bb, square)
 	return u64.btest(bb, u64.lshift(u64.ONE, square))
 end
@@ -52,6 +52,13 @@ local function popcount(bb)
 	return count
 end
 
+-- Utils
+local function separate_square_index(loc: number)
+	return { bit32.band(loc, 7), bit32.arshift(loc, 3) }
+end
+local function get_square_index(file: number, rank: number)
+	return bit32.bor(bit32.lshift(rank, 3), file)
+end
 
 return {
     -- Constants
@@ -82,4 +89,7 @@ return {
     clear_bit = clear_bit,
     pop_lsb = pop_lsb,
     popcount = popcount,
+
+    separate_square_index = separate_square_index,
+    get_square_index = get_square_index
 }

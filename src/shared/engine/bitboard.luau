@@ -13,8 +13,12 @@ local RANK_1, RANK_2, RANK_7, RANK_8, FILE_A, FILE_H, NOT_FILE_A, NOT_FILE_H, NO
 
 local Board = {
     hash = Zobrist,
+
     to_fen = FEN.to_fen,
     from_fen = FEN.from_fen,
+
+    separate_square_index = Utils.separate_square_index,
+    get_square_index = Utils.get_square_index
 }
 
 function Board.create(blank)
@@ -555,14 +559,6 @@ function Board.get_game_state(self)
     end
 
     return ""
-end
-
--- Utils
-function Board.separate_square_index(loc: number)
-	return { bit32.band(loc, 7), bit32.arshift(loc, 3) }
-end
-function Board.get_square_index(file: number, rank: number)
-	return bit32.bor(bit32.lshift(rank, 3), file)
 end
 
 
