@@ -4,3 +4,5 @@
 *.tsbuildinfo
 flamework.build
 .DS_STORE
+profile.out
+profile.svg

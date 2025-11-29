@@ -376,41 +376,6 @@ function Board.generate_legal_moves_from(self, from, filePseudoLegal, color)
     return moves
 end
 function Board:is_square_attacked(square, by_color)
-	local occupiedMe = self.occupied[by_color]
-	local myPieces = self.pieces[by_color]
-	local occupiedEnemy = self.occupied[1 - by_color]
-
-	local pawn_attack_bb = Attacks.pawn_attacks(square, 1 - by_color) -- Reverse color for "from where can pawns attack this square"
-	if u64.btest(myPieces[PAWN], pawn_attack_bb) then
-		return true
-	end
-
-	-- Check knight attacks
-	local knight_attack_bb = Attacks.knight_attacks(square)
-	if u64.btest(myPieces[KNIGHT], knight_attack_bb) then
-		return true
-	end
-
-	-- Check king attacks
-	local king_attack_bb = Attacks.king_attacks(square)
-	if u64.btest(myPieces[KING], king_attack_bb) then
-		return true
-	end
-
-	-- Check bishop/queen diagonal attacks
-	local bishop_attack_bb = Attacks.bishop_attacks(square, occupiedMe, occupiedEnemy)
-	local diagonal_attackers = u64.bor(myPieces[BISHOP], myPieces[QUEEN])
-	if u64.btest(diagonal_attackers, bishop_attack_bb) then
-		return true
-	end
-
-	-- Check rook/queen straight attacks
-	local rook_attack_bb = Attacks.rook_attacks(square, occupiedMe, occupiedEnemy)
-	local straight_attackers = u64.bor(myPieces[ROOK], myPieces[QUEEN])
-	if u64.btest(straight_attackers, rook_attack_bb) then
-		return true
-	end
-
 	return false
 end
 
@@ -476,4 +441,4 @@ function Board.get_game_state(self)
 end
 
 
-return {BitBoard = Board} -- for roblox-ts
+return {BitBoard = Board}
