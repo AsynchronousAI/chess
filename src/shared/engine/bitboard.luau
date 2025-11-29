@@ -107,15 +107,87 @@ function Board.set_start_position(self)
 	Board.update_occupied(self)
 end
 function Board.update_occupied(self)
-	self.occupied[WHITE] = u64.ZERO
-	self.occupied[BLACK] = u64.ZERO
+    -- We do not use u64.bor in repeat for performance. Using bit32.bor is much faster for mass bit operations. (nearly 2x faster)
 
-	for piece_type = PAWN, KING do
-		self.occupied[WHITE] = u64.bor(self.occupied[WHITE], self.pieces[WHITE][piece_type])
-		self.occupied[BLACK] = u64.bor(self.occupied[BLACK], self.pieces[BLACK][piece_type])
-	end
+    local whitePieces = self.pieces[WHITE]
+    local blackPieces = self.pieces[BLACK]
 
-	self.occupied.all = u64.bor(self.occupied[WHITE], self.occupied[BLACK])
+    local wP = whitePieces[PAWN]
+    local bP = blackPieces[PAWN]
+
+    local wK = whitePieces[KING]
+    local bK = blackPieces[KING]
+
+    local wQ = whitePieces[QUEEN]
+    local bQ = blackPieces[QUEEN]
+
+    local wR = whitePieces[ROOK]
+    local bR = blackPieces[ROOK]
+
+    local wB = whitePieces[BISHOP]
+    local bB = blackPieces[BISHOP]
+
+    local wN = whitePieces[KNIGHT]
+    local bN = blackPieces[KNIGHT]
+
+    -- White
+    self.occupied[WHITE] = vector.create(
+        bit32.bor(
+            wP.x,
+            wN.x,
+            wB.x,
+            wR.x,
+            wQ.x,
+            wK.x
+        ),
+        bit32.bor(
+            wP.y,
+            wN.y,
+            wB.y,
+            wR.y,
+            wQ.y,
+            wK.y
+        ),
+        bit32.bor(
+            wP.z,
+            wN.z,
+            wB.z,
+            wR.z,
+            wQ.z,
+            wK.z
+        )
+    )
+
+    -- Black
+    self.occupied[BLACK] = vector.create(
+        bit32.bor(
+            bP.x,
+            bN.x,
+            bB.x,
+            bR.x,
+            bQ.x,
+            bK.x
+        ),
+        bit32.bor(
+            bP.y,
+            bN.y,
+            bB.y,
+            bR.y,
+            bQ.y,
+            bK.y
+        ),
+        bit32.bor(
+            bP.z,
+            bN.z,
+            bB.z,
+            bR.z,
+            bQ.z,
+            bK.z
+        )
+    )
+
+    -- All
+    self.occupied.all = u64.bor(self.occupied[WHITE], self.occupied[BLACK])
 end
 
 -- Move operation
@@ -336,7 +408,6 @@ function Board.generate_legal_moves(self, filePseudoLegal, color)
 
 	local moves = {}
 
-	Board.update_occupied(self)
 	generate_pawn_moves(self, moves, color)
 	generate_piece_moves(self, moves, KNIGHT, Attacks.knight_attacks, color)
 	generate_piece_moves(self, moves, BISHOP, Attacks.bishop_attacks, color)

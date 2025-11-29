@@ -7,7 +7,7 @@ local function chess()
     print("Original hash: ", bitboard.hash(board)) -- hash
 
     -- Legal moves
-    for i = 1, 30 do
+    while true do
         local legal_moves = bitboard.generate_legal_moves(board)
         if #legal_moves == 0 then break end
         bitboard.make_move(board, legal_moves[math.random(1,#legal_moves)])
