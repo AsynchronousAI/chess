@@ -62,7 +62,6 @@ export function Image(props: ImageProps) {
   );
 
   React.useEffect(() => {
-    print(props.outlineThickness, px(props.outlineThickness!));
     if (
       !props.outlineStartAngle ||
       !props.outlinePrecision ||

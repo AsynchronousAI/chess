@@ -18,7 +18,7 @@ const Atoms = {
     ratingChange: 0,
     description: "",
     open: false,
-    onNew: () => {},
+    onBackToMenu: () => {},
     onRematch: () => {},
   }),
   ConfirmationPopup: atom<ConfirmationPopupProps>({

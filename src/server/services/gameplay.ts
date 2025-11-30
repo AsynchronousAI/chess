@@ -17,6 +17,8 @@ export type Game = {
   player1: number; // userid
   player2: number;
 
+  bot: boolean;
+
   player1draw: boolean;
   player2draw: boolean;
 
@@ -48,8 +50,7 @@ export type Game = {
   mate: number;
 };
 
-const BOT = false;
-const BOT_ELO = 3500;
+const BOT_ELO = 1500;
 
 @Service()
 export class Gameplay implements OnStart {
@@ -88,7 +89,6 @@ export class Gameplay implements OnStart {
     if (!move) {
       return;
     }
-    print(move, Move.toString(move));
 
     BitBoard.make_move(activeGame.board, move);
 
@@ -240,7 +240,6 @@ export class Gameplay implements OnStart {
       opening: activeGame.opening,
       moves: activeGame.moves,
     };
-    print(gameId, save);
     doc.write(save);
 
     doc.close().catch(warn);
@@ -263,7 +262,7 @@ export class Gameplay implements OnStart {
     if (!activeGame) return;
 
     const best = GetBestMove(activeGame.board);
-    if (BOT && best.move) {
+    if (activeGame.bot && best.move) {
       this.move(
         gameId,
         Move.getFrom(best.move),
@@ -283,6 +282,8 @@ export class Gameplay implements OnStart {
       /* Matchmaking */
       player1: player1.UserId,
       player2: player2 ? player2.UserId : -1,
+
+      bot: player2 === undefined,
 
       player1draw: false,
       player2draw: false,
@@ -323,7 +324,7 @@ export class Gameplay implements OnStart {
     ); /* perform a quick initial evaluation to upsync clients */
 
     /* Bot starts as white */
-    if (BOT && activeGame.color === 1) {
+    if (activeGame.bot && activeGame.color === 1) {
       this.evaluate(id);
     }
   }
@@ -346,10 +347,10 @@ export class Gameplay implements OnStart {
     this.evaluate(gameId);
   }
   @Event(Events.NewGame)
-  newGame(player: Player) {
+  newGame(player: Player, bot: boolean) {
     const nextPlayer = this.AwaitingGame.pop();
 
-    if (BOT) {
+    if (bot) {
       this.makeGame(player);
     } else if (nextPlayer) {
       this.makeGame(player, nextPlayer);
@@ -386,7 +387,6 @@ export class Gameplay implements OnStart {
 
     if (activeGame.player1draw && activeGame.player2draw) {
       /* draw accepted! */
-      print("drawn!");
       activeGame.analysis = "draw";
       activeGame.winner = 0;
       this.endGame(gameId);
@@ -422,7 +422,6 @@ export class Gameplay implements OnStart {
   async requestGame(_: Player, gameId: string): Promise<DatastoredGame> {
     const document = await this.db.games.load(gameId);
     const savedGame = document.read();
-    print(gameId, savedGame);
     document.close();
 
     return savedGame;

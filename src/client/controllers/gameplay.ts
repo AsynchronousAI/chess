@@ -143,10 +143,10 @@ export class Gameplay implements OnStart {
   }
 
   /* Exported Methods */
-  public newGame() {
+  public newGame(bot: boolean) {
     this.clearGame();
 
-    Events.NewGame();
+    Events.NewGame(bot);
   }
   public async loadGame(gameId: string) {
     this.clearGame();
@@ -281,8 +281,8 @@ export class Gameplay implements OnStart {
             ? newGame.player1eloDiff
             : newGame.player2eloDiff) ?? 0,
         open: true,
-        onNew: () => {
-          this.newGame();
+        onBackToMenu: () => {
+          this.clearGame();
         },
         onRematch: () => {},
       });

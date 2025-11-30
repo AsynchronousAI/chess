@@ -7,6 +7,7 @@ import Atoms from "client/ui/atoms";
 import Board from "client/ui/board";
 import { ConfirmationPopup } from "client/ui/confirmationPopup";
 import { EndgamePopup } from "client/ui/endgamePopup";
+import { Menu } from "client/ui/menu";
 import PlayerList from "client/ui/playerList";
 
 function GameRoot() {
@@ -20,6 +21,7 @@ function GameRoot() {
       {viewingPlayer > 0 && <PlayerList player={Players.LocalPlayer.UserId} />}
       <ConfirmationPopup {...confirmationPopup} />
       <EndgamePopup {...endgamePopup} />
+      <Menu />
     </screengui>
   );
 }

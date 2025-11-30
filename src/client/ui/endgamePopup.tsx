@@ -14,7 +14,7 @@ export interface EndgamePopupProps {
   rating: number;
   ratingChange: number;
   open: boolean;
-  onNew?: () => void;
+  onBackToMenu?: () => void;
   onRematch?: () => void;
 }
 
@@ -142,7 +142,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         size={new UDim2(0.8, 0, 0.2, 0)}
         position={new UDim2(0.5, 0, 0.45, 0)}
         anchorPoint={new Vector2(0.5, 0.5)}
-        text={"New Game"}
+        text={"Back to menu"}
         textColor={new Color3(0.95, 0.95, 0.95)}
         background={"#3C3A38"}
         font={"SourceSansSemibold"}
@@ -152,10 +152,10 @@ export function EndgamePopup(props: EndgamePopupProps) {
         padding={new UDim(0.2, 0)}
         overrideRoblox={{
           TextScaled: true,
-          Event: { MouseButton1Click: props.onNew },
+          Event: { MouseButton1Click: props.onBackToMenu },
         }}
       />
-      <Button
+      {/*<Button
         size={new UDim2(0.8, 0, 0.2, 0)}
         position={new UDim2(0.5, 0, 0.7, 0)}
         anchorPoint={new Vector2(0.5, 0.5)}
@@ -171,7 +171,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
           TextScaled: true,
           Event: { MouseButton1Click: props.onRematch },
         }}
-      />
+      />*/}
     </CanvasGroup>
   );
 }

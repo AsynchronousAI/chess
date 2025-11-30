@@ -11,17 +11,19 @@ export function Button({
   image,
   callback,
   aspectRatio,
+  size,
 }: {
   title: string;
   image: string;
   callback: () => void;
   aspectRatio?: number;
+  size?: UDim2;
 }) {
   const px = usePx();
   const [borderColor, borderColorMotion] = useMotion(DEFAULT_BORDER);
   return (
     <Frame
-      size={new UDim2(0.3, 0, 0.2, 0)}
+      size={size ?? new UDim2(0.3, 0, 0.2, 0)}
       aspectRatio={aspectRatio ?? 2}
       cornerRadius={px(10)}
       background={"#403E39"}

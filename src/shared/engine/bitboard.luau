@@ -276,7 +276,6 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 		board.fullmove_number += 1
 	end
 
-	if additionallyMoved then print(additionallyMoved) end
 	return additionallyMoved
 end
 
