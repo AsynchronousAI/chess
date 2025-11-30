@@ -63,7 +63,7 @@ export const EvaluationBar = forwardRef<EvaluationBarRef, EvaluationBarProps>(
         setEvalText(`M${math.abs(mate - 2)}`);
       } else {
         /* midgame */
-        const scale = 500;
+        const scale = 1500;
         const probability = 1 / (1 + math.pow(10, evaluation / scale));
         const mapped = math.min(math.max(probability, 0), 1);
 

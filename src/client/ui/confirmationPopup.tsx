@@ -47,7 +47,7 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
             ? new UDim2(1, 0, 0.15, 0)
             : new UDim2(1, 0, 0.235, 0)
         }
-        padding={px(props.description ? 0 : 3)}
+        padding={new UDim(0.1, 0)}
         font={"SourceSansBold"}
         noBackground
         overrideRoblox={{ TextScaled: true }}
@@ -57,6 +57,7 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
         text={props.description}
         position={new UDim2(0, 0, 0.125, 0)}
         size={new UDim2(1, 0, 0.1, 0)}
+        padding={new UDim(0.1, 0)}
         overrideRoblox={{ TextScaled: true }}
         font={"SourceSansSemibold"}
         noBackground
@@ -72,7 +73,7 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
         background={"#3C3A38"}
         font={"SourceSansSemibold"}
         autoButtonColor={false}
-        padding={px(5)}
+        padding={new UDim(0.2, 0)}
         cornerRadius={px(5)}
         overrideRoblox={{
           TextScaled: true,
@@ -93,7 +94,7 @@ export function ConfirmationPopup(props: ConfirmationPopupProps) {
         background={"#3C3A38"}
         font={"SourceSansSemibold"}
         autoButtonColor={false}
-        padding={px(5)}
+        padding={new UDim(0.2, 0)}
         cornerRadius={px(5)}
         overrideRoblox={{
           TextScaled: true,

@@ -1,6 +1,7 @@
-import React from "@rbxts/react";
+import React, { Binding } from "@rbxts/react";
 
 import { useBindingState } from "@rbxts/pretty-react-hooks";
+import { usePx } from "../hooks/usePx";
 export interface ImageProps<T extends Instance = ImageLabel>
   extends React.PropsWithChildren {
   // FrameProps
@@ -39,6 +40,7 @@ export interface ImageProps<T extends Instance = ImageLabel>
 }
 
 export function Image(props: ImageProps) {
+  const px = usePx();
   const commonProps = {
     ImageRectOffset: props.imageRectOffset,
     ImageRectSize: props.imageRectSize,
@@ -55,13 +57,20 @@ export function Image(props: ImageProps) {
   };
 
   const z = props.zIndex ? useBindingState(props.zIndex) - 1 : -1;
-  const outlineElements = React.useMemo(() => {
+  const [outlineElements, setOutlineElements] = React.useState<React.Element[]>(
+    [],
+  );
+
+  React.useEffect(() => {
+    print(props.outlineThickness, px(props.outlineThickness!));
     if (
       !props.outlineStartAngle ||
       !props.outlinePrecision ||
       !props.outlineThickness
-    )
-      return [];
+    ) {
+      setOutlineElements([]);
+      return;
+    }
 
     const elements: React.Element[] = [];
 
@@ -88,7 +97,7 @@ export function Image(props: ImageProps) {
         />,
       );
     }
-    return elements;
+    setOutlineElements(elements);
   }, [
     props.outlineStartAngle,
     props.outlinePrecision,

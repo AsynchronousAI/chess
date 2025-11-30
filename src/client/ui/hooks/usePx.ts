@@ -68,7 +68,7 @@ export function usePx(): ScaleFunction {
     };
 
     setmetatable(api, {
-      __call: (_, value) => math.round((value as number) * scale),
+      __call: (_, value) => (value as number) * scale,
     });
 
     return api as ScaleFunction;

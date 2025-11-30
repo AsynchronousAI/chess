@@ -37,11 +37,9 @@ function PlayerListItem({
 
   return (
     <Button
-      size={new UDim2(1, 0, 0, px(100))}
+      size={new UDim2(1, 0, 0, px(125))}
       noBackground
-      cornerRadius={px(4)}
       padding={px(8)}
-      aspectRatio={1.3 + 1.3 + 2 + 0.7}
       layoutOrder={-xGame.date}
       stroke={{
         Color: Color3.fromHex("#262522"),
@@ -262,7 +260,7 @@ export default function PlayerList(props: PlayerListProps) {
 
   return (
     <CanvasGroup
-      size={new UDim2(0.35, 0, 0.8, 0)}
+      size={new UDim2(0.5, 0, 0.9, 0)}
       background={new Color3(0.1, 0.1, 0.1)}
       position={new UDim2(0.5, 0, 0.5, 0)}
       anchorPoint={new Vector2(0.5, 0.5)}
@@ -283,11 +281,12 @@ export default function PlayerList(props: PlayerListProps) {
         <Text
           text={`${p1Name}'s games`}
           font={"SourceSansBold"}
-          textSize={px(20)}
+          overrideRoblox={{ TextScaled: true }}
           size={new UDim2(1, 0, 1, 0)}
           noBackground
           textColor={new Color3(1, 1, 1)}
-          paddingLeft={px(10)}
+          padding={new UDim(0.25, 0)}
+          paddingLeft={new UDim(0.05, 0)}
           textAlign={"Left"}
         />
 

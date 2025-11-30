@@ -87,6 +87,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         font={"SourceSansBold"}
         noBackground
         overrideRoblox={{ TextScaled: true }}
+        padding={new UDim(0.1, 0)}
         textColor={new Color3(1, 1, 1)}
       />
       <Text
@@ -95,6 +96,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         size={new UDim2(1, 0, 0.1, 0)}
         font={"SourceSansSemibold"}
         overrideRoblox={{ TextScaled: true }}
+        padding={new UDim(0.1, 0)}
         noBackground
         textColor={new Color3(0.7, 0.7, 0.7)}
       />
@@ -103,7 +105,8 @@ export function EndgamePopup(props: EndgamePopupProps) {
         richText
         position={new UDim2(0, 0, 0.875, 0)}
         size={new UDim2(1, 0, 0.1, 0)}
-        textSize={px(16)}
+        overrideRoblox={{ TextScaled: true }}
+        padding={new UDim(0.15, 0)}
         font={"SourceSansSemibold"}
         noBackground
         textColor={new Color3(0.7, 0.7, 0.7)}
@@ -146,7 +149,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         autoButtonColor={false}
         textSize={px(24)}
         cornerRadius={px(5)}
-        padding={px(5)}
+        padding={new UDim(0.2, 0)}
         overrideRoblox={{
           TextScaled: true,
           Event: { MouseButton1Click: props.onNew },
@@ -163,7 +166,7 @@ export function EndgamePopup(props: EndgamePopupProps) {
         autoButtonColor={false}
         textSize={px(24)}
         cornerRadius={px(5)}
-        padding={px(5)}
+        padding={new UDim(0.2, 0)}
         overrideRoblox={{
           TextScaled: true,
           Event: { MouseButton1Click: props.onRematch },

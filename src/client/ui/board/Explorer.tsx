@@ -44,7 +44,7 @@ export function Explorer({
         Wraps
         VerticalAlignment={"Top"}
         HorizontalAlignment={"Center"}
-        Padding={new UDim(0, px(5))}
+        Padding={new UDim(0, px(10))}
         SortOrder={"LayoutOrder"}
       />
       <ScrollingFrame
