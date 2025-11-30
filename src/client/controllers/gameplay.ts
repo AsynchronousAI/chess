@@ -9,7 +9,7 @@ import { SoundEffects } from "client/ui/board/sfx";
 import { Event } from "shared/lifecycles";
 import { Game } from "server/services/gameplay";
 import { Color, Piece, Square } from "shared/board";
-import { BitBoard } from "shared/engine/bitboard";
+import { BitBoard, Move as MoveType } from "shared/engine/bitboard";
 import { EvaluationBarRef } from "client/ui/board/EvaluationBar";
 import { FullMove } from "shared/network";
 import { Move } from "shared/engine/move";
@@ -24,10 +24,8 @@ export class Gameplay implements OnStart {
 
   private board = BitBoard.create();
   private moveHistory: Array<{
-    from: Square;
-    to: Square;
-    promotion?: Piece;
-    captured: boolean;
+    move: MoveType;
+    additionallyMoved?: [Square, Square?];
     sfx: keyof typeof SoundEffects;
     state: BitBoard;
   }> = [];
@@ -72,39 +70,30 @@ export class Gameplay implements OnStart {
     }
     return captured ? true : false;
   }
-  private animateBoard(
-    from: Square,
-    to: Square,
-    promotion: Piece | undefined,
-    color: Color,
-  ) {
+  private animateBoard(moved: [Square, Square?, Piece?][]) {
     if (Atoms.Dragging()) {
       this.chessBoard?.current?.setBoard(this.board);
     } else {
-      this.chessBoard?.current?.animateBoard(
-        from,
-        to,
-        promotion !== undefined ? [promotion, color] : undefined,
-      );
+      this.chessBoard?.current?.animateBoard(moved);
     }
   }
   private pushMove(
-    from: Square,
-    to: Square,
-    promotion: Piece | undefined,
-    captured: boolean,
+    move: MoveType,
+    additionallyMoved: [Square, Square?] | undefined,
     sfx: keyof typeof SoundEffects,
     myMove: boolean,
   ) {
     this.moveHistory.push({
-      from,
-      to,
-      promotion,
-      captured,
+      move,
       sfx,
+      additionallyMoved,
       state: BitBoard.clone(this.board),
     });
     Atoms.CurrentMove(this.moveHistory.size() - 1);
+
+    const from = Move.getFrom(move);
+    const to = Move.getTo(move);
+    const promotion = Move.getPromotion(move);
 
     if (myMove) {
       Atoms.PossibleMoves([]);
@@ -179,6 +168,7 @@ export class Gameplay implements OnStart {
     myMove: boolean = false,
     color: Color = myMove ? this.playingAs : 1 - this.playingAs,
     overrideBoard: BitBoard | undefined = undefined, //  used when we are just visually moving
+    alsoMove?: [Square, Square?],
   ) {
     const [from, to, promotion] = move;
 
@@ -186,11 +176,16 @@ export class Gameplay implements OnStart {
     if (!moveData) return;
 
     const captured = this.handleCapture(to, color, overrideBoard);
+    let moved: [Square, Square?, Piece?][] = [move];
+
+    if (alsoMove) moved.push(alsoMove);
     if (!overrideBoard) {
       if (promotion) moveData = Move.setPromotion(moveData, promotion);
-      BitBoard.make_move(this.board, moveData);
+      const additionallyMoved = BitBoard.make_move(this.board, moveData);
+      if (additionallyMoved)
+        moved.push(additionallyMoved as [Square, Square?, Piece?]);
     }
-    this.animateBoard(from, to, promotion, color);
+    this.animateBoard(moved);
 
     const opponentsKing = BitBoard.find_piece(
       overrideBoard ?? this.board,
@@ -213,8 +208,7 @@ export class Gameplay implements OnStart {
 
     if (check) {
       sfx = "Check";
-    } else if (/*moveType === "castle"*/ false) {
-      // TODO: use move.flags maybe
+    } else if (Move.getCastling(moveData)[0]) {
       sfx = "Castle";
     } else if (captured) {
       sfx = "Capture";
@@ -223,7 +217,7 @@ export class Gameplay implements OnStart {
     this.playSFX(sfx);
 
     if (!overrideBoard)
-      this.pushMove(from, to, promotion, captured, sfx, myMove);
+      this.pushMove(moveData, moved[1] as [Square, Square?], sfx, myMove);
   }
   public resign() {
     Atoms.ConfirmationPopup({

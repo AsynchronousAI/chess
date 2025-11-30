@@ -85,13 +85,17 @@ export default function Board() {
     /* TODO: Check SFX does not play in explorer, since moves are not simulated then attacked squares cannot be calculated. */
     gameplay?.movePiece(
       [
-        moveHistory[moveIndex].from,
-        moveHistory[moveIndex].to,
-        moveHistory[moveIndex].promotion,
+        Move.getFrom(moveHistory[moveIndex].move),
+        Move.getTo(moveHistory[moveIndex].move),
+        Move.getPromotion(moveHistory[moveIndex].move),
       ],
       false,
-      BitBoard.get_piece(prevBoard, moveHistory[moveIndex].from)![1],
+      BitBoard.get_piece(
+        prevBoard,
+        Move.getFrom(moveHistory[moveIndex].move),
+      )![1],
       prevBoard, // temporary!
+      moveHistory[moveIndex].additionallyMoved,
     );
     Atoms.CurrentMove(moveIndex);
     Atoms.PossibleMoves([]);

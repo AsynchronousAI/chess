@@ -11,7 +11,7 @@ import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
 import { RunService } from "@rbxts/services";
 import { Button } from "../components/button";
-import { Notation } from "shared/engine/notation";
+import { Move } from "shared/engine/move";
 
 export interface ExplorerProps {
   opening: string;
@@ -112,10 +112,7 @@ export function Explorer({
 
                 {/* White move */}
                 <textbutton
-                  Text={
-                    Notation.encodeSquare(move.from) +
-                    Notation.encodeSquare(move.to)
-                  }
+                  Text={Move.toString(move.move)}
                   TextColor3={
                     index === currentMove
                       ? new Color3(1, 1, 1)
@@ -134,10 +131,7 @@ export function Explorer({
                 {/* Black move */}
                 {blackResponse !== undefined && (
                   <textbutton
-                    Text={
-                      Notation.encodeSquare(blackResponse.from) +
-                      Notation.encodeSquare(blackResponse.to)
-                    }
+                    Text={Move.toString(blackResponse.move)}
                     TextColor3={
                       index + 1 === currentMove
                         ? new Color3(1, 1, 1)

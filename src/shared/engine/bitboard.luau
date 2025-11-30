@@ -150,7 +150,7 @@ function Board.update_occupied(board: Board)
 end
 
 -- Move operation
-function Board.make_move(board: Board, move: number)
+function Board.make_move(board: Board, move: number): {[number]: number}|nil -- Returns additional changes like: [{from, to} or {from, nil}]
 	local color = board.side_to_move
 	local opponent = 1 - color
 
@@ -161,6 +161,8 @@ function Board.make_move(board: Board, move: number)
 	local en_passant = Move.getEnPassant(move)
 	local promotion = Move.getPromotion(move)
 	local castling, kingside = Move.getCastling(move)
+
+	local additionallyMoved = nil
 
 	-- Clear the piece from its original square
 	board.pieces[color][piece_type] = Utils.clear_bit(board.pieces[color][piece_type], from)
@@ -179,6 +181,7 @@ function Board.make_move(board: Board, move: number)
 		if en_passant then
 			local captured_pawn_square = to - (if color == WHITE then 8 else -8)
 			board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
+			additionallyMoved = {captured_pawn_square}
 		end
 
 		board.halfmove_clock = 0
@@ -258,6 +261,8 @@ function Board.make_move(board: Board, move: number)
 		-- Move the rook
 		board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_from)
 		board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_to)
+
+		additionallyMoved = {rook_from, rook_to}
 	end
 
 	-- Update occupied bitboards
@@ -270,6 +275,8 @@ function Board.make_move(board: Board, move: number)
 	if color == BLACK then
 		board.fullmove_number += 1
 	end
+
+	return additionallyMoved
 end
 
 -- Attacked squares

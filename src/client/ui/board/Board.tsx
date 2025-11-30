@@ -18,7 +18,7 @@ import { IconPack } from "./images";
 import { Promotion } from "./Promotion";
 import { useAtom } from "@rbxts/react-charm";
 import { Piece } from "./Piece";
-import { HttpService, Players, RunService } from "@rbxts/services";
+import { HttpService, RunService } from "@rbxts/services";
 import { useEventListener } from "@rbxts/pretty-react-hooks";
 import { Environment } from "@rbxts/ui-labs";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
@@ -26,6 +26,7 @@ import { Gameplay } from "client/controllers/gameplay";
 import Atoms from "../atoms";
 import { usePx } from "../hooks/usePx";
 import { Move } from "shared/engine/move";
+import { Object } from "@rbxts/luau-polyfill";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -38,12 +39,7 @@ export interface ChessBoardProps {
 }
 export interface ChessBoardRef {
   setBoard: (board: BitBoard) => void;
-  animateBoard: (
-    from: number,
-    to: number,
-    as?: [PieceType, Color],
-    moveResult?: [Square, Square?], // special moves such as en passant and castling
-  ) => void;
+  animateBoard: (moved: [Square, Square?, PieceType?][]) => void;
 }
 export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
   (props, ref) => {
@@ -79,8 +75,8 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     };
     const squareHighlighted = (loc: Square) =>
       movehistory[currentMove] &&
-      (movehistory[currentMove].to === loc ||
-        movehistory[currentMove].from === loc);
+      (Move.getTo(movehistory[currentMove].move) === loc ||
+        Move.getFrom(movehistory[currentMove].move) === loc);
     const squareChecked = (loc: Square) => checked === loc;
 
     useEventListener(UIS.TouchEnded, onRelease);
@@ -102,21 +98,33 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
           ]),
         );
       },
-      animateBoard: (from, to, as) => {
+      animateBoard: (moved) => {
         setPieces((currentPieces) => {
-          // TODO: Procedural movement, for example if we see a rook is missing, and found elsewhere replace that same UUID.
+          let updatedPieces = [...currentPieces];
+          for (const move of moved) {
+            const [from, to, pieceType] = move;
 
-          /* Initial, provided move */
-          for (const piece of currentPieces) {
-            if (piece[0] === from) {
-              piece[0] = to;
-              if (as) piece[1] = as;
-            } else if (piece[0] === to) {
-              piece[1][0] = PieceType.none;
+            /* Remove any pieces already at to */
+            let index = updatedPieces.findIndex((x) => x[0] === to);
+            if (index !== -1) {
+              updatedPieces.remove(index);
+            }
+
+            /* Move a piece here */
+            index = updatedPieces.findIndex((x) => x[0] === from);
+            if (index !== -1 && to) {
+              // move
+              updatedPieces[index] = [
+                to,
+                [
+                  pieceType ?? updatedPieces[index][1][0],
+                  updatedPieces[index][1][1],
+                ],
+                updatedPieces[index][2],
+              ];
             }
           }
-
-          return currentPieces;
+          return updatedPieces;
         });
       },
     }));
