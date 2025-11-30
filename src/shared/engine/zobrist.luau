@@ -10,7 +10,8 @@ Zobrist.en_passant = {}
 Zobrist.side_to_move = 0
 
 do
-    math.randomseed(67)
+    local seed = math.floor(os.clock()/60)
+    math.randomseed(seed)
     local random = function()
         return math.random(0, 0xFFFFFFFF)
     end

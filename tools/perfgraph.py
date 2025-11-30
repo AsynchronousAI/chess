@@ -43,7 +43,7 @@ class Node(svg.Node):
             return self.function
 
     def details(self, root):
-        return "Function: {} [{}:{}] ({:,} usec, {:.1%}); self: {:,} usec".format(
+        return "Function: {} [{}:{}] ({:,} µs, {:.1%}); self: {:,} µs".format(
             self.function,
             self.source,
             self.line,

@@ -272,6 +272,38 @@ function Board.make_move(board: Board, move: number)
 	end
 end
 
+-- Attacked squares
+local function get_attacked_squares(board: Board, by_color: number): vector
+    local pieces = board.pieces[by_color]
+    local myOccupancy = board.occupied[by_color]
+    local enemyOccupancy = board.occupied[1-by_color]
+
+    local slidingAttacks = u64.ZERO
+    for i, bb in {pieces[ROOK], pieces[BISHOP], pieces[QUEEN]} do
+        Utils.iterate_bits(bb, function(s)
+            if i == 1 then
+                slidingAttacks = u64.bor(slidingAttacks, Attacks.rook_attacks(s, myOccupancy, enemyOccupancy))
+            elseif i == 2 then
+                slidingAttacks = u64.bor(slidingAttacks, Attacks.bishop_attacks(s, myOccupancy, enemyOccupancy))
+            elseif i == 3 then
+                slidingAttacks = u64.bor(slidingAttacks, Attacks.queen_attacks(s, myOccupancy, enemyOccupancy))
+            end
+        end)
+    end
+
+    return u64.hex_bor(
+        Attacks.bulk_pawn_attacks(pieces[PAWN], by_color),
+        Attacks.bulk_knight_attacks(pieces[KNIGHT]),
+        Attacks.bulk_king_attacks(pieces[KING]),
+        slidingAttacks,
+        u64.ZERO, -- would be better to use 4 in a hex-bor than individual bor
+        u64.ZERO
+    )
+end
+function Board.is_square_attacked(board: Board, square: number, by_color: number): boolean
+    return Utils.get_bit(get_attacked_squares(board, by_color), square)
+end
+
 -- Move generation
 local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 	local pawns = board.pieces[color][PAWN]
@@ -354,10 +386,66 @@ local function generate_piece_moves(board: Board, moves: {number}, piece_type: n
         end)
     end)
 end
+
+local CASTLE_MASKS = {
+    [WHITE] = {
+        [true] = {  -- kingside
+            no_checks  = u64.from_pair(0x0, 0x70),  -- e1, f1, g1
+            no_pieces  = u64.from_pair(0x0, 0x60)   -- f1, g1
+        },
+        [false] = { -- queenside
+            no_checks  = u64.from_pair(0x0, 0x1C),  -- e1, d1, c1
+            no_pieces  = u64.from_pair(0x0, 0x0E)   -- d1, c1, b1
+        }
+    },
+    [BLACK] = {
+        [true] = {  -- kingside
+            no_checks  = u64.from_pair(0x70000000, 0x0),  -- e8, f8, g8
+            no_pieces  = u64.from_pair(0x60000000, 0x0)   -- f8, g8
+        },
+        [false] = { -- queenside
+            no_checks  = u64.from_pair(0x1C000000, 0x0),  -- e8, d8, c8
+            no_pieces  = u64.from_pair(0x0E000000, 0x0)   -- d8, c8, b8
+        }
+    }
+}
+function generate_castle_moves(board: Board, moves: {number}, color: number, attacked: vector)
+    local occupied = board.occupied.all
+    local masks = CASTLE_MASKS[color]
+
+    if color == WHITE then
+        if board.castling_rights.white_kingside then
+            if u64.band(occupied, masks[true].no_pieces) ~= u64.ZERO then return end
+            if u64.band(attacked, masks[true].no_checks) ~= u64.ZERO then return end
+
+    	    table.insert(moves, Move.create(4, 6, KING, false, nil, false, true, true))
+    	end
+        if board.castling_rights.white_queenside  then
+            if u64.band(occupied, masks[false].no_pieces) ~= u64.ZERO then return end
+            if u64.band(attacked, masks[false].no_checks) ~= u64.ZERO then return end
+
+    	    table.insert(moves, Move.create(4, 2, KING, false, nil, false, true, false))
+        end
+    else
+    	if board.castling_rights.black_kingside then
+            if u64.band(occupied, masks[true].no_pieces) ~= u64.ZERO then return end
+            if u64.band(attacked, masks[true].no_checks) ~= u64.ZERO then return end
+
+    	    table.insert(moves, Move.create(60, 62, KING, false, nil, false, true, true))
+    	end
+        if board.castling_rights.black_queenside  then
+            if u64.band(occupied, masks[false].no_pieces) ~= u64.ZERO then return end
+            if u64.band(attacked, masks[false].no_checks) ~= u64.ZERO then return end
+
+    	    table.insert(moves, Move.create(60, 58, KING, false, nil, false, true, false))
+    	end
+    end
+end
+
 function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): {number}
     local color = givenColor or board.side_to_move
-
 	local moves = table.create(30)
+	local attacked = get_attacked_squares(board, 1-color)
 
 	generate_pawn_moves(board, moves, color)
 	generate_piece_moves(board, moves, KNIGHT, Attacks.knight_attacks, color)
@@ -365,6 +453,7 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 	generate_piece_moves(board, moves, ROOK, Attacks.rook_attacks, color)
 	generate_piece_moves(board, moves, QUEEN, Attacks.queen_attacks, color)
 	generate_piece_moves(board, moves, KING, Attacks.king_attacks, color)
+	generate_castle_moves(board, moves, color, attacked)
 
 	-- TODO: Add castling moves
 
@@ -407,36 +496,6 @@ function Board.generate_legal_moves_from(board: Board, from: number, filePseudoL
 
     return moves
 end
-function Board.is_square_attacked(board: Board, square: number, by_color: number): boolean
-    local pieces = board.pieces[by_color]
-    local myOccupancy = board.occupied[by_color]
-    local enemyOccupancy = board.occupied[1-by_color]
-
-    local slidingAttacks = u64.ZERO
-    for i, bb in {pieces[ROOK], pieces[BISHOP], pieces[QUEEN]} do
-        Utils.iterate_bits(bb, function(s)
-            if i == 1 then
-                slidingAttacks = u64.bor(slidingAttacks, Attacks.rook_attacks(s, myOccupancy, enemyOccupancy))
-            elseif i == 2 then
-                slidingAttacks = u64.bor(slidingAttacks, Attacks.bishop_attacks(s, myOccupancy, enemyOccupancy))
-            elseif i == 3 then
-                slidingAttacks = u64.bor(slidingAttacks, Attacks.queen_attacks(s, myOccupancy, enemyOccupancy))
-            end
-        end)
-    end
-
-    local attackBitboard = u64.hex_bor(
-        Attacks.bulk_pawn_attacks(pieces[PAWN], by_color),
-        Attacks.bulk_knight_attacks(pieces[KNIGHT]),
-        Attacks.bulk_king_attacks(pieces[KING]),
-        slidingAttacks,
-        u64.ZERO, -- would be better to use 4 in a hex-bor than individual bor
-        u64.ZERO
-    )
-
-    return Utils.get_bit(attackBitboard, square)
-end
-
 
 -- Pieces
 function Board.get_piece(board: Board, loc: number): {[number]: number}?
