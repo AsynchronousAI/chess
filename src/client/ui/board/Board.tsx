@@ -111,7 +111,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
 
             /* Move a piece here */
             index = updatedPieces.findIndex((x) => x[0] === from);
-            if (index !== -1 && to) {
+            if (index !== -1 && to !== undefined) {
               // move
               updatedPieces[index] = [
                 to,

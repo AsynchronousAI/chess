@@ -348,11 +348,14 @@ export class Gameplay implements OnStart {
   }
   @Event(Events.NewGame)
   newGame(player: Player, bot: boolean) {
-    const nextPlayer = this.AwaitingGame.pop();
-
     if (bot) {
       this.makeGame(player);
-    } else if (nextPlayer) {
+      return;
+    }
+
+    const nextPlayer = this.AwaitingGame.pop();
+    if (nextPlayer === player) return;
+    if (nextPlayer) {
       this.makeGame(player, nextPlayer);
     } else {
       this.AwaitingGame.push(player);

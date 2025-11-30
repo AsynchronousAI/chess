@@ -13,7 +13,7 @@ do
     local seed = math.floor(os.clock()/60)
     math.randomseed(seed)
     local random = function()
-        return math.random(0, 0xFFFFFFFF)
+        return math.random(0, 0xFFFFFFF)
     end
 
     for color = Utils.WHITE, Utils.BLACK do
