@@ -26,7 +26,6 @@ import { Gameplay } from "client/controllers/gameplay";
 import Atoms from "../atoms";
 import { usePx } from "../hooks/usePx";
 import { Move } from "shared/engine/move";
-import { Object } from "@rbxts/luau-polyfill";
 
 export interface ChessBoardProps {
   iconPack: IconPack;
@@ -122,6 +121,9 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                 ],
                 updatedPieces[index][2],
               ];
+            } else if (index !== -1) {
+              /* Remove this piece */
+              updatedPieces.remove(index);
             }
           }
           return updatedPieces;

@@ -48,7 +48,7 @@ export type Game = {
   mate: number;
 };
 
-const BOT = true;
+const BOT = false;
 const BOT_ELO = 3500;
 
 @Service()
