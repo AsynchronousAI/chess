@@ -657,7 +657,7 @@ local function to_bin_matrix_string(u64: vector): string
 	local x = to_bin_string(u64)
 	local y = ""
 	for i = 1, #x, 8 do
-		y = y .. x:sub(i, i + 7) .. "\n"
+		y = y .. x:sub(i, i + 7):reverse():gsub(".", "%0 ") .. "\n"
 	end
 	return y
 end

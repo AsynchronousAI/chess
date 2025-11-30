@@ -20,13 +20,13 @@ local function chess()
 
     -- Zobrist hashing
     local hash = bitboard.hash(board)
-    print("Move hash: ", hash)
+    print("Final hash: ", hash)
 
     -- FEN
     local new1 = bitboard.create()
     local fen = bitboard.to_fen(board)
     bitboard.from_fen(new1, fen)
-    print("Move FEN: ", fen)
+    print("Final FEN: ", fen)
     assert(bitboard.hash(new1) == hash, "FEN conversion failed")
 
     -- Buffers
@@ -39,7 +39,7 @@ local function chess()
     assert(bitboard.hash(new3) == hash, "Cloning failed")
 
     -- Game state
-    print("Game state: ", state)
+    print("Game state: ", state,"\n")
 end
 
 for i = 1, 50 do
