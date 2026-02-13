@@ -4,13 +4,15 @@ local u64 = require("./int64")
 local Utils = require("./utils")
 
 local WHITE, BLACK, PAWN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KING
+local split_pair, make_pair = Utils.split_pair, Utils.make_pair
 
 -- unlike older versions this is designed to be **rapid**, not efficent.
 local Encoding = {}
 local EN_PASSANT_NONE = 67 -- for the love of the game
+local U8_MAX = 255
 
 function Encoding.to_buffer(self)
-    local buf = buffer.create(242)
+    local buf = buffer.create(306)
     local off = 0
 
     -- Helper for writing a u64
@@ -24,6 +26,18 @@ function Encoding.to_buffer(self)
         for piece = PAWN, KING do
             writeU64(self.pieces[color][piece])
         end
+    end
+
+    -- Piece Table
+    for square = 0, 63 do
+        local val = self.pieceTable[square]
+        if val then
+            local a, b = split_pair(val)
+            buffer.writeu8(buf, off, bit32.bor(bit32.lshift(a, 4), b))
+        else
+            buffer.writeu8(buf, off, U8_MAX)
+        end
+        off += 1
     end
 
     -- Attacks
@@ -77,6 +91,19 @@ function Encoding.from_buffer(self, buf)
         end
     end
 
+    -- Piece Table
+    for square = 0, 63 do
+        local val = buffer.readu8(buf, off)
+        off += 1
+        if val == U8_MAX then
+            self.pieceTable[square] =  nil
+        else
+            local b = bit32.band(val, bit32.lshift(1, 4) - 1)
+            local a = bit32.rshift(val, 4)
+            self.pieceTable[square] = make_pair(a, b)
+        end
+    end
+
     -- Attacks
     for color = WHITE, BLACK do
         for piece = PAWN, KING do
@@ -108,6 +135,7 @@ function Encoding.from_buffer(self, buf)
     -- Clocks
     self.halfmove_clock  = buffer.readu16(buf, off); off += 2
     self.fullmove_number = buffer.readu16(buf, off); off += 2
+
 
     return self
 end

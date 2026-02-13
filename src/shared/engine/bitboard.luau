@@ -14,6 +14,7 @@ local RANK_1, RANK_2, RANK_7, RANK_8, NOT_FILE_A, NOT_FILE_H = Utils.RANK_1, Uti
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 
 export type Board = {
+    pieceTable: {[number]: number},
     pieces: {[number]: {[number]: vector}},
     occupied: {[number]:vector, all: vector},
     attacked: {[number]: {[number]: vector, all: vector}},
@@ -48,6 +49,7 @@ function Board.create(blank: boolean?): Board
 
     local board: Board = {
         -- Bitboards for each piece type and color
+        pieceTable = {},
         pieces = {
             [WHITE] = {
                 [PAWN] = u64.ZERO,
@@ -115,6 +117,7 @@ function Board.create(blank: boolean?): Board
 end
 function Board.clone(board: Board): Board
 	return {
+        pieceTable = table.clone(board.pieceTable),
 		pieces = {
 			[WHITE] = table.clone(board.pieces[WHITE]),
 			[BLACK] = table.clone(board.pieces[BLACK])
@@ -150,9 +153,16 @@ function Board.set_start_position(board: Board)
     board.pieces[BLACK][QUEEN]  = u64.from_pair(0x08000000, 0x00000000)
     board.pieces[BLACK][KING]   = u64.from_pair(0x10000000, 0x00000000)
 
-    -- Board.from_fen(board, "8/8/8/2k5/8/8/8/1K5r w - - 0 1");
+    -- Board.from_fen(board, "6K1/1r6/8/8/8/4k3/4N3/8 w - - 7 169");
 
 	Board.update_occupied(board)
+	for color = WHITE, BLACK do
+		for pieceType = PAWN, KING do
+			Utils.iterate_bits(board.pieces[color][pieceType], function(bitIndex)
+				board.pieceTable[bitIndex] = make_pair(pieceType, color)
+			end)
+		end
+	end
 end
 function Board.update_occupied(board: Board)
     local whitePieces = board.pieces[WHITE]
@@ -199,6 +209,8 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 
 	-- Clear the piece from its original square
 	board.pieces[color][piece_type] = Utils.clear_bit(board.pieces[color][piece_type], from)
+	board.pieceTable[from] = nil
+	board.pieceTable[to] = make_pair(piece_type, color)
 
 	-- Handle captures
 	if captured then
@@ -218,6 +230,7 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 		if en_passant then
 			local captured_pawn_square = to - (if color == WHITE then 8 else -8)
 			board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
+			board.pieceTable[captured_pawn_square] = nil
 
 			board.occupied.all = Utils.clear_bit(board.occupied.all, captured_pawn_square)
 			board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], captured_pawn_square)
@@ -233,6 +246,7 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 	-- Place the piece on the new square (with promotion if applicable)
 	local final_piece_type = promotion or piece_type
 	board.pieces[color][final_piece_type] = Utils.set_bit(board.pieces[color][final_piece_type], to)
+	board.pieceTable[to] = make_pair(final_piece_type, color)
 
 	-- Reset halfmove clock on pawn moves
 	if piece_type == PAWN then
@@ -302,6 +316,9 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 		-- Move the rook
 		board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_from)
 		board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_to)
+
+		board.pieceTable[rook_from] = nil
+		board.pieceTable[rook_to] = make_pair(ROOK, color)
 
 		board.occupied.all = Utils.clear_bit(board.occupied.all, rook_from)
 		board.occupied[color] = Utils.clear_bit(board.occupied[color], rook_from)
@@ -583,7 +600,7 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 		local from = Move.getFrom(move)
 
 		for _, block in blocking do
-		    local slider, blocker = split_pair(block)
+		    local blocker, slider = split_pair(block)
 
 			if isKing and blocker == to then -- king will take spot of blocker
 			    valid = false
@@ -640,33 +657,18 @@ end
 
 -- Pieces
 function Board.get_piece(board: Board, loc: number): {[number]: number}?
-    local search = u64.lshift(u64.ONE, loc)
-
-    if u64.band(board.occupied.all, search) == u64.ZERO then
-        return nil
-    end
-
-    for color, pieces in board.pieces do
-        -- if u64.band(board.occupied[color], search) == u64.ZERO then
-        --     return nil
-        -- end
-
-        for typ, bb in pieces do
-            if u64.band(bb, search) ~= u64.ZERO then
-                return {typ, color}
-            end
-        end
-    end
-    return nil
+    local val = board.pieceTable[loc]
+    if not val then return nil end
+    return {split_pair(val)}
 end
+
 function Board.get_all_pieces(board: Board)
     local pieces_list = {}
 
-    for color, piece_table in board.pieces do
-        for typ, bb in piece_table do
-            Utils.iterate_bits(bb, function(loc)
-                table.insert(pieces_list, { typ, color, loc })
-            end)
+    for pos = 0, 63 do
+        local piece = Board.get_piece(board, pos)
+        if piece then
+            table.insert(pieces_list, { piece[1], piece[2], pos })
         end
     end
 
