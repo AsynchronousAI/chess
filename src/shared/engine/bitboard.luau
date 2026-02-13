@@ -13,18 +13,15 @@ local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils
 local RANK_1, RANK_2, RANK_7, RANK_8, NOT_FILE_A, NOT_FILE_H = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.NOT_FILE_A, Utils.NOT_FILE_H
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 
+local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ;
+
 export type Board = {
     pieceTable: {[number]: number},
     pieces: {[number]: {[number]: vector}},
     occupied: {[number]:vector, all: vector},
     attacked: {[number]: {[number]: vector, all: vector}},
     side_to_move: number,
-    castling_rights: {
-        white_kingside: boolean,
-        white_queenside: boolean,
-        black_kingside: boolean,
-        black_queenside: boolean
-    },
+    castling_rights: number,
     en_passant_square: number?,
     halfmove_clock: number,
     fullmove_number: number
@@ -100,12 +97,7 @@ function Board.create(blank: boolean?): Board
 
         -- Game state
         side_to_move = WHITE,
-        castling_rights = {
-            white_kingside = true,
-            white_queenside = true,
-            black_kingside = true,
-            black_queenside = true,
-        },
+        castling_rights = 0b1111,
         en_passant_square = nil, -- square index or nil
         halfmove_clock = 0,
         fullmove_number = 1,
@@ -117,7 +109,7 @@ function Board.create(blank: boolean?): Board
 end
 function Board.clone(board: Board): Board
 	return {
-        pieceTable = table.clone(board.pieceTable),
+		pieceTable = table.clone(board.pieceTable),
 		pieces = {
 			[WHITE] = table.clone(board.pieces[WHITE]),
 			[BLACK] = table.clone(board.pieces[BLACK])
@@ -130,7 +122,7 @@ function Board.clone(board: Board): Board
 		halfmove_clock = board.halfmove_clock,
 		fullmove_number = board.fullmove_number,
 		side_to_move = board.side_to_move,
-		castling_rights = table.clone(board.castling_rights),
+		castling_rights = board.castling_rights,
 		occupied = table.clone(board.occupied),
 	}
 end
@@ -193,6 +185,20 @@ function Board.update_occupied(board: Board)
 end
 
 -- Move operation
+export type UndoRecord = {
+    move: number,
+    from: number,
+    to: number,
+    piece: number,
+    captured_piece: {type: number, color: number, square: number}?,
+    promotion: number?,
+    castling_rights: number,
+    en_passant_square: number?,
+    halfmove_clock: number,
+    fullmove_number: number,
+    additionallyMoved: {number}?,  -- rook moves for castling or ep captures
+}
+
 function Board.make_move(board: Board, move: number): {[number]: number}|nil -- Returns additional changes like: [{from, to} or {from, nil}]
 	local color = board.side_to_move
 	local opponent = 1 - color
@@ -266,25 +272,25 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 	-- Update castling rights
 	if piece_type == KING then
 		if color == WHITE then
-			board.castling_rights.white_kingside = false
-			board.castling_rights.white_queenside = false
+		    board.castling_rights = Utils.clear_bit32(board.castling_rights, WK)
+		    board.castling_rights = Utils.clear_bit32(board.castling_rights, WQ)
 		else
-			board.castling_rights.black_kingside = false
-			board.castling_rights.black_queenside = false
+            board.castling_rights = Utils.clear_bit32(board.castling_rights, BK)
+            board.castling_rights = Utils.clear_bit32(board.castling_rights, BQ)
 		end
 	elseif piece_type == ROOK then
 		-- Check if rook moved from starting square
 		if color == WHITE then
 			if from == 0 then
-				board.castling_rights.white_queenside = false
+				board.castling_rights = Utils.clear_bit32(board.castling_rights, WQ)
 			elseif from == 7 then
-				board.castling_rights.white_kingside = false
+				board.castling_rights = Utils.clear_bit32(board.castling_rights, WK)
 			end
 		else
 			if from == 56 then
-				board.castling_rights.black_queenside = false
+				board.castling_rights = Utils.clear_bit32(board.castling_rights, BQ)
 			elseif from == 63 then
-				board.castling_rights.black_kingside = false
+				board.castling_rights = Utils.clear_bit32(board.castling_rights, BK)
 			end
 		end
 	end
@@ -292,13 +298,13 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 	-- Also lose castling rights if rook is captured
 	if captured then
 		if to == 0 then
-			board.castling_rights.white_queenside = false
+			board.castling_rights = Utils.clear_bit32(board.castling_rights, WQ)
 		elseif to == 7 then
-			board.castling_rights.white_kingside = false
+			board.castling_rights = Utils.clear_bit32(board.castling_rights, WK)
 		elseif to == 56 then
-			board.castling_rights.black_queenside = false
+			board.castling_rights = Utils.clear_bit32(board.castling_rights, BQ)
 		elseif to == 63 then
-			board.castling_rights.black_kingside = false
+			board.castling_rights = Utils.clear_bit32(board.castling_rights, BK)
 		end
 	end
 
@@ -527,26 +533,26 @@ function generate_castle_moves(board: Board, moves: {number}, color: number, att
     local masks = CASTLE_MASKS[color]
 
     if color == WHITE then
-        if board.castling_rights.white_kingside then
+        if Utils.get_bit32(board.castling_rights, WK) then
             if u64.band(occupied, masks[true].no_pieces) ~= u64.ZERO then return end
             if u64.band(attacked, masks[true].no_checks) ~= u64.ZERO then return end
 
     	    table.insert(moves, Move.create(4, 6, KING, false, nil, false, true, true))
     	end
-        if board.castling_rights.white_queenside  then
+        if Utils.get_bit32(board.castling_rights, WQ) then
             if u64.band(occupied, masks[false].no_pieces) ~= u64.ZERO then return end
             if u64.band(attacked, masks[false].no_checks) ~= u64.ZERO then return end
 
     	    table.insert(moves, Move.create(4, 2, KING, false, nil, false, true, false))
         end
     else
-    	if board.castling_rights.black_kingside then
+    	if Utils.get_bit32(board.castling_rights, BK) then
             if u64.band(occupied, masks[true].no_pieces) ~= u64.ZERO then return end
             if u64.band(attacked, masks[true].no_checks) ~= u64.ZERO then return end
 
     	    table.insert(moves, Move.create(60, 62, KING, false, nil, false, true, true))
     	end
-        if board.castling_rights.black_queenside  then
+        if Utils.get_bit32(board.castling_rights, BQ) then
             if u64.band(occupied, masks[false].no_pieces) ~= u64.ZERO then return end
             if u64.band(attacked, masks[false].no_checks) ~= u64.ZERO then return end
 

@@ -4,12 +4,7 @@ export type BitBoard = {
   side_to_move: Color;
   pieces: Record<Color, Record<Piece, vector>>;
   occupied: Record<Color | "all", vector>;
-  castling_rights: {
-    white_king_side: boolean;
-    white_queen_side: boolean;
-    black_king_side: boolean;
-    black_queen_side: boolean;
-  };
+  castling_rights: number;
   en_passant_square?: Square;
   halfmove_clock: number;
   fullmove_number: number;

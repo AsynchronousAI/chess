@@ -58,10 +58,8 @@ function Encoding.to_buffer(self)
     off += 1
 
     -- Castling
-    buffer.writeu8(buf, off, self.castling_rights.white_kingside  and 1 or 0); off += 1
-    buffer.writeu8(buf, off, self.castling_rights.white_queenside and 1 or 0); off += 1
-    buffer.writeu8(buf, off, self.castling_rights.black_kingside  and 1 or 0); off += 1
-    buffer.writeu8(buf, off, self.castling_rights.black_queenside and 1 or 0); off += 1
+    buffer.writeu8(buf, off, self.castling_rights);
+    off += 1
 
     -- En-passant
     local ep = self.en_passant_square or EN_PASSANT_NONE
@@ -122,10 +120,8 @@ function Encoding.from_buffer(self, buf)
     off += 1
 
     -- Castling rights
-    self.castling_rights.white_kingside  = buffer.readu8(buf, off) == 1; off += 1
-    self.castling_rights.white_queenside = buffer.readu8(buf, off) == 1; off += 1
-    self.castling_rights.black_kingside  = buffer.readu8(buf, off) == 1; off += 1
-    self.castling_rights.black_queenside = buffer.readu8(buf, off) == 1; off += 1
+    self.castling_rights  = buffer.readu8(buf, off);
+    off += 1
 
     -- En-passant
     local ep = buffer.readu8(buf, off)

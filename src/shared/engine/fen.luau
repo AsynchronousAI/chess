@@ -8,6 +8,8 @@ local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils
 
 local FEN = {}
 
+local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ;
+
 local piece_map = {
 	P = {color = WHITE, type = PAWN},
 	N = {color = WHITE, type = KNIGHT},
@@ -69,10 +71,10 @@ function FEN.from_fen(board, fen)
 
 	board.side_to_move = (parts[2] == "w") and WHITE or BLACK
 
-	board.castling_rights.white_kingside = parts[3]:find("K") ~= nil
-	board.castling_rights.white_queenside = parts[3]:find("Q") ~= nil
-	board.castling_rights.black_kingside = parts[3]:find("k") ~= nil
-	board.castling_rights.black_queenside = parts[3]:find("q") ~= nil
+	if parts[3]:find("K") then Utils.set_bit32(board.castling_rights, WK) end
+	if parts[3]:find("Q") then Utils.set_bit32(board.castling_rights, WQ) end
+	if parts[3]:find("k") then Utils.set_bit32(board.castling_rights, BK) end
+	if parts[3]:find("q") then Utils.set_bit32(board.castling_rights, BQ) end
 
 	board.en_passant_square = (parts[4] ~= "-") and parts[4] or nil
 	board.halfmove_clock = tonumber(parts[5])
@@ -114,10 +116,10 @@ function FEN.to_fen(self)
 	local stm = (self.side_to_move == WHITE) and "w" or "b"
 
 	local castling = ""
-	if self.castling_rights.white_kingside then castling = castling.."K" end
-	if self.castling_rights.white_queenside then castling = castling.."Q" end
-	if self.castling_rights.black_kingside then castling = castling.."k" end
-	if self.castling_rights.black_queenside then castling = castling.."q" end
+	if Utils.get_bit32(self.castling_rights, WK) then castling = castling.."K" end
+	if Utils.get_bit32(self.castling_rights, WQ) then castling = castling.."Q" end
+	if Utils.get_bit32(self.castling_rights, BK) then castling = castling.."k" end
+	if Utils.get_bit32(self.castling_rights, BQ) then castling = castling.."q" end
 	if castling == "" then castling = "-" end
 
 	local ep = self.en_passant_square or "-"

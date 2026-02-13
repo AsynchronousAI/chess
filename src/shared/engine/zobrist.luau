@@ -2,6 +2,7 @@
 --!optimize 2
 
 local Utils = require("./utils")
+local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ;
 
 local Zobrist = {}
 Zobrist.piece_square = {}
@@ -49,10 +50,10 @@ return function(board)
     end
 
     -- Castling
-    if board.castling_rights.white_kingside then hash = bit32.bxor(hash, Zobrist.castling[1]) end
-    if board.castling_rights.white_queenside then hash = bit32.bxor(hash, Zobrist.castling[2]) end
-    if board.castling_rights.black_kingside then hash = bit32.bxor(hash, Zobrist.castling[3]) end
-    if board.castling_rights.black_queenside then hash = bit32.bxor(hash, Zobrist.castling[4]) end
+    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, WK)])
+    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, WQ)])
+    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, BK)])
+    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, BQ)])
 
     -- En passant
     if board.en_passant_square then

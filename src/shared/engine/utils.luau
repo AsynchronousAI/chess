@@ -92,7 +92,16 @@ local function make_pair(a: number, b: number) -- inspired by C++ make_pair
     return bit32.bor(bit32.lshift(a, 6), b)
 end
 local function split_pair(pair: number)
-    return bit32.band(pair, 63), bit32.arshift(pair, 6)
+    return bit32.arshift(pair, 6), bit32.band(pair, 63)
+end
+local function set_bit32(num: number, index: number)
+    return bit32.bor(num, bit32.lshift(1, index))
+end
+local function clear_bit32(num: number, index: number)
+    return bit32.band(num, bit32.bnot(bit32.lshift(1, index)))
+end
+local function get_bit32(num: number, index: number)
+    return bit32.band(num, bit32.lshift(1, index)) ~= 0
 end
 
 
@@ -109,6 +118,9 @@ return {
     NOT_FILE_AB = NOT_FILE_AB,
     NOT_FILE_GH = NOT_FILE_GH,
 
+
+    WK = 0, WQ = 1, BK = 2, BQ = 3,
+
     WHITE = WHITE,
     BLACK = BLACK,
     NONE = NONE,
@@ -123,6 +135,9 @@ return {
     get_bit = get_bit,
     set_bit = set_bit,
     clear_bit = clear_bit,
+    set_bit32 = set_bit32,
+    get_bit32 = get_bit32,
+    clear_bit32 = clear_bit32,
     pop_lsb = pop_lsb,
     popcount = popcount,
     iterate_bits = iterate_bits,
