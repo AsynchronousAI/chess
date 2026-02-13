@@ -1,0 +1,11 @@
+# TODO:
+- Pin detection
+- No string keys at all for board object
+- If a rook is attacking the king, you can just move backwards.
+- Eval function cannot distinguish between a checkmate and a stalemate.
+- UI is nasty
+- Queenside castling will not work if kingside does cannot
+- Cannot escape focus on a game
+- Thread pool
+- Incremental evaluation
+- Increase depth when capturing

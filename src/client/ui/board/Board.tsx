@@ -1,4 +1,3 @@
-import { Frame, Text } from "@rbxts/better-react-components";
 import React, {
   forwardRef,
   useImperativeHandle,
@@ -132,12 +131,14 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
     }));
 
     return (
-      <Frame
-        size={props.size}
-        aspectRatio={1}
+      <frame
+        Size={props.size}
         ref={containerRef}
-        layoutOrder={1}
+        LayoutOrder={1}
+        BackgroundTransparency={1}
+        BorderSizePixel={0}
       >
+        <uiaspectratioconstraint AspectRatio={1} />
         {/* Squares */}
         {FILES.map((letter, i) =>
           RANKS.map((number, j) => {
@@ -150,11 +151,11 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
             return (
               <>
                 {/* Square background */}
-                <Frame
+                <frame
                   key={`${location}-square`}
-                  position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
-                  size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-                  background={
+                  Position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
+                  Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+                  BackgroundColor3={
                     squareHighlighted(index)
                       ? props.iconPack.highlighted
                       : squareChecked(index)
@@ -163,43 +164,56 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                           ? props.iconPack.filled
                           : props.iconPack.unfilled
                   }
-                  zIndex={1}
+                  ZIndex={1}
+                  BorderSizePixel={0}
                 >
                   {boardJ === 7 && (
-                    <Text
-                      textColor={
+                    <textlabel
+                      TextColor3={
                         !colored
                           ? props.iconPack.filled
                           : props.iconPack.unfilled
                       }
-                      textSize={px(20)}
-                      text={props.playingAs === 1 ? FILES[7 - i] : FILES[i]}
-                      font={"SourceSansBold"}
-                      backgroundTransparency={1}
-                      padding={px(3)}
-                      size={new UDim2(1, 0, 1, 0)}
-                      verticalTextAlign="Bottom"
-                      textAlign="Right"
-                    />
+                      TextSize={px(20)}
+                      Text={props.playingAs === 1 ? FILES[7 - i] : FILES[i]}
+                      Font={Enum.Font.SourceSansBold}
+                      BackgroundTransparency={1}
+                      Size={new UDim2(1, 0, 1, 0)}
+                      TextYAlignment={Enum.TextYAlignment.Bottom}
+                      TextXAlignment={Enum.TextXAlignment.Right}
+                    >
+                      <uipadding
+                        PaddingTop={new UDim(0, px(3))}
+                        PaddingBottom={new UDim(0, px(3))}
+                        PaddingLeft={new UDim(0, px(3))}
+                        PaddingRight={new UDim(0, px(3))}
+                      />
+                    </textlabel>
                   )}
                   {i === 0 && (
-                    <Text
-                      textColor={
+                    <textlabel
+                      TextColor3={
                         !colored
                           ? props.iconPack.filled
                           : props.iconPack.unfilled
                       }
-                      textSize={px(20)}
-                      padding={px(3)}
-                      text={RANKS[j]}
-                      font={"SourceSansBold"}
-                      backgroundTransparency={1}
-                      size={new UDim2(1, 0, 1, 0)}
-                      verticalTextAlign="Top"
-                      textAlign="Left"
-                    />
+                      TextSize={px(20)}
+                      Text={RANKS[j]}
+                      Font={Enum.Font.SourceSansBold}
+                      BackgroundTransparency={1}
+                      Size={new UDim2(1, 0, 1, 0)}
+                      TextYAlignment={Enum.TextYAlignment.Top}
+                      TextXAlignment={Enum.TextXAlignment.Left}
+                    >
+                      <uipadding
+                        PaddingTop={new UDim(0, px(3))}
+                        PaddingBottom={new UDim(0, px(3))}
+                        PaddingLeft={new UDim(0, px(3))}
+                        PaddingRight={new UDim(0, px(3))}
+                      />
+                    </textlabel>
                   )}
-                </Frame>
+                </frame>
 
                 {/* Hitbox */}
                 {possibleMoves.find((v) => Move.getTo(v) === index) && (
@@ -217,23 +231,26 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
                         MouseLeave: () => setHoveringSquare(undefined),
                       }}
                     />
-                    <Frame
+                    <frame
                       key={`${location}-hit-visual`}
-                      position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
-                      size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-                      noBackground
-                      zIndex={25}
+                      Position={new UDim2(i * (1 / 8), 0, boardJ * (1 / 8), 0)}
+                      Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+                      BackgroundTransparency={1}
+                      ZIndex={25}
+                      BorderSizePixel={0}
                     >
-                      <Frame
-                        size={new UDim2(0.35, 0, 0.35, 0)}
-                        position={new UDim2(0.5, 0, 0.5, 0)}
-                        anchorPoint={new Vector2(0.5, 0.5)}
-                        background={new Color3(0, 0, 0)}
-                        backgroundTransparency={0.75}
-                        cornerRadius={new UDim(0.5, 0)}
-                        zIndex={5}
-                      />
-                    </Frame>
+                      <frame
+                        Size={new UDim2(0.35, 0, 0.35, 0)}
+                        Position={new UDim2(0.5, 0, 0.5, 0)}
+                        AnchorPoint={new Vector2(0.5, 0.5)}
+                        BackgroundColor3={new Color3(0, 0, 0)}
+                        BackgroundTransparency={0.75}
+                        ZIndex={5}
+                        BorderSizePixel={0}
+                      >
+                        <uicorner CornerRadius={new UDim(0.5, 0)} />
+                      </frame>
+                    </frame>
                   </>
                 )}
               </>
@@ -268,7 +285,7 @@ export const ChessBoard = forwardRef<ChessBoardRef, ChessBoardProps>(
             onPromote={props.onPromote}
           />
         ) : undefined}
-      </Frame>
+      </frame>
     );
   },
 );

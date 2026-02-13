@@ -4,7 +4,7 @@ local libs = require(script.import)
 local eval = require(script.eval)
 local moveOrdering = require(script.moveOrdering)
 
-local DEPTH = if game:GetService("RunService"):IsStudio() then 3 else 3
+local DEPTH = if game:GetService("RunService"):IsStudio() then 4 else 3
 
 local MinimaxTranspositions = game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
 local EvaluationTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
@@ -85,7 +85,7 @@ function spawnThreads(threads)
 
     for i = 1, threads do
         local clone = script.ActorTemplate:Clone()
-        clone.Name = "Actor"..i
+        clone.Name = i
         clone.Parent = pool
 
         actors[i] = clone

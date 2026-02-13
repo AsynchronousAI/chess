@@ -1,4 +1,3 @@
-import { Frame, Text } from "@rbxts/better-react-components";
 import React from "@rbxts/react";
 import { usePx } from "./hooks/usePx";
 import { Button } from "./components/button";
@@ -13,12 +12,13 @@ export function Menu() {
 
   const activeGame = gameplay?.useActiveGame();
   return (
-    <Frame
-      size={new UDim2(1, 0, 1, 0)}
-      position={new UDim2(0.5, 0, 0.5, 0)}
-      anchorPoint={new Vector2(0.5, 0.5)}
-      background={new Color3(0.1, 0.1, 0.1)}
-      visible={activeGame?.opening === undefined}
+    <frame
+      Size={new UDim2(1, 0, 1, 0)}
+      Position={new UDim2(0.5, 0, 0.5, 0)}
+      AnchorPoint={new Vector2(0.5, 0.5)}
+      BackgroundColor3={new Color3(0.1, 0.1, 0.1)}
+      Visible={activeGame?.opening === undefined}
+      BorderSizePixel={0}
     >
       <uilistlayout
         FillDirection={"Vertical"}
@@ -26,15 +26,21 @@ export function Menu() {
         Padding={new UDim(0.05, 0)}
         HorizontalAlignment={"Center"}
       />
-      <Text
-        text={"Chess"}
-        size={new UDim2(1, 0, 0.25, 0)}
-        noBackground
-        font={"SourceSansBold"}
-        padding={new UDim(0.2, 0)}
-        overrideRoblox={{ TextScaled: true }}
-        textColor={new Color3(1, 1, 1)}
-      />
+      <textlabel
+        Text={"Chess"}
+        Size={new UDim2(1, 0, 0.25, 0)}
+        BackgroundTransparency={1}
+        Font={Enum.Font.SourceSansBold}
+        TextScaled={true}
+        TextColor3={new Color3(1, 1, 1)}
+      >
+        <uipadding
+          PaddingTop={new UDim(0.2, 0)}
+          PaddingBottom={new UDim(0.2, 0)}
+          PaddingLeft={new UDim(0.2, 0)}
+          PaddingRight={new UDim(0.2, 0)}
+        />
+      </textlabel>
       <Button
         title={"vs Bot"}
         image={"rbxassetid://10709782230"}
@@ -49,6 +55,6 @@ export function Menu() {
         aspectRatio={3}
         size={new UDim2(1, 0, 0.15, 0)}
       />
-    </Frame>
+    </frame>
   );
 }

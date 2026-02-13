@@ -152,65 +152,89 @@ function Attacks.king_attacks(square: number): vector
 end
 
 -- Compute attacks in a direction using countlz/countrz
-local function ray_attack_positive(ray: vector, occupied: vector): vector
+local function ray_attack_positive(ray: vector, occupied: vector, ignoreBlockers: boolean?): vector
     local blockers = u64.band(ray, occupied)
-    if blockers == u64.ZERO then
+    if blockers == u64.ZERO or ignoreBlockers then
         return ray
     end
+
     local blocker_square = u64.countrz(blockers)
+    if blocker_square == -1 then
+        return ray
+    end
+
     local mask = u64.lshift(u64.ONE, blocker_square)
     local attack = u64.band(ray, u64.bor(mask, u64.sub(mask, u64.ONE)))
-    return attack
+    return attack, blocker_square
 end
-local function ray_attack_negative(ray: vector, occupied: vector): vector
+local function ray_attack_negative(ray: vector, occupied: vector, ignoreBlockers: boolean?): vector
     local blockers = u64.band(ray, occupied)
-    if blockers == u64.ZERO then
+    if blockers == u64.ZERO or ignoreBlockers then
         return ray
     end
+
     local blocker_square = 63 - u64.countlz(blockers)
+    if blocker_square == -1 then
+        return ray
+    end
+
     local mask = u64.lshift(u64.ONE, blocker_square)
     local attack = u64.band(ray, u64.bnot(u64.sub(mask, u64.ONE)))
-    return attack
+    return attack, blocker_square
 end
 
 -- Optimized sliding attacks using CLZ/CTZ
-function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupied: vector, ignoreBlockers: boolean?): (vector, {number})
 	local occupied = u64.bor(my_occupied, other_occupied)
 	local attacks = u64.ZERO
 
-	-- North - positive direction
-	attacks = u64.bor(attacks, ray_attack_positive(RAY_NORTH[square], occupied))
-	-- East - positive direction - use CTZ
-	attacks = u64.bor(attacks, ray_attack_positive(RAY_EAST[square], occupied))
-	-- South - negative direction - use CLZ
-	attacks = u64.bor(attacks, ray_attack_negative(RAY_SOUTH[square], occupied))
-	-- West - negative direction - use CLZ
-	attacks = u64.bor(attacks, ray_attack_negative(RAY_WEST[square], occupied))
+	local north, northBlocker = ray_attack_positive(RAY_NORTH[square], occupied, ignoreBlockers)
+	local east, eastBlocker = ray_attack_positive(RAY_EAST[square], occupied, ignoreBlockers)
+	local south, southBlocker = ray_attack_negative(RAY_SOUTH[square], occupied, ignoreBlockers)
+	local west, westBlocker = ray_attack_negative(RAY_WEST[square], occupied, ignoreBlockers)
 
-	-- Remove our own pieces from attacks
-	return u64.band(attacks, u64.bnot(my_occupied))
+	attacks = u64.bor(attacks, north)
+	attacks = u64.bor(attacks, east)
+	attacks = u64.bor(attacks, south)
+	attacks = u64.bor(attacks, west)
+
+	local blockers = {}
+	if northBlocker then table.insert(blockers, northBlocker) end
+	if eastBlocker then table.insert(blockers, eastBlocker) end
+	if southBlocker then table.insert(blockers, southBlocker) end
+	if westBlocker then table.insert(blockers, westBlocker) end
+
+	return u64.band(attacks, u64.bnot(my_occupied)), blockers
 end
-function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector, ignoreBlockers: boolean?): (vector, {number})
 	local occupied = u64.bor(my_occupied, other_occupied)
 	local attacks = u64.ZERO
 
-	-- NE - positive direction - use CTZ
-	attacks = u64.bor(attacks, ray_attack_positive(RAY_NE[square], occupied))
-	-- NW - positive direction - use CTZ
-	attacks = u64.bor(attacks, ray_attack_positive(RAY_NW[square], occupied))
-	-- SE - negative direction - use CLZ
-	attacks = u64.bor(attacks, ray_attack_negative(RAY_SE[square], occupied))
-	-- SW - negative direction - use CLZ
-	attacks = u64.bor(attacks, ray_attack_negative(RAY_SW[square], occupied))
+	local northEast, northEastBlocker = ray_attack_positive(RAY_NE[square], occupied, ignoreBlockers)
+	local northWest, northWestBlocker = ray_attack_positive(RAY_NW[square], occupied, ignoreBlockers)
+	local southEast, southEastBlocker = ray_attack_negative(RAY_SE[square], occupied, ignoreBlockers)
+	local southWest, southWestBlocker = ray_attack_negative(RAY_SW[square], occupied, ignoreBlockers)
 
-	-- Remove our own pieces from attacks
-	return u64.band(attacks, u64.bnot(my_occupied))
+	attacks = u64.bor(attacks, northEast)
+	attacks = u64.bor(attacks, northWest)
+	attacks = u64.bor(attacks, southEast)
+	attacks = u64.bor(attacks, southWest)
+
+	local blockers = {}
+	if northEastBlocker then table.insert(blockers, northEastBlocker) end
+	if northWestBlocker then table.insert(blockers, northWestBlocker) end
+	if southEastBlocker then table.insert(blockers, southEastBlocker) end
+	if southWestBlocker then table.insert(blockers, southWestBlocker) end
+
+	return u64.band(attacks, u64.bnot(my_occupied)), blockers
 end
-function Attacks.queen_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
-	return u64.bor(
-		Attacks.rook_attacks(square, my_occupied, other_occupied),
-		Attacks.bishop_attacks(square, my_occupied, other_occupied)
-	)
+function Attacks.queen_attacks(square: number, my_occupied: vector, other_occupied: vector, ignoreBlockers: boolean?): (vector, {number})
+    local rookAttacks, rookBlockers = Attacks.rook_attacks(square, my_occupied, other_occupied, ignoreBlockers)
+	local bishopAttacks, bishopBlockers = Attacks.bishop_attacks(square, my_occupied, other_occupied, ignoreBlockers)
+
+	for _, blocker in bishopBlockers do table.insert(rookBlockers, blocker) end
+
+	return u64.bor(rookAttacks, bishopAttacks), rookBlockers
 end
 
 return Attacks

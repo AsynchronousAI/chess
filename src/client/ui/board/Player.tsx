@@ -1,7 +1,6 @@
 import { useEffect, useState } from "@rbxts/react";
 import { Color, Piece, PieceValues } from "shared/board";
 import { Players } from "@rbxts/services";
-import { Frame, Image, Text } from "@rbxts/better-react-components";
 import React from "@rbxts/react";
 import { IconPack, Vector } from "./images";
 import { Object } from "@rbxts/luau-polyfill";
@@ -90,43 +89,50 @@ export function Player({
   ) as unknown as [Piece, number][];
 
   return (
-    <Frame
-      size={new UDim2(0.85, 0, 0.05, 0)}
-      noBackground
-      layoutOrder={
+    <frame
+      Size={new UDim2(0.85, 0, 0.05, 0)}
+      BackgroundTransparency={1}
+      BorderSizePixel={0}
+      LayoutOrder={
         userId === Players.LocalPlayer?.UserId ? 2 : 0
       } /* align to top or bottom */
-      visible={userId !== 0}
+      Visible={userId !== 0}
     >
       {/* Player details */}
-      <Image
-        background={"#403E39"}
-        cornerRadius={px(2)}
-        visible={thumbnail !== ""}
-        image={thumbnail}
-        size={new UDim2(1, 0, 1, 0)}
-        aspectRatio={1}
-      />
-      <Text
-        noBackground
-        richText
-        text={`<b>${name}</b> <font color="rgb(128,128,128)">(${rating})</font> ${flag}`}
-        size={new UDim2(0.85, 0, 0.45, 0)}
-        position={new UDim2(0.085, 0, 0, 0)}
-        textSize={px(18)}
-        textAlign={"Left"}
-        paddingLeft={px(2)}
-        paddingTop={px(15)}
-        paddingBottom={px(15)}
-        textColor={new Color3(1, 1, 1)}
-        font={"SourceSans"}
-      />
+      <imagelabel
+        BackgroundColor3={Color3.fromHex("#403E39")}
+        Visible={thumbnail !== ""}
+        Image={thumbnail}
+        Size={new UDim2(1, 0, 1, 0)}
+        BorderSizePixel={0}
+      >
+        <uiaspectratioconstraint AspectRatio={1} />
+        <uicorner CornerRadius={new UDim(0, px(2))} />
+      </imagelabel>
+      <textlabel
+        BackgroundTransparency={1}
+        RichText={true}
+        Text={`<b>${name}</b> <font color="rgb(128,128,128)">(${rating})</font> ${flag}`}
+        Size={new UDim2(0.85, 0, 0.45, 0)}
+        Position={new UDim2(0.085, 0, 0, 0)}
+        TextSize={px(18)}
+        TextXAlignment={Enum.TextXAlignment.Left}
+        TextColor3={new Color3(1, 1, 1)}
+        Font={Enum.Font.SourceSans}
+      >
+        <uipadding
+          PaddingLeft={new UDim(0, px(2))}
+          PaddingTop={new UDim(0, px(15))}
+          PaddingBottom={new UDim(0, px(15))}
+        />
+      </textlabel>
 
       {/* Pieces */}
-      <Frame
-        size={new UDim2(1, 0, 0.5, 0)}
-        noBackground
-        position={new UDim2(0.085, 0, 0.55, 0)}
+      <frame
+        Size={new UDim2(1, 0, 0.5, 0)}
+        BackgroundTransparency={1}
+        BorderSizePixel={0}
+        Position={new UDim2(0.085, 0, 0.55, 0)}
       >
         <uilistlayout
           VerticalAlignment={"Center"}
@@ -138,13 +144,14 @@ export function Player({
 
         {groupedPieces.map(([piece, count]) => {
           return (
-            <Frame
+            <frame
               key={piece}
-              size={new UDim2(0, 0, 1, 0)}
-              automaticSize={"X"}
-              noBackground
-              layoutOrder={PieceValues[piece]}
-              position={new UDim2(0.085, 0, 0.55, 0)}
+              Size={new UDim2(0, 0, 1, 0)}
+              AutomaticSize={Enum.AutomaticSize.X}
+              BackgroundTransparency={1}
+              BorderSizePixel={0}
+              LayoutOrder={PieceValues[piece]}
+              Position={new UDim2(0.085, 0, 0.55, 0)}
             >
               <uilistlayout
                 VerticalAlignment={"Center"}
@@ -156,78 +163,81 @@ export function Player({
                 SortOrder={"LayoutOrder"}
               />
               {repeating(count, () => (
-                <Image
+                <imagelabel
                   key={count}
-                  image={iconPack[(1 - color) as Color][piece]}
-                  noBackground
-                  size={new UDim2(0, px(20), 0, px(20))}
-                  aspectRatio={1}
-                  layoutOrder={PieceValues[piece]}
-                />
+                  Image={iconPack[(1 - color) as Color][piece]}
+                  BackgroundTransparency={1}
+                  Size={new UDim2(0, px(20), 0, px(20))}
+                  LayoutOrder={PieceValues[piece]}
+                >
+                  <uiaspectratioconstraint AspectRatio={1} />
+                </imagelabel>
               ))}
-            </Frame>
+            </frame>
           );
         })}
 
         {valueDifference > 0 ? (
-          <Text
-            text={`+${valueDifference}`}
-            size={new UDim2(0.05, 0, 1, 0)}
-            textSize={px(17)}
-            layoutOrder={100}
-            noBackground
-            textColor={new Color3(0.65, 0.65, 0.65)}
-            font={"SourceSansSemibold"}
+          <textlabel
+            Text={`+${valueDifference}`}
+            Size={new UDim2(0.05, 0, 1, 0)}
+            TextSize={px(17)}
+            LayoutOrder={100}
+            BackgroundTransparency={1}
+            TextColor3={new Color3(0.65, 0.65, 0.65)}
+            Font={Enum.Font.SourceSansSemibold}
           />
         ) : undefined}
-      </Frame>
+      </frame>
 
       {/* Clock */}
-      <Text
-        visible={time >= 0}
-        size={new UDim2(0.2, 0, 1, 0)}
-        position={new UDim2(0.8, 0, 0, 0)}
-        text={formatTime(time)}
-        background={
+      <textlabel
+        Visible={time >= 0}
+        Size={new UDim2(0.2, 0, 1, 0)}
+        Position={new UDim2(0.8, 0, 0, 0)}
+        Text={formatTime(time)}
+        BackgroundColor3={
           time < 60
-            ? "#f24349"
+            ? Color3.fromHex("#f24349")
             : color === Color.white
               ? new Color3(1, 1, 1)
-              : "#403E39"
+              : Color3.fromHex("#403E39")
         }
-        textSize={px(25)}
-        textAlign={"Right"}
-        verticalTextAlign={"Center"}
-        paddingRight={px(10)}
-        textColor={
+        TextSize={px(25)}
+        TextXAlignment={Enum.TextXAlignment.Right}
+        TextYAlignment={Enum.TextYAlignment.Center}
+        TextColor3={
           time < 60
             ? new Color3(1, 1, 1)
             : color === Color.white
-              ? "#403E39"
+              ? Color3.fromHex("#403E39")
               : new Color3(1, 1, 1)
         }
-        font={"SourceSansSemibold"}
-        backgroundTransparency={isMyTurn ? 0 : 0.5}
-        overrideRoblox={{ TextTransparency: isMyTurn ? 0 : 0.5 }}
-        cornerRadius={px(2)}
+        Font={Enum.Font.SourceSansSemibold}
+        BackgroundTransparency={isMyTurn ? 0 : 0.5}
+        TextTransparency={isMyTurn ? 0 : 0.5}
+        BorderSizePixel={0}
       >
-        <Image
-          noBackground
-          size={new UDim2(0.55, 0, 0.55, 0)}
-          aspectRatio={1}
-          image={clocks[clockIndex]}
-          imageColor={
+        <uipadding PaddingRight={new UDim(0, px(10))} />
+        <uicorner CornerRadius={new UDim(0, px(2))} />
+        <imagelabel
+          BackgroundTransparency={1}
+          Size={new UDim2(0.55, 0, 0.55, 0)}
+          Image={clocks[clockIndex]}
+          ImageColor3={
             time < 60
               ? new Color3(1, 1, 1)
               : color === Color.white
-                ? "#403E39"
+                ? Color3.fromHex("#403E39")
                 : new Color3(1, 1, 1)
           }
-          anchorPoint={new Vector2(0, 0.5)}
-          position={new UDim2(0.1, 0, 0.5, 0)}
-          visible={isMyTurn}
-        />
-      </Text>
+          AnchorPoint={new Vector2(0, 0.5)}
+          Position={new UDim2(0.1, 0, 0.5, 0)}
+          Visible={isMyTurn}
+        >
+          <uiaspectratioconstraint AspectRatio={1} />
+        </imagelabel>
+      </textlabel>
 
       {/* Button */}
       <textbutton
@@ -238,6 +248,6 @@ export function Player({
           MouseButton1Click: () => Atoms.ViewingPlayer(userId),
         }}
       />
-    </Frame>
+    </frame>
   );
 }

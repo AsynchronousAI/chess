@@ -10,7 +10,7 @@ local Encoding = {}
 local EN_PASSANT_NONE = 67 -- for the love of the game
 
 function Encoding.to_buffer(self)
-    local buf = buffer.create(1040) -- (64*15)+(8*6)+(16*2)
+    local buf = buffer.create(1808) -- (64*15)+(8*6)+(16*2)+(64*12) Idk might be a bit extra but i fogor the math.
     local off = 0
 
     -- Helper for writing a u64
@@ -23,6 +23,26 @@ function Encoding.to_buffer(self)
     for color = WHITE, BLACK do
         for piece = PAWN, KING do
             writeU64(self.pieces[color][piece])
+        end
+    end
+
+    -- Attacks
+    for color = WHITE, BLACK do
+        for piece = PAWN, KING do
+            writeU64(self.attacked[color][piece])
+        end
+        writeU64(self.attacked[color].all)
+    end
+
+    -- Blockers
+    for pos = 0, 63 do
+        for blocker = 1, 8 do
+            if self.blocking[pos][blocker] then
+                buffer.writeu8(buf, off, self.blocking[pos][blocker])
+            else
+                buffer.writeu8(buf, off, 0)
+            end
+            off += 1
         end
     end
 
@@ -66,6 +86,23 @@ function Encoding.from_buffer(self, buf)
     for color = WHITE, BLACK do
         for piece = PAWN, KING do
             self.pieces[color][piece] = readU64()
+        end
+    end
+
+    -- Attacks
+    for color = WHITE, BLACK do
+        for piece = PAWN, KING do
+            self.attacked[color][piece] = readU64()
+        end
+        self.attacked[color].all = readU64()
+    end
+
+    -- Blockers
+    for pos = 0, 63 do
+        self.blocking[pos] = {}
+        for blocker = 1, 8 do
+            self.blocking[pos][blocker] = buffer.readu8(buf, off)
+            off += 1
         end
     end
 

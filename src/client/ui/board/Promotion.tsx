@@ -1,7 +1,7 @@
 import React, { Binding } from "@rbxts/react";
 import { Color, Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
-import { CanvasGroup, Frame, ListLayout } from "@rbxts/better-react-components";
+
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { Motion } from "@rbxts/ripple";
 import { generatePosition } from "./shared";
@@ -40,26 +40,27 @@ export function Promotion({
   const pos = BitBoard.separate_square_index(location);
 
   return (
-    <CanvasGroup
-      position={generatePosition(pos, color).add(
+    <frame
+      Position={generatePosition(pos, color).add(
         color === Color.white ? new UDim2() : new UDim2(0, 0, -0.435, 0),
       )}
-      size={new UDim2(1 / 8, 0, 4.5 / 8, 0)}
-      zIndex={1000}
-      background={new Color3(1, 1, 1)}
-      cornerRadius={px(4)}
+      Size={new UDim2(1 / 8, 0, 4.5 / 8, 0)}
+      ZIndex={1000}
+      BackgroundColor3={new Color3(1, 1, 1)}
+      BorderSizePixel={0}
     >
-      <ListLayout
-        verticalAlign={"Top"}
-        horizontalAlign={"Center"}
-        direction={"Vertical"}
-        order={"LayoutOrder"}
-        padding={px(5)}
+      <uicorner CornerRadius={new UDim(0, px(4))} />
+      <uilistlayout
+        VerticalAlignment={Enum.VerticalAlignment.Top}
+        HorizontalAlignment={Enum.HorizontalAlignment.Center}
+        FillDirection={Enum.FillDirection.Vertical}
+        SortOrder={Enum.SortOrder.LayoutOrder}
+        Padding={new UDim(0, px(5))}
       />
 
       {/* Close */}
       <textbutton
-        Font={"ArialBold"}
+        Font={Enum.Font.ArialBold}
         TextSize={px(18)}
         Size={new UDim2(1, 0, 1 / 9, 0)}
         Text="X"
@@ -74,7 +75,7 @@ export function Promotion({
         <uistroke
           Thickness={px(1)}
           Color={new Color3(0.85, 0.85, 0.85)}
-          ApplyStrokeMode={"Border"}
+          ApplyStrokeMode={Enum.ApplyStrokeMode.Border}
         />
       </textbutton>
 
@@ -82,12 +83,13 @@ export function Promotion({
       {pieces.map((piece, index) => {
         const [offsetY, offsetYMotion] = motions[index];
         return (
-          <Frame
-            size={new UDim2(1, -px(7), 1, -px(7))}
-            noBackground
-            zIndex={holdingPiece === location ? 100 : 3}
+          <frame
+            Size={new UDim2(1, -px(7), 1, -px(7))}
+            BackgroundTransparency={1}
+            BorderSizePixel={0}
+            ZIndex={holdingPiece === location ? 100 : 3}
             key={index}
-            layoutOrder={index + 1}
+            LayoutOrder={index + 1}
           >
             <uiaspectratioconstraint AspectRatio={1} />
             <textbutton
@@ -111,9 +113,9 @@ export function Promotion({
               outlineColor={new Color3(0.35, 0.35, 0.35)}
               zIndex={holdingPiece === location ? 100 : 3}
             />
-          </Frame>
+          </frame>
         );
       })}
-    </CanvasGroup>
+    </frame>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect } from "@rbxts/react";
 import { Color, Piece as PieceType } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
-import { Frame } from "@rbxts/better-react-components";
+
 import { useMotion, useMouse } from "@rbxts/pretty-react-hooks";
 import { generatePosition } from "./shared";
 import { IconPack } from "./images";
@@ -104,17 +104,18 @@ export function Piece(props: PieceProps) {
 
   return (
     props.piece[0] !== PieceType.none && (
-      <Frame
-        position={dragging && holdingPiece === props.location ? mousePos : pos}
-        size={new UDim2(1 / 8, 0, 1 / 8, 0)}
-        overrideRoblox={{ Rotation: rotation }}
-        noBackground
-        anchorPoint={
+      <frame
+        Position={dragging && holdingPiece === props.location ? mousePos : pos}
+        Size={new UDim2(1 / 8, 0, 1 / 8, 0)}
+        Rotation={rotation}
+        BackgroundTransparency={1}
+        BorderSizePixel={0}
+        AnchorPoint={
           dragging && holdingPiece === props.location
             ? new Vector2(0.5, 1)
             : undefined
         }
-        zIndex={holdingPiece === props.location ? 100 : 3}
+        ZIndex={holdingPiece === props.location ? 100 : 3}
       >
         <textbutton
           Size={new UDim2(1, 0, 1, 0)}
@@ -144,7 +145,7 @@ export function Piece(props: PieceProps) {
             zIndex={holdingPiece === props.location ? 100 : 3}
           />
         ) : undefined}
-      </Frame>
+      </frame>
     )
   );
 }

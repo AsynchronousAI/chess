@@ -4,7 +4,6 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "@rbxts/react";
-import { CanvasGroup, Frame, Text } from "@rbxts/better-react-components";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "../hooks/usePx";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
@@ -78,34 +77,36 @@ export const EvaluationBar = forwardRef<EvaluationBarRef, EvaluationBarProps>(
     }, [evaluation, mate, board]);
 
     return (
-      <CanvasGroup
-        size={props.size}
-        anchorPoint={new Vector2(0.5, 0.5)}
-        position={props.position}
-        background={"#403E39"}
-        cornerRadius={px(2)}
+      <frame
+        Size={props.size}
+        AnchorPoint={new Vector2(0.5, 0.5)}
+        Position={props.position}
+        BackgroundColor3={Color3.fromHex("#403E39")}
+        BorderSizePixel={0}
       >
-        <Frame
-          size={evalBar.map((value) => new UDim2(1, 0, value, 0))}
-          position={evalBar.map((value) => new UDim2(0, 0, 1 - value, 0))}
-          background={new Color3(1, 1, 1)}
+        <uicorner CornerRadius={new UDim(0, px(2))} />
+        <frame
+          Size={evalBar.map((value) => new UDim2(1, 0, value, 0))}
+          Position={evalBar.map((value) => new UDim2(0, 0, 1 - value, 0))}
+          BackgroundColor3={new Color3(1, 1, 1)}
+          BorderSizePixel={0}
         />
-        <Text
-          size={new UDim2(1, 0, 0, px(20))}
-          text={evalText}
-          noBackground
-          textColor={
+        <textlabel
+          Size={new UDim2(1, 0, 0, px(20))}
+          Text={evalText}
+          BackgroundTransparency={1}
+          TextColor3={
             evaluation <= 0 ? new Color3(0.45, 0.45, 0.45) : new Color3(1, 1, 1)
           }
-          font={"SourceSansBold"}
-          textSize={px(14)}
-          position={
+          Font={Enum.Font.SourceSansBold}
+          TextSize={px(14)}
+          Position={
             evaluation <= 0
               ? new UDim2(0, 0, 1, -px(25))
               : new UDim2(0, 0, 0, px(2))
           }
         />
-      </CanvasGroup>
+      </frame>
     );
   },
 );

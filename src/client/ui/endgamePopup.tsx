@@ -1,9 +1,3 @@
-import {
-  Button,
-  CanvasGroup,
-  Frame,
-  Text,
-} from "@rbxts/better-react-components";
 import React, { useEffect, useState } from "@rbxts/react";
 import { useMotion } from "@rbxts/pretty-react-hooks";
 import { usePx } from "./hooks/usePx";
@@ -70,47 +64,70 @@ export function EndgamePopup(props: EndgamePopupProps) {
   );
 
   return (
-    <CanvasGroup
-      size={new UDim2(0.4, 0.0, 0.4, 0)}
-      anchorPoint={new Vector2(0.5, 0.5)}
-      position={position}
-      aspectRatio={0.9}
-      cornerRadius={px(8)}
-      background={"#262421"}
-      stroke={{ Color: Color3.fromHex("#3C3A38"), Transparency: 0.5 }}
+    <frame
+      Size={new UDim2(0.4, 0.0, 0.4, 0)}
+      AnchorPoint={new Vector2(0.5, 0.5)}
+      Position={position}
+      BackgroundColor3={Color3.fromHex("#262421")}
+      BorderSizePixel={0}
     >
-      <Frame size={new UDim2(1, 0, 0.235, 0)} background={"#3C3A38"} />
-      <Text
-        text={props.title}
-        position={new UDim2(0, 0, 0, 0)}
-        size={new UDim2(1, 0, 0.15, 0)}
-        font={"SourceSansBold"}
-        noBackground
-        overrideRoblox={{ TextScaled: true }}
-        padding={new UDim(0.1, 0)}
-        textColor={new Color3(1, 1, 1)}
+      <uiaspectratioconstraint AspectRatio={0.9} />
+      <uicorner CornerRadius={new UDim(0, px(8))} />
+      <uistroke Color={Color3.fromHex("#3C3A38")} Transparency={0.5} />
+      <frame
+        Size={new UDim2(1, 0, 0.235, 0)}
+        BackgroundColor3={Color3.fromHex("#3C3A38")}
+        BorderSizePixel={0}
       />
-      <Text
-        text={props.description}
-        position={new UDim2(0, 0, 0.125, 0)}
-        size={new UDim2(1, 0, 0.1, 0)}
-        font={"SourceSansSemibold"}
-        overrideRoblox={{ TextScaled: true }}
-        padding={new UDim(0.1, 0)}
-        noBackground
-        textColor={new Color3(0.7, 0.7, 0.7)}
-      />
-      <Text
-        text={infoText}
-        richText
-        position={new UDim2(0, 0, 0.875, 0)}
-        size={new UDim2(1, 0, 0.1, 0)}
-        overrideRoblox={{ TextScaled: true }}
-        padding={new UDim(0.15, 0)}
-        font={"SourceSansSemibold"}
-        noBackground
-        textColor={new Color3(0.7, 0.7, 0.7)}
-      />
+      <textlabel
+        Text={props.title}
+        Position={new UDim2(0, 0, 0, 0)}
+        Size={new UDim2(1, 0, 0.15, 0)}
+        Font={Enum.Font.SourceSansBold}
+        BackgroundTransparency={1}
+        TextScaled={true}
+        TextColor3={new Color3(1, 1, 1)}
+      >
+        <uipadding
+          PaddingTop={new UDim(0.1, 0)}
+          PaddingBottom={new UDim(0.1, 0)}
+          PaddingLeft={new UDim(0.1, 0)}
+          PaddingRight={new UDim(0.1, 0)}
+        />
+      </textlabel>
+      <textlabel
+        Text={props.description}
+        Position={new UDim2(0, 0, 0.125, 0)}
+        Size={new UDim2(1, 0, 0.1, 0)}
+        Font={Enum.Font.SourceSansSemibold}
+        TextScaled={true}
+        BackgroundTransparency={1}
+        TextColor3={new Color3(0.7, 0.7, 0.7)}
+      >
+        <uipadding
+          PaddingTop={new UDim(0.1, 0)}
+          PaddingBottom={new UDim(0.1, 0)}
+          PaddingLeft={new UDim(0.1, 0)}
+          PaddingRight={new UDim(0.1, 0)}
+        />
+      </textlabel>
+      <textlabel
+        Text={infoText}
+        RichText={true}
+        Position={new UDim2(0, 0, 0.875, 0)}
+        Size={new UDim2(1, 0, 0.1, 0)}
+        TextScaled={true}
+        Font={Enum.Font.SourceSansSemibold}
+        BackgroundTransparency={1}
+        TextColor3={new Color3(0.7, 0.7, 0.7)}
+      >
+        <uipadding
+          PaddingTop={new UDim(0.15, 0)}
+          PaddingBottom={new UDim(0.15, 0)}
+          PaddingLeft={new UDim(0.15, 0)}
+          PaddingRight={new UDim(0.15, 0)}
+        />
+      </textlabel>
 
       {/*<Frame
         size={new UDim2(0.075, 0, 0.075, 0)}
@@ -138,23 +155,28 @@ export function EndgamePopup(props: EndgamePopupProps) {
         />
       </Frame>*/}
 
-      <Button
-        size={new UDim2(0.8, 0, 0.2, 0)}
-        position={new UDim2(0.5, 0, 0.45, 0)}
-        anchorPoint={new Vector2(0.5, 0.5)}
-        text={"Back to menu"}
-        textColor={new Color3(0.95, 0.95, 0.95)}
-        background={"#3C3A38"}
-        font={"SourceSansSemibold"}
-        autoButtonColor={false}
-        textSize={px(24)}
-        cornerRadius={px(5)}
-        padding={new UDim(0.2, 0)}
-        overrideRoblox={{
-          TextScaled: true,
-          Event: { MouseButton1Click: props.onBackToMenu },
-        }}
-      />
+      <textbutton
+        Size={new UDim2(0.8, 0, 0.2, 0)}
+        Position={new UDim2(0.5, 0, 0.45, 0)}
+        AnchorPoint={new Vector2(0.5, 0.5)}
+        Text={"Back to menu"}
+        TextColor3={new Color3(0.95, 0.95, 0.95)}
+        BackgroundColor3={Color3.fromHex("#3C3A38")}
+        Font={Enum.Font.SourceSansSemibold}
+        AutoButtonColor={false}
+        TextScaled={true}
+        TextSize={px(24)}
+        BorderSizePixel={0}
+        Event={{ MouseButton1Click: props.onBackToMenu }}
+      >
+        <uipadding
+          PaddingTop={new UDim(0.2, 0)}
+          PaddingBottom={new UDim(0.2, 0)}
+          PaddingLeft={new UDim(0.2, 0)}
+          PaddingRight={new UDim(0.2, 0)}
+        />
+        <uicorner CornerRadius={new UDim(0, px(5))} />
+      </textbutton>
       {/*<Button
         size={new UDim2(0.8, 0, 0.2, 0)}
         position={new UDim2(0.5, 0, 0.7, 0)}
@@ -172,6 +194,6 @@ export function EndgamePopup(props: EndgamePopupProps) {
           Event: { MouseButton1Click: props.onRematch },
         }}
       />*/}
-    </CanvasGroup>
+    </frame>
   );
 }

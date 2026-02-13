@@ -8,7 +8,7 @@ import {
 } from "shared/board";
 import { useAtom } from "@rbxts/react-charm";
 import { Vector, Wood } from "./images";
-import { Frame } from "@rbxts/better-react-components";
+
 import { BitBoard } from "shared/engine/bitboard";
 import { EvaluationBar, EvaluationBarRef } from "./EvaluationBar";
 import { ChessBoard, ChessBoardRef } from "./Board";
@@ -109,11 +109,12 @@ export default function Board() {
       ? activeGame.color === Color.white
       : currentMove % 2 !== activeGame.color;
   return (
-    <Frame
-      size={new UDim2(1, 0, 1, 0)}
-      position={new UDim2(0.5, 0, 0.5, 0)}
-      anchorPoint={new Vector2(0.5, 0.5)}
-      background={new Color3(0.1, 0.1, 0.1)}
+    <frame
+      Size={new UDim2(1, 0, 1, 0)}
+      Position={new UDim2(0.5, 0, 0.5, 0)}
+      AnchorPoint={new Vector2(0.5, 0.5)}
+      BackgroundColor3={new Color3(0.1, 0.1, 0.1)}
+      BorderSizePixel={0}
     >
       <EvaluationBar
         ref={evalBarRef}
@@ -121,14 +122,15 @@ export default function Board() {
         position={new UDim2(0.05, 0, 0.5, 0)}
         analysis={activeGame.analysis!}
       />
-      <Frame
-        size={new UDim2(1, 0, 0.975, 0)}
-        position={new UDim2(0.35, 0, 0.5, 0)}
-        anchorPoint={new Vector2(0.5, 0.5)}
-        aspectRatio={1}
-        zIndex={2}
-        noBackground
+      <frame
+        Size={new UDim2(1, 0, 0.975, 0)}
+        Position={new UDim2(0.35, 0, 0.5, 0)}
+        AnchorPoint={new Vector2(0.5, 0.5)}
+        ZIndex={2}
+        BackgroundTransparency={1}
+        BorderSizePixel={0}
       >
+        <uiaspectratioconstraint AspectRatio={1} />
         <uilistlayout
           VerticalAlignment={"Center"}
           HorizontalAlignment={"Center"}
@@ -184,7 +186,7 @@ export default function Board() {
           }
           size={new UDim2(0.85, 0, 0.85, 0)}
         />
-      </Frame>
+      </frame>
 
       <Explorer
         opening={activeGame.opening ?? "No game"}
@@ -192,6 +194,6 @@ export default function Board() {
         position={new UDim2(0.85, 0, 0.5, 0)}
         onRewind={onRewind}
       />
-    </Frame>
+    </frame>
   );
 }

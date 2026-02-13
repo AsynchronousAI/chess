@@ -1,12 +1,3 @@
-import {
-  Button,
-  CanvasGroup,
-  Frame,
-  Image,
-  ListLayout,
-  ScrollingFrame,
-  Text,
-} from "@rbxts/better-react-components";
 import React, { useEffect, useState } from "@rbxts/react";
 import { Players, RunService } from "@rbxts/services";
 import { Functions } from "client/network";
@@ -36,191 +27,220 @@ function PlayerListItem({
   const [p2Name, p2Thumbnail] = usePlayer(xGame.user);
 
   return (
-    <Button
-      size={new UDim2(1, 0, 0, px(125))}
-      noBackground
-      padding={px(8)}
-      layoutOrder={-xGame.date}
-      stroke={{
-        Color: Color3.fromHex("#262522"),
-        Thickness: 1,
-        ApplyStrokeMode: "Border",
-      }}
-      overrideRoblox={{
-        Event: {
-          MouseButton1Click: () => gameplay && gameplay.loadGame(xGame.gameId),
-        },
+    <textbutton
+      Size={new UDim2(1, 0, 0, px(125))}
+      BackgroundTransparency={1}
+      Text=""
+      LayoutOrder={-xGame.date}
+      AutoButtonColor={false}
+      BorderSizePixel={0}
+      Event={{
+        MouseButton1Click: () => gameplay && gameplay.loadGame(xGame.gameId),
       }}
     >
-      <ListLayout
-        direction={"Horizontal"}
-        verticalAlign={"Center"}
-        horizontalAlign={"Center"}
-        padding={px(5)}
+      <uipadding
+        PaddingTop={new UDim(0, px(8))}
+        PaddingBottom={new UDim(0, px(8))}
+        PaddingLeft={new UDim(0, px(8))}
+        PaddingRight={new UDim(0, px(8))}
+      />
+      <uistroke
+        Color={Color3.fromHex("#262522")}
+        Thickness={1}
+        ApplyStrokeMode={Enum.ApplyStrokeMode.Border}
+      />
+      <uilistlayout
+        FillDirection={Enum.FillDirection.Horizontal}
+        VerticalAlignment={Enum.VerticalAlignment.Center}
+        HorizontalAlignment={Enum.HorizontalAlignment.Center}
+        Padding={new UDim(0, px(5))}
       />
 
       {/* player 1 */}
-      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={1.3} noBackground>
-        <Image
-          image={p1Thumbnail}
-          size={new UDim2(0.7, 0, 0.7, 0)}
-          anchorPoint={new Vector2(0.5, 0.5)}
-          position={new UDim2(0.5, 0, 0.4, 0)}
-          aspectRatio={1}
-          background={"#403E39"}
-          cornerRadius={px(5)}
-          stroke={{
-            Color: new Color3(1, 1, 1),
-            Thickness: 2,
-            Transparency: xGame.score === 1 ? 0.5 : 0.75,
-          }}
+      <frame
+        Size={new UDim2(1, 0, 1, 0)}
+        BackgroundTransparency={1}
+        BorderSizePixel={0}
+      >
+        <uiaspectratioconstraint AspectRatio={1.3} />
+        <imagelabel
+          Image={p1Thumbnail}
+          Size={new UDim2(0.7, 0, 0.7, 0)}
+          AnchorPoint={new Vector2(0.5, 0.5)}
+          Position={new UDim2(0.5, 0, 0.4, 0)}
+          BackgroundColor3={Color3.fromHex("#403E39")}
+          BorderSizePixel={0}
+        >
+          <uiaspectratioconstraint AspectRatio={1} />
+          <uicorner CornerRadius={new UDim(0, px(5))} />
+          <uistroke
+            Color={new Color3(1, 1, 1)}
+            Thickness={2}
+            Transparency={xGame.score === 1 ? 0.5 : 0.75}
+          />
+        </imagelabel>
+        <textlabel
+          Text={`${p1Name} <font color="rgb(128,128,128)">(${xGame.myRating})</font>`}
+          Font={Enum.Font.SourceSansSemibold}
+          RichText={true}
+          TextSize={px(15)}
+          Size={new UDim2(1, 0, 0.25, 0)}
+          Position={new UDim2(0, 0, 0.75, 0)}
+          BackgroundTransparency={1}
+          TextColor3={new Color3(1, 1, 1)}
         />
-        <Text
-          text={`${p1Name} <font color="rgb(128,128,128)">(${xGame.myRating})</font>`}
-          font={"SourceSansSemibold"}
-          richText
-          textSize={px(15)}
-          size={new UDim2(1, 0, 0.25, 0)}
-          position={new UDim2(0, 0, 0.75, 0)}
-          noBackground
-          textColor={new Color3(1, 1, 1)}
-        />
-      </Frame>
+      </frame>
 
       {/* player 2  */}
-      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={1.3} noBackground>
-        <Image
-          image={p2Thumbnail}
-          size={new UDim2(0.7, 0, 0.7, 0)}
-          anchorPoint={new Vector2(0.5, 0.5)}
-          position={new UDim2(0.5, 0, 0.4, 0)}
-          aspectRatio={1}
-          background={"#403E39"}
-          cornerRadius={px(5)}
-          stroke={{
-            Color: new Color3(1, 1, 1),
-            Thickness: 2,
-            Transparency: xGame.score === 0 ? 0.5 : 0.75,
-          }}
+      <frame
+        Size={new UDim2(1, 0, 1, 0)}
+        BackgroundTransparency={1}
+        BorderSizePixel={0}
+      >
+        <uiaspectratioconstraint AspectRatio={1.3} />
+        <imagelabel
+          Image={p2Thumbnail}
+          Size={new UDim2(0.7, 0, 0.7, 0)}
+          AnchorPoint={new Vector2(0.5, 0.5)}
+          Position={new UDim2(0.5, 0, 0.4, 0)}
+          BackgroundColor3={Color3.fromHex("#403E39")}
+          BorderSizePixel={0}
+        >
+          <uiaspectratioconstraint AspectRatio={1} />
+          <uicorner CornerRadius={new UDim(0, px(5))} />
+          <uistroke
+            Color={new Color3(1, 1, 1)}
+            Thickness={2}
+            Transparency={xGame.score === 0 ? 0.5 : 0.75}
+          />
+        </imagelabel>
+        <textlabel
+          Text={`${p2Name} <font color="rgb(128,128,128)">(${xGame.theirRating})</font>`}
+          Font={Enum.Font.SourceSansSemibold}
+          RichText={true}
+          TextSize={px(16)}
+          Size={new UDim2(1, 0, 0.25, 0)}
+          Position={new UDim2(0, 0, 0.75, 0)}
+          BackgroundTransparency={1}
+          TextColor3={new Color3(1, 1, 1)}
         />
-        <Text
-          text={`${p2Name} <font color="rgb(128,128,128)">(${xGame.theirRating})</font>`}
-          font={"SourceSansSemibold"}
-          richText
-          textSize={px(16)}
-          size={new UDim2(1, 0, 0.25, 0)}
-          position={new UDim2(0, 0, 0.75, 0)}
-          noBackground
-          textColor={new Color3(1, 1, 1)}
-        />
-      </Frame>
+      </frame>
 
-      <Frame size={new UDim2(1, 0, 1, 0)} aspectRatio={2.4} noBackground>
-        <ListLayout
-          direction={"Vertical"}
-          verticalAlign={"Center"}
-          horizontalAlign={"Center"}
-          padding={px(5)}
+      <frame
+        Size={new UDim2(1, 0, 1, 0)}
+        BackgroundTransparency={1}
+        BorderSizePixel={0}
+      >
+        <uiaspectratioconstraint AspectRatio={2.4} />
+        <uilistlayout
+          FillDirection={Enum.FillDirection.Vertical}
+          VerticalAlignment={Enum.VerticalAlignment.Center}
+          HorizontalAlignment={Enum.HorizontalAlignment.Center}
+          Padding={new UDim(0, px(5))}
         />
 
         {/* Moves */}
-        <Text
-          text={`${math.floor(xGame.moves / 2)} moves`}
-          font={"SourceSansSemibold"}
-          textSize={px(18)}
-          size={new UDim2(0.8, 0, 0.25, 0)}
-          position={new UDim2(0.15, 0, 0.25, 0)}
-          noBackground
-          textColor={new Color3(0.65, 0.65, 0.65)}
-          textAlign={"Left"}
+        <textlabel
+          Text={`${math.floor(xGame.moves / 2)} moves`}
+          Font={Enum.Font.SourceSansSemibold}
+          TextSize={px(18)}
+          Size={new UDim2(0.8, 0, 0.25, 0)}
+          Position={new UDim2(0.15, 0, 0.25, 0)}
+          BackgroundTransparency={1}
+          TextColor3={new Color3(0.65, 0.65, 0.65)}
+          TextXAlignment={Enum.TextXAlignment.Left}
         >
-          <Image
-            size={new UDim2(0.8, 0, 0.8, 0)}
-            position={new UDim2(-0.1, 0, 0.5, 0)}
-            anchorPoint={new Vector2(0.5, 0.5)}
-            noBackground
-            aspectRatio={1}
-            imageColor={new Color3(0.5, 0.5, 0.5)}
-            image={"rbxassetid://10709768019"}
-          />
-        </Text>
+          <imagelabel
+            Size={new UDim2(0.8, 0, 0.8, 0)}
+            Position={new UDim2(-0.1, 0, 0.5, 0)}
+            AnchorPoint={new Vector2(0.5, 0.5)}
+            BackgroundTransparency={1}
+            ImageColor3={new Color3(0.5, 0.5, 0.5)}
+            Image={"rbxassetid://10709768019"}
+          >
+            <uiaspectratioconstraint AspectRatio={1} />
+          </imagelabel>
+        </textlabel>
 
         {/* Date */}
-        <Text
-          text={DateTime.fromUnixTimestamp(xGame.date).FormatLocalTime(
+        <textlabel
+          Text={DateTime.fromUnixTimestamp(xGame.date).FormatLocalTime(
             "LL",
             "en-us",
           )}
-          font={"SourceSansSemibold"}
-          textSize={px(18)}
-          size={new UDim2(0.8, 0, 0.25, 0)}
-          position={new UDim2(0.15, 0, 0.5, 0)}
-          noBackground
-          textColor={new Color3(0.65, 0.65, 0.65)}
-          textAlign={"Left"}
+          Font={Enum.Font.SourceSansSemibold}
+          TextSize={px(18)}
+          Size={new UDim2(0.8, 0, 0.25, 0)}
+          Position={new UDim2(0.15, 0, 0.5, 0)}
+          BackgroundTransparency={1}
+          TextColor3={new Color3(0.65, 0.65, 0.65)}
+          TextXAlignment={Enum.TextXAlignment.Left}
         >
-          <Image
-            size={new UDim2(0.8, 0, 0.8, 0)}
-            position={new UDim2(-0.1, 0, 0.5, 0)}
-            anchorPoint={new Vector2(0.5, 0.5)}
-            noBackground
-            aspectRatio={1}
-            imageColor={new Color3(0.5, 0.5, 0.5)}
-            image={"rbxassetid://10709789505"}
-          />
-        </Text>
+          <imagelabel
+            Size={new UDim2(0.8, 0, 0.8, 0)}
+            Position={new UDim2(-0.1, 0, 0.5, 0)}
+            AnchorPoint={new Vector2(0.5, 0.5)}
+            BackgroundTransparency={1}
+            ImageColor3={new Color3(0.5, 0.5, 0.5)}
+            Image={"rbxassetid://10709789505"}
+          >
+            <uiaspectratioconstraint AspectRatio={1} />
+          </imagelabel>
+        </textlabel>
 
         {/* Opening
-        <Text
-          text={"Queen's Gambit: Accepted"}
-          font={"SourceSansSemibold"}
-          textSize={px(18)}
-          size={new UDim2(0.8, 0, 0.25, 0)}
-          position={new UDim2(0.15, 0, 0.5, 0)}
-          noBackground
-          textColor={new Color3(0.65, 0.65, 0.65)}
-          textAlign={"Left"}
+        <textlabel
+          Text={"Queen's Gambit: Accepted"}
+          Font={Enum.Font.SourceSansSemibold}
+          TextSize={px(18)}
+          Size={new UDim2(0.8, 0, 0.25, 0)}
+          Position={new UDim2(0.15, 0, 0.5, 0)}
+          BackgroundTransparency={1}
+          TextColor3={new Color3(0.65, 0.65, 0.65)}
+          TextXAlignment={Enum.TextXAlignment.Left}
         >
-          <Image
-            size={new UDim2(0.8, 0, 0.8, 0)}
-            position={new UDim2(-0.1, 0, 0.5, 0)}
-            anchorPoint={new Vector2(0.5, 0.5)}
-            noBackground
-            aspectRatio={1}
-            imageColor={new Color3(0.5, 0.5, 0.5)}
-            image={"rbxassetid://10709781824"}
-          />
-        </Text> */}
-      </Frame>
+          <imagelabel
+            Size={new UDim2(0.8, 0, 0.8, 0)}
+            Position={new UDim2(-0.1, 0, 0.5, 0)}
+            AnchorPoint={new Vector2(0.5, 0.5)}
+            BackgroundTransparency={1}
+            ImageColor3={new Color3(0.5, 0.5, 0.5)}
+            Image={"rbxassetid://10709781824"}
+          >
+            <uiaspectratioconstraint AspectRatio={1} />
+          </imagelabel>
+        </textlabel> */}
+      </frame>
 
       {/* Win / lose indicator */}
-      <Text
-        text={xGame.score === 1 ? "1\n0" : xGame.score === 0 ? "0\n1" : "½\n½"}
-        font={"SourceSansSemibold"}
-        textSize={px(20)}
-        size={new UDim2(0.05, 0, 0.5, 0)}
-        position={new UDim2(0, 0, 0.5, 0)}
-        noBackground
-        textColor={new Color3(0.5, 0.5, 0.5)}
+      <textlabel
+        Text={xGame.score === 1 ? "1\n0" : xGame.score === 0 ? "0\n1" : "½\n½"}
+        Font={Enum.Font.SourceSansSemibold}
+        TextSize={px(20)}
+        Size={new UDim2(0.05, 0, 0.5, 0)}
+        Position={new UDim2(0, 0, 0.5, 0)}
+        BackgroundTransparency={1}
+        TextColor3={new Color3(0.5, 0.5, 0.5)}
       />
-      <Frame
-        size={new UDim2(0, px(25), 0, px(25))}
-        background={
+      <frame
+        Size={new UDim2(0, px(25), 0, px(25))}
+        BackgroundColor3={
           xGame.score === 1
-            ? "#81B64C"
+            ? Color3.fromHex("#81B64C")
             : xGame.score === 0
-              ? "#F6412E"
-              : "#909090"
+              ? Color3.fromHex("#F6412E")
+              : Color3.fromHex("#909090")
         }
-        cornerRadius={px(4)}
+        BorderSizePixel={0}
       >
-        <Image
-          size={new UDim2(0.8, 0, 0.8, 0)}
-          position={new UDim2(0.5, 0, 0.5, 0)}
-          anchorPoint={new Vector2(0.5, 0.5)}
-          noBackground
-          imageColor={"#262522"}
-          image={
+        <uicorner CornerRadius={new UDim(0, px(4))} />
+        <imagelabel
+          Size={new UDim2(0.8, 0, 0.8, 0)}
+          Position={new UDim2(0.5, 0, 0.5, 0)}
+          AnchorPoint={new Vector2(0.5, 0.5)}
+          BackgroundTransparency={1}
+          ImageColor3={Color3.fromHex("#262522")}
+          Image={
             xGame.score === 1
               ? "rbxassetid://10734924532"
               : xGame.score === 0
@@ -228,8 +248,8 @@ function PlayerListItem({
                 : "rbxassetid://10723345990"
           }
         />
-      </Frame>
-    </Button>
+      </frame>
+    </textbutton>
   );
 }
 export default function PlayerList(props: PlayerListProps) {
@@ -259,53 +279,55 @@ export default function PlayerList(props: PlayerListProps) {
   }, [props.player]);
 
   return (
-    <CanvasGroup
-      size={new UDim2(0.5, 0, 0.9, 0)}
-      background={new Color3(0.1, 0.1, 0.1)}
-      position={new UDim2(0.5, 0, 0.5, 0)}
-      anchorPoint={new Vector2(0.5, 0.5)}
-      cornerRadius={px(8)}
-      stroke={{
-        Color: new Color3(0.25, 0.25, 0.25),
-        Thickness: px(0.5),
-      }}
+    <canvasgroup
+      Size={new UDim2(0.5, 0, 0.9, 0)}
+      BackgroundColor3={new Color3(0.1, 0.1, 0.1)}
+      Position={new UDim2(0.5, 0, 0.5, 0)}
+      AnchorPoint={new Vector2(0.5, 0.5)}
+      BorderSizePixel={0}
     >
-      <Frame
-        size={new UDim2(1, 0, 0.1, 0)}
-        background={"#262522"}
-        stroke={{
-          Color: new Color3(0.5, 0.5, 0.5),
-          Thickness: px(0.5),
-        }}
+      <uicorner CornerRadius={new UDim(0, px(8))} />
+      <uistroke Color={new Color3(0.25, 0.25, 0.25)} Thickness={px(0.5)} />
+      <frame
+        Size={new UDim2(1, 0, 0.1, 0)}
+        BackgroundColor3={Color3.fromHex("#262522")}
+        BorderSizePixel={0}
       >
-        <Text
-          text={`${p1Name}'s games`}
-          font={"SourceSansBold"}
-          overrideRoblox={{ TextScaled: true }}
-          size={new UDim2(1, 0, 1, 0)}
-          noBackground
-          textColor={new Color3(1, 1, 1)}
-          padding={new UDim(0.25, 0)}
-          paddingLeft={new UDim(0.05, 0)}
-          textAlign={"Left"}
-        />
-
-        <Frame
-          size={new UDim2(0.5, 0, 0.5, 0)}
-          position={new UDim2(1, -px(25), 0.5, 0)}
-          anchorPoint={new Vector2(0.5, 0.5)}
-          noBackground
-          aspectRatio={1}
+        <uistroke Color={new Color3(0.5, 0.5, 0.5)} Thickness={px(0.5)} />
+        <textlabel
+          Text={`${p1Name}'s games`}
+          Font={Enum.Font.SourceSansBold}
+          TextScaled={true}
+          Size={new UDim2(1, 0, 1, 0)}
+          BackgroundTransparency={1}
+          TextColor3={new Color3(1, 1, 1)}
+          TextXAlignment={Enum.TextXAlignment.Left}
         >
-          <Image
-            size={new UDim2(1, 0, 1, 0)}
-            image={"rbxassetid://10747384394"}
-            noBackground
-            imageTransparency={closeButtonTransparency}
+          <uipadding
+            PaddingTop={new UDim(0.25, 0)}
+            PaddingBottom={new UDim(0.25, 0)}
+            PaddingRight={new UDim(0.25, 0)}
+            PaddingLeft={new UDim(0.05, 0)}
+          />
+        </textlabel>
+
+        <frame
+          Size={new UDim2(0.5, 0, 0.5, 0)}
+          Position={new UDim2(1, -px(25), 0.5, 0)}
+          AnchorPoint={new Vector2(0.5, 0.5)}
+          BackgroundTransparency={1}
+          BorderSizePixel={0}
+        >
+          <uiaspectratioconstraint AspectRatio={1} />
+          <imagelabel
+            Size={new UDim2(1, 0, 1, 0)}
+            Image={"rbxassetid://10747384394"}
+            BackgroundTransparency={1}
+            ImageTransparency={closeButtonTransparency}
           />
           <textbutton
             Size={new UDim2(1, 0, 1, 0)}
-            Text={""}
+            Text=""
             BackgroundTransparency={1}
             Event={{
               MouseEnter: () =>
@@ -315,24 +337,25 @@ export default function PlayerList(props: PlayerListProps) {
               MouseButton1Click: () => Atoms.ViewingPlayer(0),
             }}
           />
-        </Frame>
-      </Frame>
+        </frame>
+      </frame>
 
       {/* List */}
-      <ScrollingFrame
-        noBackground
-        size={new UDim2(1, 0, 0.9, 0)}
-        position={new UDim2(0, 0, 0.1, 0)}
-        direction={"Y"}
-        scrollbar={{ imageTransparency: 0.8 }}
-        overrideRoblox={{ ScrollBarThickness: 8 }}
-        canvasSize={new UDim2(1, 0, 0, px(100) * games.size())}
+      <scrollingframe
+        BackgroundTransparency={1}
+        Size={new UDim2(1, 0, 0.9, 0)}
+        Position={new UDim2(0, 0, 0.1, 0)}
+        ScrollingDirection={Enum.ScrollingDirection.Y}
+        ScrollBarImageTransparency={0.8}
+        ScrollBarThickness={8}
+        CanvasSize={new UDim2(1, 0, 0, px(100) * games.size())}
+        BorderSizePixel={0}
       >
-        <ListLayout
-          direction={"Vertical"}
-          verticalAlign={"Top"}
-          horizontalAlign={"Center"}
-          order={"LayoutOrder"}
+        <uilistlayout
+          FillDirection={Enum.FillDirection.Vertical}
+          VerticalAlignment={Enum.VerticalAlignment.Top}
+          HorizontalAlignment={Enum.HorizontalAlignment.Center}
+          SortOrder={Enum.SortOrder.LayoutOrder}
         />
 
         {games.map((xGame) => (
@@ -343,7 +366,7 @@ export default function PlayerList(props: PlayerListProps) {
             p1Thumbnail={p1Thumbnail}
           />
         ))}
-      </ScrollingFrame>
-    </CanvasGroup>
+      </scrollingframe>
+    </canvasgroup>
   );
 }

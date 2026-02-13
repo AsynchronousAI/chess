@@ -29,6 +29,8 @@ local Board = {
 export type Board = {
     pieces: {[number]: {[number]: vector}},
     occupied: {[number]:vector, all: vector},
+    attacked: {[number]: {[number]: vector, all: vector}},
+    blocking: {[number]: {number}},
     side_to_move: number,
     castling_rights: {
         white_kingside: boolean,
@@ -41,6 +43,9 @@ export type Board = {
     fullmove_number: number
 }
 function Board.create(blank: boolean?): Board
+    local empty = {};
+    for i = 0, 63 do empty[i] = {} end
+
     local board: Board = {
         -- Bitboards for each piece type and color
         pieces = {
@@ -61,6 +66,29 @@ function Board.create(blank: boolean?): Board
                 [KING] = u64.ZERO,
             }
         },
+
+        -- Attacked bitboard
+        attacked = {
+            [WHITE] = {
+                [PAWN] = u64.ZERO,
+                [KNIGHT] = u64.ZERO,
+                [BISHOP] = u64.ZERO,
+                [ROOK] = u64.ZERO,
+                [QUEEN] = u64.ZERO,
+                [KING] = u64.ZERO,
+                all = u64.ZERO,
+            },
+            [BLACK] = {
+                [PAWN] = u64.ZERO,
+                [KNIGHT] = u64.ZERO,
+                [BISHOP] = u64.ZERO,
+                [ROOK] = u64.ZERO,
+                [QUEEN] = u64.ZERO,
+                [KING] = u64.ZERO,
+                all = u64.ZERO,
+            }
+        },
+        blocking = empty,
 
         -- Occupied bitboards (initialized empty)
         occupied = {
@@ -92,6 +120,11 @@ function Board.clone(board: Board): Board
 			[WHITE] = table.clone(board.pieces[WHITE]),
 			[BLACK] = table.clone(board.pieces[BLACK])
 		},
+		attacked = {
+			[WHITE] = table.clone(board.attacked[WHITE]),
+			[BLACK] = table.clone(board.attacked[BLACK])
+		},
+		blocking = table.clone(board.blocking),
 		en_passant_square = board.en_passant_square,
 		halfmove_clock = board.halfmove_clock,
 		fullmove_number = board.fullmove_number,
@@ -118,6 +151,8 @@ function Board.set_start_position(board: Board)
     board.pieces[BLACK][ROOK]   = u64.from_pair(0x81000000, 0x00000000)
     board.pieces[BLACK][QUEEN]  = u64.from_pair(0x08000000, 0x00000000)
     board.pieces[BLACK][KING]   = u64.from_pair(0x10000000, 0x00000000)
+
+    Board.from_fen(board, "4rk2/8/8/5K2/8/6r1/8/8 w - - 0 1");
 
 	Board.update_occupied(board)
 end
@@ -173,6 +208,12 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 		for p = PAWN, KING do
 			if Utils.get_bit(board.pieces[opponent][p], to) then
 				board.pieces[opponent][p] = Utils.clear_bit(board.pieces[opponent][p], to)
+
+				board.occupied.all = Utils.clear_bit(board.occupied.all, to)
+				board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], to)
+
+				table.clear(board.blocking[to]);
+
 				break
 			end
 		end
@@ -181,6 +222,12 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 		if en_passant then
 			local captured_pawn_square = to - (if color == WHITE then 8 else -8)
 			board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
+
+			board.occupied.all = Utils.clear_bit(board.occupied.all, captured_pawn_square)
+			board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], captured_pawn_square)
+
+			table.clear(board.blocking[captured_pawn_square]);
+
 			additionallyMoved = {captured_pawn_square}
 		end
 
@@ -262,11 +309,22 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 		board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_from)
 		board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_to)
 
+		board.occupied.all = Utils.clear_bit(board.occupied.all, rook_from)
+		board.occupied[color] = Utils.clear_bit(board.occupied[color], rook_from)
+
+		board.occupied.all = Utils.set_bit(board.occupied.all, rook_to)
+		board.occupied[color] = Utils.set_bit(board.occupied[color], rook_to)
+
 		additionallyMoved = {rook_from, rook_to}
 	end
 
-	-- Update occupied bitboards
-	Board.update_occupied(board)
+	-- **Incrementally** update occupied bitboards
+	-- Board.update_occupied(board)
+	board.occupied.all = Utils.clear_bit(board.occupied.all, from)
+	board.occupied.all = Utils.set_bit(board.occupied.all, to)
+
+	board.occupied[color] = Utils.clear_bit(board.occupied[color], from)
+	board.occupied[color] = Utils.set_bit(board.occupied[color], to)
 
 	-- Switch side to move
 	board.side_to_move = opponent
@@ -280,35 +338,48 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 end
 
 -- Attacked squares
-local function get_attacked_squares(board: Board, by_color: number): vector
-    local pieces = board.pieces[by_color]
-    local myOccupancy = board.occupied[by_color]
-    local enemyOccupancy = board.occupied[1-by_color]
+function Board.generate_attacked(board: Board, by_color: number)
+    local rookAttacks = u64.ZERO
+    local bishopAttacks = u64.ZERO
+    local queenAttacks = u64.ZERO
 
-    local slidingAttacks = u64.ZERO
-    for i, bb in {pieces[ROOK], pieces[BISHOP], pieces[QUEEN]} do
-        Utils.iterate_bits(bb, function(s)
-            if i == 1 then
-                slidingAttacks = u64.bor(slidingAttacks, Attacks.rook_attacks(s, myOccupancy, enemyOccupancy))
-            elseif i == 2 then
-                slidingAttacks = u64.bor(slidingAttacks, Attacks.bishop_attacks(s, myOccupancy, enemyOccupancy))
-            elseif i == 3 then
-                slidingAttacks = u64.bor(slidingAttacks, Attacks.queen_attacks(s, myOccupancy, enemyOccupancy))
-            end
-        end)
-    end
+    Utils.iterate_bits(board.pieces[by_color][ROOK], function(s)
+        local attack, blockers = Attacks.rook_attacks(s, board.occupied[by_color], board.occupied[1-by_color])
+        board.blocking[s] = blockers
+        rookAttacks = u64.bor(rookAttacks, attack)
+    end)
+    Utils.iterate_bits(board.pieces[by_color][BISHOP], function(s)
+        local attack, blockers = Attacks.bishop_attacks(s, board.occupied[by_color], board.occupied[1-by_color])
+        board.blocking[s] = blockers
+        bishopAttacks = u64.bor(bishopAttacks, attack)
+    end)
+    Utils.iterate_bits(board.pieces[by_color][QUEEN], function(s)
+        local attack, blockers = Attacks.queen_attacks(s, board.occupied[by_color], board.occupied[1-by_color])
+        board.blocking[s] = blockers
+        queenAttacks = u64.bor(queenAttacks, attack)
+    end)
 
-    return u64.hex_bor(
-        Attacks.bulk_pawn_attacks(pieces[PAWN], by_color),
-        Attacks.bulk_knight_attacks(pieces[KNIGHT]),
-        Attacks.bulk_king_attacks(pieces[KING]),
-        slidingAttacks,
-        u64.ZERO, -- would be better to use 4 in a hex-bor than individual bor
-        u64.ZERO
+    local knightAttacks = Attacks.bulk_knight_attacks(board.pieces[by_color][KNIGHT])
+    local kingAttacks = Attacks.bulk_king_attacks(board.pieces[by_color][KING])
+    local pawnAttacks = Attacks.bulk_pawn_attacks(board.pieces[by_color][PAWN], by_color)
+
+    board.attacked[by_color][ROOK] = rookAttacks
+    board.attacked[by_color][BISHOP] = bishopAttacks
+    board.attacked[by_color][QUEEN] = queenAttacks
+    board.attacked[by_color][KNIGHT] = knightAttacks
+    board.attacked[by_color][KING] = kingAttacks
+    board.attacked[by_color][PAWN] = pawnAttacks
+    board.attacked[by_color].all = u64.hex_bor(
+        rookAttacks,
+        bishopAttacks,
+        queenAttacks,
+        knightAttacks,
+        kingAttacks,
+        pawnAttacks
     )
 end
 function Board.is_square_attacked(board: Board, square: number, by_color: number): boolean
-    return Utils.get_bit(get_attacked_squares(board, by_color), square)
+    return Utils.get_bit(board.attacked[by_color].all, square)
 end
 
 -- Move generation
@@ -452,7 +523,6 @@ end
 function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): {number}
     local color = givenColor or board.side_to_move
 	local moves = table.create(30)
-	local attacked = get_attacked_squares(board, 1-color)
 
 	generate_pawn_moves(board, moves, color)
 	generate_piece_moves(board, moves, KNIGHT, Attacks.knight_attacks, color)
@@ -460,13 +530,15 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 	generate_piece_moves(board, moves, ROOK, Attacks.rook_attacks, color)
 	generate_piece_moves(board, moves, QUEEN, Attacks.queen_attacks, color)
 	generate_piece_moves(board, moves, KING, Attacks.king_attacks, color)
-	generate_castle_moves(board, moves, color, attacked)
+	generate_castle_moves(board, moves, color, board.attacked[1-color].all)
+
+	Board.generate_attacked(board, 1-color)
 
 	-- TODO: Add castling moves
 
 	local headKingPos = Board.find_piece(board, KING, color)
 	if not headKingPos then
-	    error("No king!")
+	    return {}
 	end
 	if filePseudoLegal then return moves end
 
@@ -474,6 +546,7 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 
     for _, move in moves do
 		local branch = Board.clone(board)
+
 		Board.make_move(branch, move)
 
 		-- Is this move moving the king?
@@ -507,7 +580,16 @@ end
 -- Pieces
 function Board.get_piece(board: Board, loc: number): {[number]: number}?
     local search = u64.lshift(u64.ONE, loc)
+
+    if u64.band(board.occupied.all, search) == u64.ZERO then
+        return nil
+    end
+
     for color, pieces in board.pieces do
+        -- if u64.band(board.occupied[color], search) == u64.ZERO then
+        --     return nil
+        -- end
+
         for typ, bb in pieces do
             if u64.band(bb, search) ~= u64.ZERO then
                 return {typ, color}
@@ -547,7 +629,7 @@ function Board.get_game_state(board: Board, providedMoves: {number}?)
     -- Check if king is in check
     local king_square = Board.find_piece(board, KING, color)
     if not king_square then
-        error("No king!")
+        return "faulty"
     end
 
     local in_check = Board.is_square_attacked(board, king_square, 1 - color)
