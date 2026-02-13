@@ -1,5 +1,4 @@
 local bitboard = require("./engine/bitboard").BitBoard
-local Move = require("./engine/move").Move
 
 local s = 0
 local function chess()
@@ -19,14 +18,16 @@ local function chess()
         local move = legal_moves[math.random(1,#legal_moves)]
         bitboard.make_move(board, move)
 
-        -- print(bitboard.to_fen(board), Move.toString(move))
+        -- print(bitboard.to_fen(board))
     end
 
     -- Game state
     print("Game state: ", state, s)
 end
 
+local startTime = os.clock()
 for i = 1, 50 do
     chess()
 end
-print(s, "samples")
+print(s, "positions")
+print("Time taken: ", os.clock()-startTime)

@@ -1,7 +1,6 @@
 --!native
 --!optimize 2
 --!strict
-
 local u64 = require("./int64")
 local Utils = require("./utils")
 local Attacks = require("./attacks")
@@ -12,6 +11,23 @@ local FEN = require("./fen")
 
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 local RANK_1, RANK_2, RANK_7, RANK_8, NOT_FILE_A, NOT_FILE_H = Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.NOT_FILE_A, Utils.NOT_FILE_H
+local make_pair, split_pair = Utils.make_pair, Utils.split_pair
+
+export type Board = {
+    pieces: {[number]: {[number]: vector}},
+    occupied: {[number]:vector, all: vector},
+    attacked: {[number]: {[number]: vector, all: vector}},
+    side_to_move: number,
+    castling_rights: {
+        white_kingside: boolean,
+        white_queenside: boolean,
+        black_kingside: boolean,
+        black_queenside: boolean
+    },
+    en_passant_square: number?,
+    halfmove_clock: number,
+    fullmove_number: number
+}
 
 local Board = {
     hash = Zobrist,
@@ -26,22 +42,6 @@ local Board = {
     from_buffer = Encoding.from_buffer
 }
 
-export type Board = {
-    pieces: {[number]: {[number]: vector}},
-    occupied: {[number]:vector, all: vector},
-    attacked: {[number]: {[number]: vector, all: vector}},
-    blocking: {[number]: {number}},
-    side_to_move: number,
-    castling_rights: {
-        white_kingside: boolean,
-        white_queenside: boolean,
-        black_kingside: boolean,
-        black_queenside: boolean
-    },
-    en_passant_square: number?,
-    halfmove_clock: number,
-    fullmove_number: number
-}
 function Board.create(blank: boolean?): Board
     local empty = {};
     for i = 0, 63 do empty[i] = {} end
@@ -88,7 +88,6 @@ function Board.create(blank: boolean?): Board
                 all = u64.ZERO,
             }
         },
-        blocking = empty,
 
         -- Occupied bitboards (initialized empty)
         occupied = {
@@ -124,7 +123,6 @@ function Board.clone(board: Board): Board
 			[WHITE] = table.clone(board.attacked[WHITE]),
 			[BLACK] = table.clone(board.attacked[BLACK])
 		},
-		blocking = table.clone(board.blocking),
 		en_passant_square = board.en_passant_square,
 		halfmove_clock = board.halfmove_clock,
 		fullmove_number = board.fullmove_number,
@@ -152,7 +150,7 @@ function Board.set_start_position(board: Board)
     board.pieces[BLACK][QUEEN]  = u64.from_pair(0x08000000, 0x00000000)
     board.pieces[BLACK][KING]   = u64.from_pair(0x10000000, 0x00000000)
 
-    Board.from_fen(board, "4rk2/8/8/5K2/8/6r1/8/8 w - - 0 1");
+    -- Board.from_fen(board, "8/8/8/2k5/8/8/8/1K5r w - - 0 1");
 
 	Board.update_occupied(board)
 end
@@ -212,8 +210,6 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 				board.occupied.all = Utils.clear_bit(board.occupied.all, to)
 				board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], to)
 
-				table.clear(board.blocking[to]);
-
 				break
 			end
 		end
@@ -225,8 +221,6 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 
 			board.occupied.all = Utils.clear_bit(board.occupied.all, captured_pawn_square)
 			board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], captured_pawn_square)
-
-			table.clear(board.blocking[captured_pawn_square]);
 
 			additionallyMoved = {captured_pawn_square}
 		end
@@ -338,46 +332,69 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 end
 
 -- Attacked squares
-function Board.generate_attacked(board: Board, by_color: number)
-    local rookAttacks = u64.ZERO
-    local bishopAttacks = u64.ZERO
-    local queenAttacks = u64.ZERO
+function Board.regenerate_piece_attacked(board: Board, by_color: number, piece: number): {number}
+    local blockingPairs = {}
 
-    Utils.iterate_bits(board.pieces[by_color][ROOK], function(s)
-        local attack, blockers = Attacks.rook_attacks(s, board.occupied[by_color], board.occupied[1-by_color])
-        board.blocking[s] = blockers
-        rookAttacks = u64.bor(rookAttacks, attack)
-    end)
-    Utils.iterate_bits(board.pieces[by_color][BISHOP], function(s)
-        local attack, blockers = Attacks.bishop_attacks(s, board.occupied[by_color], board.occupied[1-by_color])
-        board.blocking[s] = blockers
-        bishopAttacks = u64.bor(bishopAttacks, attack)
-    end)
-    Utils.iterate_bits(board.pieces[by_color][QUEEN], function(s)
-        local attack, blockers = Attacks.queen_attacks(s, board.occupied[by_color], board.occupied[1-by_color])
-        board.blocking[s] = blockers
-        queenAttacks = u64.bor(queenAttacks, attack)
-    end)
+    local attacks = u64.ZERO
+    local attack_func
 
-    local knightAttacks = Attacks.bulk_knight_attacks(board.pieces[by_color][KNIGHT])
-    local kingAttacks = Attacks.bulk_king_attacks(board.pieces[by_color][KING])
-    local pawnAttacks = Attacks.bulk_pawn_attacks(board.pieces[by_color][PAWN], by_color)
+    if piece == KNIGHT then
+        attacks = Attacks.bulk_knight_attacks(board.pieces[by_color][piece])
+    elseif piece == KING then
+        attacks = Attacks.bulk_king_attacks(board.pieces[by_color][piece])
+    elseif piece == PAWN then
+        attacks = Attacks.bulk_pawn_attacks(board.pieces[by_color][piece], by_color)
+    elseif piece == QUEEN then
+        attack_func = Attacks.queen_attacks
+    elseif piece == ROOK then
+        attack_func = Attacks.rook_attacks
+    elseif piece == BISHOP then
+        attack_func = Attacks.bishop_attacks
+    end
 
-    board.attacked[by_color][ROOK] = rookAttacks
-    board.attacked[by_color][BISHOP] = bishopAttacks
-    board.attacked[by_color][QUEEN] = queenAttacks
-    board.attacked[by_color][KNIGHT] = knightAttacks
-    board.attacked[by_color][KING] = kingAttacks
-    board.attacked[by_color][PAWN] = pawnAttacks
+    -- SLIDING PIECES:
+    -- Note: In the future, we can regenerate individuals or maybe even single rays (NE, NW) of a sliding piece based on pins.
+    if attack_func then
+        Utils.iterate_bits(board.pieces[by_color][piece], function(s)
+            local attack, blockers = attack_func(s, board.occupied[by_color], board.occupied[1-by_color])
+            attacks = u64.bor(attacks, attack)
+
+            for _, blocker in blockers do
+                table.insert(blockingPairs, make_pair(blocker, s))
+            end
+        end)
+    end
+
+    board.attacked[by_color][piece] = attacks
+
+    return blockingPairs
+end
+function Board.attacked_occupancy(board: Board, by_color: number)
     board.attacked[by_color].all = u64.hex_bor(
-        rookAttacks,
-        bishopAttacks,
-        queenAttacks,
-        knightAttacks,
-        kingAttacks,
-        pawnAttacks
+        board.attacked[by_color][ROOK],
+        board.attacked[by_color][BISHOP],
+        board.attacked[by_color][QUEEN],
+        board.attacked[by_color][KNIGHT],
+        board.attacked[by_color][KING],
+        board.attacked[by_color][PAWN]
     )
 end
+function Board.regenerate_all_attacked(board: Board, by_color: number)
+    local blockingPairs = {}
+
+    for _, i in Board.regenerate_piece_attacked(board, by_color, QUEEN) do table.insert(blockingPairs, i) end
+    for _, i in Board.regenerate_piece_attacked(board, by_color, ROOK) do table.insert(blockingPairs, i) end
+    for _, i in Board.regenerate_piece_attacked(board, by_color, BISHOP) do table.insert(blockingPairs, i) end
+
+    Board.regenerate_piece_attacked(board, by_color, KNIGHT)
+    Board.regenerate_piece_attacked(board, by_color, KING)
+    Board.regenerate_piece_attacked(board, by_color, PAWN)
+
+    Board.attacked_occupancy(board, by_color)
+
+    return blockingPairs
+end
+
 function Board.is_square_attacked(board: Board, square: number, by_color: number): boolean
     return Utils.get_bit(board.attacked[by_color].all, square)
 end
@@ -465,6 +482,7 @@ local function generate_piece_moves(board: Board, moves: {number}, piece_type: n
     end)
 end
 
+-- Castling
 local CASTLE_MASKS = {
     [WHITE] = {
         [true] = {  -- kingside
@@ -520,6 +538,7 @@ function generate_castle_moves(board: Board, moves: {number}, color: number, att
     end
 end
 
+-- Generate Legal Moves
 function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): {number}
     local color = givenColor or board.side_to_move
 	local moves = table.create(30)
@@ -532,9 +551,7 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 	generate_piece_moves(board, moves, KING, Attacks.king_attacks, color)
 	generate_castle_moves(board, moves, color, board.attacked[1-color].all)
 
-	Board.generate_attacked(board, 1-color)
-
-	-- TODO: Add castling moves
+	local blocking = Board.regenerate_all_attacked(board, 1-color)
 
 	local headKingPos = Board.find_piece(board, KING, color)
 	if not headKingPos then
@@ -546,12 +563,55 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 
     for _, move in moves do
 		local branch = Board.clone(board)
+		local isKing = Move.getPieceType(move) == KING
 
+        local capturingPiece = if Move.getCaptured(move) then Board.get_piece(branch, Move.getTo(move)) else nil
 		Board.make_move(branch, move)
+
+
+        --- Regenerate attack bitboards
+        -- Capturing piece (to escape check)
+        if capturingPiece then
+			Board.regenerate_piece_attacked(branch, 1-color, capturingPiece[1])
+		end
+
+		-- Blocking sliding pieces
+		local valid = true;
+		local alreadyGenerated = {};
+
+		local to = Move.getTo(move)
+		local from = Move.getFrom(move)
+
+		for _, block in blocking do
+		    local slider, blocker = split_pair(block)
+
+			if isKing and blocker == to then -- king will take spot of blocker
+			    valid = false
+				break
+			end
+			if blocker ~= from then -- we are not moving the blocker
+			    continue
+			end
+
+            local piece = Board.get_piece(branch, slider)
+            if not piece then continue end
+
+            -- if it is opponents piece and not already regenerated
+            if piece[2] == 1-color and not alreadyGenerated[piece[1]] then
+                alreadyGenerated[piece[2]] = true;
+                Board.regenerate_piece_attacked(branch, 1-color, piece[1])
+            end
+        end
+
+        if not valid then
+            continue
+        end
+
+		Board.attacked_occupancy(branch, 1-color)
 
 		-- Is this move moving the king?
 		local kingPos = headKingPos
-		if Move.getPieceType(move) == KING then
+		if isKing then
 			kingPos = Move.getTo(move)
 		end
 
@@ -564,6 +624,7 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
     return filtered_moves
 end
 function Board.generate_legal_moves_from(board: Board, from: number, filePseudoLegal: boolean?, color: number?)
+    -- This is not run much in the backend, so does not require the "ultraspeed" bitboard like the bot does.
     local allMoves = Board.generate_legal_moves(board, filePseudoLegal, color)
     local moves = {}
 

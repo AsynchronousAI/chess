@@ -88,6 +88,13 @@ end
 local function get_square_index(file: number, rank: number)
 	return bit32.bor(bit32.lshift(rank, 3), file)
 end
+local function make_pair(a: number, b: number) -- inspired by C++ make_pair
+    return bit32.bor(bit32.lshift(a, 6), b)
+end
+local function split_pair(pair: number)
+    return bit32.band(pair, 63), bit32.arshift(pair, 6)
+end
+
 
 return {
     -- Constants
@@ -120,6 +127,8 @@ return {
     popcount = popcount,
     iterate_bits = iterate_bits,
     unit_board = unit_board,
+    make_pair = make_pair,
+    split_pair = split_pair,
 
     separate_square_index = separate_square_index,
     get_square_index = get_square_index

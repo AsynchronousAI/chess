@@ -1,7 +1,5 @@
 # TODO:
-- Pin detection
 - No string keys at all for board object
-- If a rook is attacking the king, you can just move backwards.
 - Eval function cannot distinguish between a checkmate and a stalemate.
 - UI is nasty
 - Queenside castling will not work if kingside does cannot
@@ -9,3 +7,6 @@
 - Thread pool
 - Incremental evaluation
 - Increase depth when capturing
+
+# Notes:
+- Run a benchmark with `luau src/shared/test.server.luau --profile && python3 tools/perfgraph.py profile.out > profile.svg`
