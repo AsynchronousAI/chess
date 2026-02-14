@@ -1,7 +1,6 @@
 # TODO:
 - Eval function cannot distinguish between a checkmate and a stalemate.
 - UI is nasty
-- Queenside castling will not work if kingside does cannot
 - Cannot escape focus on a game
 - Thread pool
 - Incremental evaluation

@@ -534,30 +534,42 @@ function generate_castle_moves(board: Board, moves: {number}, color: number, att
 
     if color == WHITE then
         if Utils.get_bit32(board.castling_rights, WK) then
-            if u64.band(occupied, masks[true].no_pieces) ~= u64.ZERO then return end
-            if u64.band(attacked, masks[true].no_checks) ~= u64.ZERO then return end
+            if u64.band(occupied, masks[true].no_pieces) == u64.ZERO and
+               u64.band(attacked, masks[true].no_checks) == u64.ZERO then
 
-    	    table.insert(moves, Move.create(4, 6, KING, false, nil, false, true, true))
-    	end
+                table.insert(moves,
+                    Move.create(4, 6, KING, false, nil, false, true, true)
+                )
+            end
+        end
         if Utils.get_bit32(board.castling_rights, WQ) then
-            if u64.band(occupied, masks[false].no_pieces) ~= u64.ZERO then return end
-            if u64.band(attacked, masks[false].no_checks) ~= u64.ZERO then return end
+            if u64.band(occupied, masks[false].no_pieces) == u64.ZERO and
+               u64.band(attacked, masks[false].no_checks) == u64.ZERO then
 
-    	    table.insert(moves, Move.create(4, 2, KING, false, nil, false, true, false))
+                table.insert(moves,
+                    Move.create(4, 2, KING, false, nil, false, true, false)
+                )
+            end
         end
     else
-    	if Utils.get_bit32(board.castling_rights, BK) then
-            if u64.band(occupied, masks[true].no_pieces) ~= u64.ZERO then return end
-            if u64.band(attacked, masks[true].no_checks) ~= u64.ZERO then return end
+        if Utils.get_bit32(board.castling_rights, BK) then
+            if u64.band(occupied, masks[true].no_pieces) == u64.ZERO and
+               u64.band(attacked, masks[true].no_checks) == u64.ZERO then
 
-    	    table.insert(moves, Move.create(60, 62, KING, false, nil, false, true, true))
-    	end
+                table.insert(moves,
+                    Move.create(60, 62, KING, false, nil, false, true, true)
+                )
+            end
+        end
         if Utils.get_bit32(board.castling_rights, BQ) then
-            if u64.band(occupied, masks[false].no_pieces) ~= u64.ZERO then return end
-            if u64.band(attacked, masks[false].no_checks) ~= u64.ZERO then return end
+            if u64.band(occupied, masks[false].no_pieces) == u64.ZERO and
+               u64.band(attacked, masks[false].no_checks) == u64.ZERO then
 
-    	    table.insert(moves, Move.create(60, 58, KING, false, nil, false, true, false))
-    	end
+                table.insert(moves,
+                    Move.create(60, 58, KING, false, nil, false, true, false)
+                )
+            end
+        end
     end
 end
 

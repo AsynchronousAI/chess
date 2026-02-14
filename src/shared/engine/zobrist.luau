@@ -50,10 +50,10 @@ return function(board)
     end
 
     -- Castling
-    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, WK)])
-    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, WQ)])
-    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, BK)])
-    hash = bit32.bxor(hash, Zobrist.castling[Utils.get_bit32(board.castling_rights, BQ)])
+    if Utils.get_bit32(board.castling_rights, WK) then hash = bit32.bxor(hash, Zobrist.castling[1]) end
+    if Utils.get_bit32(board.castling_rights, WQ) then hash = bit32.bxor(hash, Zobrist.castling[2]) end
+    if Utils.get_bit32(board.castling_rights, BK) then hash = bit32.bxor(hash, Zobrist.castling[3]) end
+    if Utils.get_bit32(board.castling_rights, BQ) then hash = bit32.bxor(hash, Zobrist.castling[4]) end
 
     -- En passant
     if board.en_passant_square then
