@@ -4,6 +4,8 @@
 - Cannot escape focus on a game
 - Thread pool
 - Incremental evaluation
+- Rewrite minimax algorithm
 
-# Notes:
-- Run a benchmark with `luau src/shared/test.server.luau --codegen -O2 --profile && python3 tools/perfgraph.py profile.out > profile.svg`
+## Benchmarking:
+- `luau src/shared/miniMax.test.luau --codegen -O2 --profile && python3 tools/perfgraph.py profile.out > profile.svg`
+- `luau src/shared/legalMoveGen.test.luau --codegen -O2 --profile && python3 tools/perfgraph.py profile.out > profile.svg`

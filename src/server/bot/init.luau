@@ -13,10 +13,8 @@ local LegalMovesTransposition = game:GetService("SharedTableRegistry"):GetShared
 
 --[[ Minimax host ]]
 local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
-    local score = eval(board)
-
     if depth >= maxDepth then
-        return score, depth, nil
+        return eval(board), depth, nil
     end
 
     local maxDepthReached = depth

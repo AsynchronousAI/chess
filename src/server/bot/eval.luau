@@ -1,11 +1,26 @@
 --!native
 --!optimize 2
 
-local libs = require(script.Parent.import)
-local Piece = libs.Board.Piece
-local BitBoard = libs.BitBoard
+local libs, BitBoard
+if game then
+    libs = require(script.Parent.import)
+    BitBoard = libs.BitBoard
+else
+    BitBoard = require("../../shared/engine/bitboard").BitBoard
+end
 
-local transposition = game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
+local Piece = {
+  none = -1,
+  pawn = 0,
+  knight = 1,
+  bishop = 2,
+  rook = 3,
+  queen = 4,
+  king = 5,
+}
+
+local transposition = game and game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
+
 local pst = {
     [Piece.pawn] = {
         198,198,198,198,198,198,198,
@@ -76,12 +91,16 @@ local pst = {
 
 return function (board)
     local value = 0
-    local hash = BitBoard.hash(board)
-    if transposition[hash] then
-        return transposition[hash]
+
+    local hash
+    if transposition then
+        hash = BitBoard.hash(board)
+        if transposition[hash] then
+            return transposition[hash]
+        end
     end
 
-    local mate = ""--libs.LegalMoves.AnalyzeMates(board)
+    local mate = ""--BitBoard.get_game_state(board)
     if mate == "stalemate" then
         value = 0
     elseif mate == "checkmate" then
@@ -98,6 +117,6 @@ return function (board)
         end
     end
 
-    transposition[hash] = value
+    if transposition then transposition[hash] = value end
     return value
 end

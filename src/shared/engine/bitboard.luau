@@ -684,9 +684,10 @@ function Board.get_all_pieces(board: Board)
     local pieces_list = {}
 
     for pos = 0, 63 do
-        local piece = Board.get_piece(board, pos)
+        local piece = board.pieceTable[pos]
         if piece then
-            table.insert(pieces_list, { piece[1], piece[2], pos })
+            local a, b = split_pair(piece)
+            table.insert(pieces_list, { a, b, pos })
         end
     end
 

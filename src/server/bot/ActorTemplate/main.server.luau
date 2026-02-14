@@ -18,7 +18,6 @@ local UPPERBOUND = 2
 
 local nodes = 0;
 local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
-    local score = eval(board)
     local hash = libs.BitBoard.hash(board)
 
     -- TT lookup
@@ -42,7 +41,7 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
 
 
     if depth >= maxDepth then
-        return score, depth, if SEQUENCE then {} else nil
+        return eval(board), depth, if SEQUENCE then {} else nil
     end
 
     local maxDepthReached = depth
