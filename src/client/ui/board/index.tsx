@@ -49,6 +49,10 @@ export default function Board() {
   gameplay?.setChessBoard(chessBoardRef);
   gameplay?.setEvaluationBar(evalBarRef);
 
+  useEffect(() => {
+    gameplay?.newGame(true);
+  }, [gameplay]);
+
   /* Handlers */
   const onMove = (location: number) => {
     if (
@@ -140,7 +144,7 @@ export default function Board() {
         />
 
         {/* Player component handles layout with the layoutOrder being either 0 or 2 */}
-        <Player
+        {/*<Player
           userId={activeGame.player2 ?? 0}
           flag={"🇺🇸"}
           rating={activeGame.player2elo ?? 0}
@@ -167,7 +171,7 @@ export default function Board() {
           piecesTaken={takenPieces[currentMove]?.[0] ?? []}
           iconPack={iconPack}
           isMyTurn={isPlayer1Turn}
-        />
+        />*/}
         <ChessBoard
           ref={chessBoardRef}
           iconPack={iconPack}

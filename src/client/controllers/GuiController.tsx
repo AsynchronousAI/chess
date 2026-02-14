@@ -5,23 +5,23 @@ import { createPortal, createRoot } from "@rbxts/react-roblox";
 import { Players } from "@rbxts/services";
 import Atoms from "client/ui/atoms";
 import Board from "client/ui/board";
-import { ConfirmationPopup } from "client/ui/confirmationPopup";
-import { EndgamePopup } from "client/ui/endgamePopup";
-import { Menu } from "client/ui/menu";
-import PlayerList from "client/ui/playerList";
+// import { ConfirmationPopup } from "client/ui/confirmationPopup";
+// import { EndgamePopup } from "client/ui/endgamePopup";
+// import { Menu } from "client/ui/menu";
+// import PlayerList from "client/ui/playerList";
 
 function GameRoot() {
-  const endgamePopup = useAtom(Atoms.EndgamePopup);
-  const confirmationPopup = useAtom(Atoms.ConfirmationPopup);
-  const viewingPlayer = useAtom(Atoms.ViewingPlayer);
+  // const endgamePopup = useAtom(Atoms.EndgamePopup);
+  // const confirmationPopup = useAtom(Atoms.ConfirmationPopup);
+  // const viewingPlayer = useAtom(Atoms.ViewingPlayer);
 
   return (
     <screengui ZIndexBehavior="Sibling" IgnoreGuiInset>
       <Board />
-      {viewingPlayer > 0 && <PlayerList player={Players.LocalPlayer.UserId} />}
-      <ConfirmationPopup {...confirmationPopup} />
+      {/*{viewingPlayer > 0 && <PlayerList player={Players.LocalPlayer.UserId} />}*/}
+      {/*<ConfirmationPopup {...confirmationPopup} />
       <EndgamePopup {...endgamePopup} />
-      <Menu />
+      <Menu />*/}
     </screengui>
   );
 }

@@ -296,8 +296,8 @@ export class Gameplay implements OnStart {
       player1eloDiff: 0,
       player2eloDiff: 0,
 
-      player1time: 300,
-      player2time: 300,
+      player1time: math.huge,
+      player2time: math.huge,
 
       lastMove: os.clock(),
 

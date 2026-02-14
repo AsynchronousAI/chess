@@ -154,7 +154,7 @@ export function Explorer({
             );
           })}
       </scrollingframe>
-
+      {/*
       <Button
         title={"Resign"}
         image={"rbxassetid://10723375890"}
@@ -164,7 +164,7 @@ export function Explorer({
         title={"Draw"}
         image={"rbxassetid://13738539975"}
         callback={() => gameplay?.draw()}
-      />
+      />*/}
     </canvasgroup>
   );
 }

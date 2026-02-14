@@ -1,5 +1,4 @@
-import React from "@rbxts/react";
-import { usePx } from "./hooks/usePx";
+import React, { useEffect } from "@rbxts/react";
 import { Button } from "./components/button";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import { Gameplay } from "client/controllers/gameplay";
@@ -11,6 +10,7 @@ export function Menu() {
     : undefined;
 
   const activeGame = gameplay?.useActiveGame();
+
   return (
     <frame
       Size={new UDim2(1, 0, 1, 0)}
