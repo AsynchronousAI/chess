@@ -1,14 +1,31 @@
 import { Color, Piece, Square } from "shared/board";
 
-export type BitBoard = {
-  side_to_move: Color;
-  pieces: Record<Color, Record<Piece, vector>>;
-  occupied: Record<Color | "all", vector>;
+export type UndoRecord = {
+  move: number;
+  from: Square;
+  to: Square;
+  piece: Piece;
+  captured_piece?: { type: Piece; color: Color; square: Square };
+  promotion?: Piece;
   castling_rights: number;
   en_passant_square?: Square;
   halfmove_clock: number;
   fullmove_number: number;
+  additionallyMoved?: Square[]; // rook moves for castling or ep captures
 };
+
+export type BitBoard = {
+  side_to_move: Color;
+  pieces: Record<Color, Record<Piece, vector>>;
+  occupied: Record<Color | "all", vector>;
+  attacked: Record<Color, Record<Piece | "all", vector>>;
+  castling_rights: number;
+  en_passant_square?: Square;
+  halfmove_clock: number;
+  fullmove_number: number;
+  pieceTable: Record<number, number>;
+};
+
 export type Move = number;
 
 export namespace BitBoard {
@@ -29,7 +46,9 @@ export namespace BitBoard {
   export function make_move(
     board: BitBoard,
     move: Move,
-  ): [Square, Square?] | undefined;
+  ): [Square, Square?] | undefined /* UndoRecord */;
+
+  // export function undo_move(board: BitBoard, record: UndoRecord): void;
 
   export function generate_legal_moves(
     board: BitBoard,
@@ -71,6 +90,7 @@ export namespace BitBoard {
     | "timeout"
     | "resign"
     | "draw"
+    | "faulty"
     | "";
 
   export function separate_square_index(loc: number): [number, number];

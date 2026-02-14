@@ -93,7 +93,7 @@ local function separate_square_index(loc: number)
 	return { bit32.band(loc, 7), bit32.arshift(loc, 3) }
 end
 local function get_square_index(file: number, rank: number)
-	return bit32.bor(BIT_MASKS32[3], file)
+    return bit32.bor(bit32.lshift(rank, 3), file)
 end
 local function make_pair(a: number, b: number)
     return bit32.bor(bit32.lshift(a, 6), bit32.band(b, 63))
