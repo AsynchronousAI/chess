@@ -47,6 +47,13 @@ do
     end
 end
 
+local BIT_MASKS32 = {}
+do
+    for i = 0, 31 do
+        BIT_MASKS32[i] = bit32.lshift(1, i)
+    end
+end
+
 local function unit_board(square)
     return BIT_MASKS[square]
 end
@@ -76,7 +83,7 @@ function iterate_bits(bb, callback)
     while bb ~= u64.ZERO do
         local index = u64.countrz(bb)
         callback(index)
-        bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, index)))
+        bb = u64.band(bb, u64.bnot(BIT_MASKS[index]))
     end
 end
 
@@ -86,10 +93,10 @@ local function separate_square_index(loc: number)
 	return { bit32.band(loc, 7), bit32.arshift(loc, 3) }
 end
 local function get_square_index(file: number, rank: number)
-	return bit32.bor(bit32.lshift(rank, 3), file)
+	return bit32.bor(BIT_MASKS32[3], file)
 end
 local function make_pair(a: number, b: number) -- inspired by C++ make_pair
-    return bit32.bor(bit32.lshift(a, 6), b)
+    return bit32.bor(BIT_MASKS32[6], b)
 end
 local function split_pair(pair: number)
     return bit32.arshift(pair, 6), bit32.band(pair, 63)

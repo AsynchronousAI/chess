@@ -41,8 +41,8 @@ function FEN.from_fen(board, fen)
 	end
 
 	-- clear all bitboards first
-	for _, color in pairs({WHITE, BLACK}) do
-		for _, typ in pairs({PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING}) do
+	for _, color in {WHITE, BLACK} do
+		for _, typ in {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING} do
 			board.pieces[color][typ] = u64.ZERO
 		end
 		board.occupied[color] = u64.ZERO
