@@ -95,11 +95,11 @@ end
 local function get_square_index(file: number, rank: number)
 	return bit32.bor(BIT_MASKS32[3], file)
 end
-local function make_pair(a: number, b: number) -- inspired by C++ make_pair
-    return bit32.bor(BIT_MASKS32[6], b)
+local function make_pair(a: number, b: number)
+    return bit32.bor(bit32.lshift(a, 6), bit32.band(b, 63))
 end
 local function split_pair(pair: number)
-    return bit32.arshift(pair, 6), bit32.band(pair, 63)
+    return bit32.rshift(pair, 6), bit32.band(pair, 63)
 end
 local function set_bit32(num: number, index: number)
     return bit32.bor(num, bit32.lshift(1, index))
