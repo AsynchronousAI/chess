@@ -43,12 +43,9 @@ export namespace BitBoard {
   export function set_start_position(board: BitBoard): void;
   export function update_occupied(board: BitBoard): void;
 
-  export function make_move(
-    board: BitBoard,
-    move: Move,
-  ): [Square, Square?] | undefined /* UndoRecord */;
+  export function make_move(board: BitBoard, move: Move): UndoRecord;
 
-  // export function undo_move(board: BitBoard, record: UndoRecord): void;
+  export function undo_move(board: BitBoard, record: UndoRecord): void;
 
   export function generate_legal_moves(
     board: BitBoard,

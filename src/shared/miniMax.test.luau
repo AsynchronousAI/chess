@@ -57,12 +57,12 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local bestMove = moves[1]
 
     for _, move in moves do
-        local branch = bitboard.clone(board)
-        bitboard.make_move(branch, move)
+        local record = bitboard.make_move(board, move)
 
         nodes = nodes + 1
 
-        local score = minimax(branch, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+        local score = minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+        bitboard.undo_move(board, record)
 
         if isMaximizing then
             if score > bestScore then

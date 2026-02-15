@@ -181,9 +181,9 @@ export class Gameplay implements OnStart {
     if (alsoMove) moved.push(alsoMove);
     if (!overrideBoard) {
       if (promotion) moveData = Move.setPromotion(moveData, promotion);
-      const additionallyMoved = BitBoard.make_move(this.board, moveData);
-      if (additionallyMoved)
-        moved.push(additionallyMoved as [Square, Square?, Piece?]);
+      const record = BitBoard.make_move(this.board, moveData);
+      if (record.additionallyMoved)
+        moved.push(record.additionallyMoved as [Square, Square?, Piece?]);
     }
     this.animateBoard(moved);
 

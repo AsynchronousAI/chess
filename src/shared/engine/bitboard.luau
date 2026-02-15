@@ -199,7 +199,7 @@ export type UndoRecord = {
     additionallyMoved: {number}?,  -- rook moves for castling or ep captures
 }
 
-function Board.make_move(board: Board, move: number): {[number]: number}|nil -- Returns additional changes like: [{from, to} or {from, nil}]
+function Board.make_move(board: Board, move: number): UndoRecord
 	local color = board.side_to_move
 	local opponent = 1 - color
 
@@ -210,6 +210,34 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 	local en_passant = Move.getEnPassant(move)
 	local promotion = Move.getPromotion(move)
 	local castling, kingside = Move.getCastling(move)
+
+	local captured_piece = nil
+	if captured then
+		local captured_square = to
+		if en_passant then
+			captured_square = to - (if color == WHITE then 8 else -8)
+		end
+
+		local captured_info = board.pieceTable[captured_square]
+		if captured_info then
+			local cap_type, cap_color = split_pair(captured_info)
+			captured_piece = {type = cap_type, color = cap_color, square = captured_square}
+		end
+	end
+
+	local record: UndoRecord = {
+		move = move,
+		from = from,
+		to = to,
+		piece = piece_type,
+		captured_piece = captured_piece,
+		promotion = promotion,
+		castling_rights = board.castling_rights,
+		en_passant_square = board.en_passant_square,
+		halfmove_clock = board.halfmove_clock,
+		fullmove_number = board.fullmove_number,
+		additionallyMoved = nil,
+	}
 
 	local additionallyMoved = nil
 
@@ -351,7 +379,65 @@ function Board.make_move(board: Board, move: number): {[number]: number}|nil -- 
 		board.fullmove_number += 1
 	end
 
-	return additionallyMoved
+	if additionallyMoved then
+		record.additionallyMoved = additionallyMoved
+	end
+
+	return record
+end
+
+function Board.undo_move(board: Board, record: UndoRecord)
+	local from = record.from
+	local to = record.to
+	local piece_type = record.piece
+	local promotion = record.promotion
+
+	local color = 1 - board.side_to_move
+
+	board.side_to_move = color
+	board.castling_rights = record.castling_rights
+	board.en_passant_square = record.en_passant_square
+	board.halfmove_clock = record.halfmove_clock
+	board.fullmove_number = record.fullmove_number
+
+	local final_piece_type = promotion or piece_type
+	board.pieces[color][final_piece_type] = Utils.clear_bit(board.pieces[color][final_piece_type], to)
+	board.pieceTable[to] = nil
+
+	board.pieces[color][piece_type] = Utils.set_bit(board.pieces[color][piece_type], from)
+	board.pieceTable[from] = make_pair(piece_type, color)
+
+	board.occupied.all = Utils.clear_bit(board.occupied.all, to)
+	board.occupied[color] = Utils.clear_bit(board.occupied[color], to)
+
+	board.occupied.all = Utils.set_bit(board.occupied.all, from)
+	board.occupied[color] = Utils.set_bit(board.occupied[color], from)
+
+	if record.captured_piece then
+		local cap = record.captured_piece
+		board.pieces[cap.color][cap.type] = Utils.set_bit(board.pieces[cap.color][cap.type], cap.square)
+		board.pieceTable[cap.square] = make_pair(cap.type, cap.color)
+
+		board.occupied.all = Utils.set_bit(board.occupied.all, cap.square)
+		board.occupied[cap.color] = Utils.set_bit(board.occupied[cap.color], cap.square)
+	end
+
+	if record.additionallyMoved and #record.additionallyMoved == 2 then
+		local rook_from = record.additionallyMoved[1]
+		local rook_to = record.additionallyMoved[2]
+
+		board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_to)
+		board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_from)
+
+		board.pieceTable[rook_to] = nil
+		board.pieceTable[rook_from] = make_pair(ROOK, color)
+
+		board.occupied.all = Utils.clear_bit(board.occupied.all, rook_to)
+		board.occupied[color] = Utils.clear_bit(board.occupied[color], rook_to)
+
+		board.occupied.all = Utils.set_bit(board.occupied.all, rook_from)
+		board.occupied[color] = Utils.set_bit(board.occupied[color], rook_from)
+	end
 end
 
 -- Attacked squares

@@ -53,13 +53,12 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local moves = moveOrdering(board, allLegalMoves)
 
     for _, move in moves do
-        -- TODO: try undo_move method
-        local branch = libs.BitBoard.clone(board)
-        libs.BitBoard.make_move(branch, move)
+        local record = libs.BitBoard.make_move(board, move)
 
         nodes += 1;
 
-        local currentScore, childDepth, subSequence = minimax(branch, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+        local currentScore, childDepth, subSequence = minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+        libs.BitBoard.undo_move(board, record)
 
         if isMaximizing then
             if currentScore > bestScore then
