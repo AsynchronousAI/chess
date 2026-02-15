@@ -102,10 +102,10 @@ local function split_pair(pair: number)
     return bit32.rshift(pair, 6), bit32.band(pair, 63)
 end
 local function set_bit32(num: number, index: number)
-    return bit32.bor(num, bit32.lshift(1, index))
+    return bit32.bor(num, BIT_MASKS32[index])
 end
 local function clear_bit32(num: number, index: number)
-    return bit32.band(num, bit32.bnot(bit32.lshift(1, index)))
+    return bit32.band(num, bit32.bnot(BIT_MASKS32[index]))
 end
 local function get_bit32(num: number, index: number)
     return bit32.band(num, bit32.lshift(1, index)) ~= 0

@@ -2,11 +2,7 @@ import { Color, Piece, Square } from "shared/board";
 
 export type UndoRecord = {
   move: number;
-  from: Square;
-  to: Square;
-  piece: Piece;
-  captured_piece?: { type: Piece; color: Color; square: Square };
-  promotion?: Piece;
+  captured_piece?: number;
   castling_rights: number;
   en_passant_square?: Square;
   halfmove_clock: number;

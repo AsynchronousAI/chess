@@ -9,6 +9,9 @@ local HEX_TO_BINARY = {
     ["c"] = "1100", ["d"] = "1101", ["e"] = "1110", ["f"] = "1111",
 }
 
+local MASK_XZ = 0b1111_1111_1111_1111_1111_11
+local MASK_Y = 0b1111_1111_1111_1111_1111
+
 --- A constant representing the 64-bit representation of `0`.
 local ZERO = vector.create(0, 0, 0)
 --- A constant representating the 64-bit representation of `1`.
@@ -35,9 +38,9 @@ local MAX_F32 = vector.create(0, 4, 0)
 ]=]
 local function normalize(u64: vector): vector
 	return vector.create(
-		bit32.band(u64.x, 0b1111_1111_1111_1111_1111_11),
-		bit32.band(u64.y, 0b1111_1111_1111_1111_1111),
-		bit32.band(u64.z, 0b1111_1111_1111_1111_1111_11)
+		bit32.band(u64.x, MASK_XZ),
+		bit32.band(u64.y, MASK_Y),
+		bit32.band(u64.z, MASK_XZ)
 	)
 end
 
@@ -55,7 +58,7 @@ local function from_pair(most: number, least: number): vector
 	return vector.create(
 		bit32.rshift(most, 10),
 		bit32.bor(bit32.extract(least, 22, 10), bit32.lshift(bit32.band(most, 0b1111_1111_11), 10)),
-		bit32.band(least, 0b1111_1111_1111_1111_1111_11)
+		bit32.band(least, MASK_XZ)
 	)
 end
 
@@ -66,7 +69,7 @@ end
 	the max value.
 ]=]
 local function from_u32(u32: number): vector
-	return vector.create(0, bit32.rshift(u32, 22), bit32.band(u32, 0b1111_1111_1111_1111_1111_11))
+	return vector.create(0, bit32.rshift(u32, 22), bit32.band(u32, MASK_XZ))
 end
 
 --[=[
@@ -179,9 +182,9 @@ end
 ]=]
 local function bnot(u64: vector): vector
 	return vector.create(
-		bit32.band(bit32.bnot(u64.x), 0b1111_1111_1111_1111_1111_11),
-		bit32.band(bit32.bnot(u64.y), 0b1111_1111_1111_1111_1111),
-		bit32.band(bit32.bnot(u64.z), 0b1111_1111_1111_1111_1111_11)
+		bit32.band(bit32.bnot(u64.x), MASK_XZ),
+		bit32.band(bit32.bnot(u64.y), MASK_Y),
+		bit32.band(bit32.bnot(u64.z), MASK_XZ)
 	)
 end
 
