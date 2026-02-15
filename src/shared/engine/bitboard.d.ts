@@ -1,14 +1,6 @@
 import { Color, Piece, Square } from "shared/board";
 
-export type UndoRecord = {
-  move: number;
-  captured_piece?: number;
-  castling_rights: number;
-  en_passant_square?: Square;
-  halfmove_clock: number;
-  fullmove_number: number;
-  additionallyMoved?: Square[]; // rook moves for castling or ep captures
-};
+export type UndoRecord = number;
 
 export type BitBoard = {
   side_to_move: Color;
@@ -41,7 +33,20 @@ export namespace BitBoard {
 
   export function make_move(board: BitBoard, move: Move): UndoRecord;
 
-  export function undo_move(board: BitBoard, record: UndoRecord): void;
+  export function undo_move(
+    board: BitBoard,
+    move: Move,
+    record?: UndoRecord,
+  ): void;
+
+  export function get_undo_record_data(record: UndoRecord): {
+    captured_piece?: number;
+    castling_rights: number;
+    en_passant_square?: Square;
+    halfmove_clock: number;
+    fullmove_number: number;
+    additionallyMoved?: [Square, Square];
+  };
 
   export function generate_legal_moves(
     board: BitBoard,

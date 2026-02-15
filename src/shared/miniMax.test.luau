@@ -62,7 +62,7 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
         nodes = nodes + 1
 
         local score = minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
-        bitboard.undo_move(board, record)
+        bitboard.undo_move(board, move, record)
 
         if isMaximizing then
             if score > bestScore then

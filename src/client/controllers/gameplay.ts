@@ -181,7 +181,8 @@ export class Gameplay implements OnStart {
     if (alsoMove) moved.push(alsoMove);
     if (!overrideBoard) {
       if (promotion) moveData = Move.setPromotion(moveData, promotion);
-      const record = BitBoard.make_move(this.board, moveData);
+      const id = BitBoard.make_move(this.board, moveData);
+      const record = BitBoard.get_undo_record_data(id);
       if (record.additionallyMoved)
         moved.push(record.additionallyMoved as [Square, Square?, Piece?]);
     }

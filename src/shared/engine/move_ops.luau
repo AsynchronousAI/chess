@@ -10,27 +10,9 @@ local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
 
-export type Board = {
-	pieceTable: { [number]: number },
-	pieces: { [number]: { [number]: vector } },
-	occupied: { [number]: vector, all: vector },
-	attacked: { [number]: { [number]: vector, all: vector } },
-	side_to_move: number,
-	castling_rights: number,
-	en_passant_square: number?,
-	halfmove_clock: number,
-	fullmove_number: number,
-}
+export type Board = Utils.Board
 
-export type UndoRecord = {
-	move: number,
-	captured_piece: number?,
-	castling_rights: number,
-	en_passant_square: number?,
-	halfmove_clock: number,
-	fullmove_number: number,
-	additionallyMoved: { number }?, -- rook moves for castling or ep captures
-}
+export type UndoRecord = number
 
 local CAPTURED_SQUARE_MASK = 0x3F
 local CAPTURED_TYPE_SHIFT = 6
@@ -51,7 +33,51 @@ local function unpack_captured_piece(packed: number)
 	return cap_type, cap_color, square
 end
 
-local function get_captured_piece(board: Board, to: number, en_passant: boolean, color: number): number|nil
+-- Flat undo stack (LIFO, no clearing)
+local STRIDE = 3
+local SENTINEL = -1
+local EP_SENTINEL = 0x7F
+
+local undo_top = 0
+local undo_stack = table.create(1000 * STRIDE)
+
+local OFF_CAPTURED = 0
+local OFF_STATE = 1
+local OFF_ROOK_PAIR = 2
+
+local STATE_CASTLING_MASK = 0xF
+local STATE_EP_MASK = 0x7F
+local STATE_HALF_MASK = 0xFF
+local STATE_FULL_MASK = 0x3FF
+
+local STATE_EP_SHIFT = 4
+local STATE_HALF_SHIFT = 11
+local STATE_FULL_SHIFT = 19
+
+local function pack_state(castling_rights: number, en_passant_square: number?, halfmove_clock: number, fullmove_number: number)
+	local ep = en_passant_square
+	if ep == nil then
+		ep = EP_SENTINEL
+	end
+
+	return bit32.bor(
+		bit32.band(castling_rights, STATE_CASTLING_MASK),
+		bit32.lshift(bit32.band(ep, STATE_EP_MASK), STATE_EP_SHIFT),
+		bit32.lshift(bit32.band(halfmove_clock, STATE_HALF_MASK), STATE_HALF_SHIFT),
+		bit32.lshift(bit32.band(fullmove_number, STATE_FULL_MASK), STATE_FULL_SHIFT)
+	)
+end
+
+local function unpack_state(packed: number)
+	local castling_rights = bit32.band(packed, STATE_CASTLING_MASK)
+	local ep = bit32.band(bit32.rshift(packed, STATE_EP_SHIFT), STATE_EP_MASK)
+	local halfmove_clock = bit32.band(bit32.rshift(packed, STATE_HALF_SHIFT), STATE_HALF_MASK)
+	local fullmove_number = bit32.band(bit32.rshift(packed, STATE_FULL_SHIFT), STATE_FULL_MASK)
+
+	return castling_rights, if ep == EP_SENTINEL then nil else ep, halfmove_clock, fullmove_number
+end
+
+local function get_captured_piece(board: Board, to: number, en_passant: boolean, color: number): number?
 	local captured_square = to
 	if en_passant then
 		captured_square = to - (if color == WHITE then 8 else -8)
@@ -82,8 +108,7 @@ local function handle_capture(
 	to: number,
 	en_passant: boolean,
 	color: number
-): { number }?
-	-- Remove captured piece on target square
+)
 	for p = PAWN, KING do
 		if Utils.get_bit(board.pieces[opponent][p], to) then
 			board.pieces[opponent][p] = Utils.clear_bit(board.pieces[opponent][p], to)
@@ -93,7 +118,6 @@ local function handle_capture(
 		end
 	end
 
-	-- En passant capture: captured pawn is not on target square
 	if en_passant then
 		local captured_pawn_square = to - (if color == WHITE then 8 else -8)
 		board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
@@ -101,11 +125,7 @@ local function handle_capture(
 
 		board.occupied.all = Utils.clear_bit(board.occupied.all, captured_pawn_square)
 		board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], captured_pawn_square)
-
-		return { captured_pawn_square }
 	end
-
-	return nil
 end
 
 local function update_halfmove_clock(board: Board, piece_type: number, captured: boolean)
@@ -166,7 +186,7 @@ local function update_castling_rights_for_move(board: Board, piece_type: number,
 	end
 end
 
-local function handle_castling_rook_move(board: Board, color: number, kingside: boolean): { number }
+local function handle_castling_rook_move(board: Board, color: number, kingside: boolean): (number, number)
 	local rook_from, rook_to
 	if kingside then
 		rook_from = if color == WHITE then 7 else 63
@@ -188,7 +208,7 @@ local function handle_castling_rook_move(board: Board, color: number, kingside: 
 	board.occupied.all = Utils.set_bit(board.occupied.all, rook_to)
 	board.occupied[color] = Utils.set_bit(board.occupied[color], rook_to)
 
-	return { rook_from, rook_to }
+	return rook_from, rook_to
 end
 
 local function update_occupied_for_basic_move(board: Board, color: number, from: number, to: number)
@@ -200,13 +220,13 @@ local function update_occupied_for_basic_move(board: Board, color: number, from:
 end
 
 local function restore_captured_piece(board: Board, packed: number)
-	local type, color, square = unpack_captured_piece(packed)
+	local cap_type, cap_color, square = unpack_captured_piece(packed)
 
-	board.pieces[color][type] = Utils.set_bit(board.pieces[color][type], square)
-	board.pieceTable[square] = make_pair(type, color)
+	board.pieces[cap_color][cap_type] = Utils.set_bit(board.pieces[cap_color][cap_type], square)
+	board.pieceTable[square] = make_pair(cap_type, cap_color)
 
 	board.occupied.all = Utils.set_bit(board.occupied.all, square)
-	board.occupied[color] = Utils.set_bit(board.occupied[color], square)
+	board.occupied[cap_color] = Utils.set_bit(board.occupied[cap_color], square)
 end
 
 local function undo_castling_rook(board: Board, color: number, rook_from: number, rook_to: number)
@@ -240,24 +260,20 @@ local function make_move(board: Board, move: number): UndoRecord
 		captured_piece = get_captured_piece(board, to, en_passant, color)
 	end
 
-	local record: UndoRecord = {
-		move = move,
-		captured_piece = captured_piece,
-		castling_rights = board.castling_rights,
-		en_passant_square = board.en_passant_square,
-		halfmove_clock = board.halfmove_clock,
-		fullmove_number = board.fullmove_number,
-		additionallyMoved = nil,
-	}
+	-- Save pre-move state
+	undo_top += 1
+	local base = (undo_top - 1) * STRIDE
+	local idx = base + 1
+	undo_stack[idx + OFF_CAPTURED] = captured_piece or SENTINEL
+	undo_stack[idx + OFF_STATE] = pack_state(board.castling_rights, board.en_passant_square, board.halfmove_clock, board.fullmove_number)
+	undo_stack[idx + OFF_ROOK_PAIR] = SENTINEL
 
 	clear_from_square(board, color, piece_type, from)
 
-	-- Place basic piece (promotion handled later)
 	board.pieceTable[to] = make_pair(piece_type, color)
 
-	local additionallyMoved = nil
 	if captured then
-		additionallyMoved = handle_capture(board, opponent, to, en_passant, color)
+		handle_capture(board, opponent, to, en_passant, color)
 	end
 
 	local final_piece_type = promotion or piece_type
@@ -268,7 +284,8 @@ local function make_move(board: Board, move: number): UndoRecord
 	update_castling_rights_for_move(board, piece_type, color, from, to, captured)
 
 	if castling then
-		additionallyMoved = handle_castling_rook_move(board, color, kingside)
+		local rook_from, rook_to = handle_castling_rook_move(board, color, kingside)
+		undo_stack[idx + OFF_ROOK_PAIR] = make_pair(rook_from, rook_to)
 	end
 
 	update_occupied_for_basic_move(board, color, from, to)
@@ -278,15 +295,12 @@ local function make_move(board: Board, move: number): UndoRecord
 		board.fullmove_number += 1
 	end
 
-	if additionallyMoved then
-		record.additionallyMoved = additionallyMoved
-	end
-
-	return record
+	return idx
 end
 
-local function undo_move(board: Board, record: UndoRecord)
-	local move = record.move
+local function undo_move(board: Board, move: number, record: UndoRecord?)
+	local idx = record or ((undo_top - 1) * STRIDE + 1)
+
 	local from = Move.getFrom(move)
 	local to = Move.getTo(move)
 	local piece_type = Move.getPieceType(move)
@@ -295,10 +309,11 @@ local function undo_move(board: Board, record: UndoRecord)
 	local color = 1 - board.side_to_move
 
 	board.side_to_move = color
-	board.castling_rights = record.castling_rights
-	board.en_passant_square = record.en_passant_square
-	board.halfmove_clock = record.halfmove_clock
-	board.fullmove_number = record.fullmove_number
+	local castling_rights, en_passant_square, halfmove_clock, fullmove_number = unpack_state(undo_stack[idx + OFF_STATE])
+	board.castling_rights = castling_rights
+	board.en_passant_square = en_passant_square
+	board.halfmove_clock = halfmove_clock
+	board.fullmove_number = fullmove_number
 
 	local final_piece_type = promotion or piece_type
 	board.pieces[color][final_piece_type] = Utils.clear_bit(board.pieces[color][final_piece_type], to)
@@ -313,18 +328,38 @@ local function undo_move(board: Board, record: UndoRecord)
 	board.occupied.all = Utils.set_bit(board.occupied.all, from)
 	board.occupied[color] = Utils.set_bit(board.occupied[color], from)
 
-	if record.captured_piece then
-		restore_captured_piece(board, record.captured_piece)
+	local packed_captured = undo_stack[idx + OFF_CAPTURED]
+	if packed_captured ~= SENTINEL then
+		restore_captured_piece(board, packed_captured)
 	end
 
-	if record.additionallyMoved and #record.additionallyMoved == 2 then
-		local rook_from = record.additionallyMoved[1]
-		local rook_to = record.additionallyMoved[2]
+	local rook_pair = undo_stack[idx + OFF_ROOK_PAIR]
+	if rook_pair ~= SENTINEL then
+		local rook_from, rook_to = split_pair(rook_pair)
 		undo_castling_rook(board, color, rook_from, rook_to)
 	end
+
+	undo_top = (idx - 1) / STRIDE
+end
+
+local function get_undo_record_data(record: UndoRecord)
+	local idx = record
+	local captured_piece = undo_stack[idx + OFF_CAPTURED]
+	local castling_rights, en_passant_square, halfmove_clock, fullmove_number = unpack_state(undo_stack[idx + OFF_STATE])
+	local rook_pair = undo_stack[idx + OFF_ROOK_PAIR]
+
+	return {
+		captured_piece = if captured_piece == SENTINEL then nil else captured_piece,
+		castling_rights = castling_rights,
+		en_passant_square = en_passant_square,
+		halfmove_clock = halfmove_clock,
+		fullmove_number = fullmove_number,
+		additionallyMoved = if rook_pair ~= SENTINEL then { split_pair(rook_pair) } else nil,
+	}
 end
 
 return {
 	make_move = make_move,
 	undo_move = undo_move,
+	get_undo_record_data = get_undo_record_data,
 }

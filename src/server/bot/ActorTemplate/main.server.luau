@@ -58,7 +58,7 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
         nodes += 1;
 
         local currentScore, childDepth, subSequence = minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
-        libs.BitBoard.undo_move(board, record)
+        libs.BitBoard.undo_move(board, move, record)
 
         if isMaximizing then
             if currentScore > bestScore then

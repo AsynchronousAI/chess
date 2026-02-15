@@ -192,6 +192,8 @@ Board.make_move = MoveOps.make_move
 
 Board.undo_move = MoveOps.undo_move
 
+Board.get_undo_record_data = MoveOps.get_undo_record_data
+
 -- Attacked squares
 function Board.regenerate_piece_attacked(board: Board, by_color: number, piece: number): {number}
     local blockingPairs = {}
@@ -492,7 +494,7 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
         end
 
         if not valid then
-			Board.undo_move(board, record)
+			Board.undo_move(board, move, record)
 			restoreAttacks()
             continue
         end
@@ -510,7 +512,7 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
             table.insert(filtered_moves, move)
         end
 
-		Board.undo_move(board, record)
+		Board.undo_move(board, move, record)
 		restoreAttacks()
     end
 
