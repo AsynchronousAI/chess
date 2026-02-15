@@ -1,12 +1,14 @@
 --!native
 --!optimize 2
 
-local libs, BitBoard
+local libs, BitBoard, Utils
 if game then
     libs = require(script.Parent.import)
     BitBoard = libs.BitBoard
+    Utils = libs.Utils
 else
     BitBoard = require("../../shared/engine/bitboard").BitBoard
+    Utils = require("../../shared/engine/utils")
 end
 
 local Piece = {
@@ -18,9 +20,8 @@ local Piece = {
   queen = 4,
   king = 5,
 }
-local NOISE = 0
 
-local transposition = game and game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
+-- local transposition = game and game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
 
 local pst = {
     [Piece.pawn] = {
@@ -90,6 +91,24 @@ local pst = {
     }
 }
 
+local pstForColor = {}
+for color = 0, 1 do
+    pstForColor[color] = {}
+
+    for piece, table64 in pst do
+        pstForColor[color][piece] = {}
+
+        for square = 0, 63 do
+            if color == 0 then -- white: keep the table as-is
+                pstForColor[color][piece][square] = -(table64[square + 1] or 0)
+            else -- black: mirror vertically
+                local mirrored = 63 - square
+                pstForColor[color][piece][square] = table64[mirrored + 1] or 0
+            end
+        end
+    end
+end
+
 return function (board)
     local value = 0
 
@@ -104,15 +123,13 @@ return function (board)
     elseif mate == "checkmate" then
         value = if board.side_to_move == 1 then -math.huge else math.huge
     else
-        for _, d in BitBoard.get_all_pieces(board) do
-            local color = d[2]
-            local square = if color == 1 then d[3] else 63 - d[3]
-            local piece = d[1]
+        for pos = 0, 63 do
+            local pieceInfo = board.pieceTable[pos]
+            if not pieceInfo then continue end
 
-            local v = pst[piece][square+1] or 0
+            local piece, color = Utils.split_pair(pieceInfo)
 
-            value += v * (if color == 1 then 1 else -1)
-            value += math.random(-NOISE, NOISE)
+            value += pstForColor[color][piece][pos]
         end
     end
 
