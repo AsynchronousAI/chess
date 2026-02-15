@@ -683,17 +683,31 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
     local filtered_moves = {}
 
     for _, move in moves do
-		local branch = Board.clone(board)
 		local isKing = Move.getPieceType(move) == KING
 
-        local capturingPiece = if Move.getCaptured(move) then Board.get_piece(branch, Move.getTo(move)) else nil
-		Board.make_move(branch, move)
-
+        local capturingPiece = if Move.getCaptured(move) then Board.get_piece(board, Move.getTo(move)) else nil
+		local attackedCache = {
+			all = board.attacked[1-color].all,
+			pieces = {},
+		}
+		local function cachePiece(pieceType: number)
+			if attackedCache.pieces[pieceType] == nil then
+				attackedCache.pieces[pieceType] = board.attacked[1-color][pieceType]
+			end
+		end
+		local function restoreAttacks()
+			for pieceType, bb in pairs(attackedCache.pieces) do
+				board.attacked[1-color][pieceType] = bb
+			end
+			board.attacked[1-color].all = attackedCache.all
+		end
+		local record = Board.make_move(board, move)
 
         --- Regenerate attack bitboards
         -- Capturing piece (to escape check)
         if capturingPiece then
-			Board.regenerate_piece_attacked(branch, 1-color, capturingPiece[1])
+			cachePiece(capturingPiece[1])
+			Board.regenerate_piece_attacked(board, 1-color, capturingPiece[1])
 		end
 
 		-- Blocking sliding pieces
@@ -714,21 +728,24 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 			    continue
 			end
 
-            local piece = Board.get_piece(branch, slider)
+            local piece = Board.get_piece(board, slider)
             if not piece then continue end
 
             -- if it is opponents piece and not already regenerated
             if piece[2] == 1-color and not alreadyGenerated[piece[1]] then
                 alreadyGenerated[piece[2]] = true;
-                Board.regenerate_piece_attacked(branch, 1-color, piece[1])
+				cachePiece(piece[1])
+                Board.regenerate_piece_attacked(board, 1-color, piece[1])
             end
         end
 
         if not valid then
+			Board.undo_move(board, record)
+			restoreAttacks()
             continue
         end
 
-		Board.attacked_occupancy(branch, 1-color)
+		Board.attacked_occupancy(board, 1-color)
 
 		-- Is this move moving the king?
 		local kingPos = headKingPos
@@ -736,10 +753,13 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 			kingPos = Move.getTo(move)
 		end
 
-		local check = Board.is_square_attacked(branch, kingPos, 1-color)
+		local check = Board.is_square_attacked(board, kingPos, 1-color)
         if not check then
             table.insert(filtered_moves, move)
         end
+
+		Board.undo_move(board, record)
+		restoreAttacks()
     end
 
     return filtered_moves
