@@ -26,58 +26,48 @@ local TT = game and game:GetService("SharedTableRegistry"):GetSharedTable("Minim
 local function isPromotion(loc: number, piece: number, color: number)
     return piece == 0 and (if color == 0 then loc > 55 else loc < 8);
 end
-return function(board, moves: {number})
-    local color = board.side_to_move;
-    local new = table.clone(moves)
+return function(board, moves)
+    local color = board.side_to_move
+    local ttEntry --= TT and TT[bitboard.hash(board)]
+    local tt_from, tt_to, tt_promo
+    if ttEntry and ttEntry.bestMove then
+        tt_from = moveLib.getFrom(ttEntry.bestMove)
+        tt_to = moveLib.getTo(ttEntry.bestMove)
+        tt_promo = moveLib.getPromotion(ttEntry.bestMove)
+    end
 
-    -- Get hash for the current board
-    local hash = bitboard.hash(board)
-    local ttEntry = TT and TT[hash] -- lookup TT entry
+    local new = {}
 
-    for index, move in moves do
-        -- Extract move data
-        local from = moveLib.getFrom(move);
-        local to = moveLib.getTo(move);
-        local promotion = moveLib.getPromotion(move);
+    local promoTypes = {1,2,3,4}
+    local promoValues = {18,17,19,20}
 
-        -- From & to in the board
+    for _, move in ipairs(moves) do
+        local from = moveLib.getFrom(move)
+        local to = moveLib.getTo(move)
+        local promotion = moveLib.getPromotion(move)
         local piece = moveLib.getPieceType(move)
         local victim = bitboard.get_piece(board, to)
 
-        -- Capture value
+        -- Base value
         local value = 1
-        if victim then
-            value = (PieceValues[victim[1]]*10)-PieceValues[piece]
+        if victim then value = (PieceValues[victim[1]]*10)-PieceValues[piece] end
+
+        -- TT boost
+        if ttEntry and from==tt_from and to==tt_to and promotion==tt_promo then
+            value = value + 1000
         end
 
-        -- Check if this move matches the TT best move
-        if ttEntry and ttEntry.bestMove then
-            local best = ttEntry.bestMove
+        -- Normal move
+        table.insert(new, moveLib.setValue(move, value))
 
-            local best_from = moveLib.getFrom(best)
-            local best_to = moveLib.getTo(best)
-            local best_promotion = moveLib.getPromotion(best)
-
-            if from == best_from and to == best_to and promotion == best_promotion then
-                value += 1000 -- boost TT move to the front
+        -- Promotions
+        if not promotion and piece==0 and ((color==0 and to>55) or (color==1 and to<8)) then
+            for i, p in ipairs(promoTypes) do
+                table.insert(new, moveLib.setValue(moveLib.setPromotion(move, p), value + promoValues[i]))
             end
-        end
-
-        new[index] = moveLib.setValue(move, value)
-
-        -- Handle promotions
-        if promotion == nil and isPromotion(to, piece, color) then
-            table.insert(new, moveLib.setValue(moveLib.setPromotion(moveLib, 2), value+17)); -- Bishop
-            table.insert(new, moveLib.setValue(moveLib.setPromotion(moveLib, 1), value+18)); -- Knight
-            table.insert(new, moveLib.setValue(moveLib.setPromotion(moveLib, 3), value+19)); -- Rook
-            table.insert(new, moveLib.setValue(moveLib.setPromotion(moveLib, 4), value+20)); -- Queen
         end
     end
 
-    -- Sort moves descending by score (higher first)
-    table.sort(new, function(a, b)
-        return moveLib.getValue(a) > moveLib.getValue(b)
-    end)
-
+    table.sort(new, function(a,b) return moveLib.getValue(a) > moveLib.getValue(b) end)
     return new
 end

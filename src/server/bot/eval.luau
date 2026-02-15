@@ -93,10 +93,10 @@ local pst = {
 return function (board)
     local value = 0
 
-    local hash = BitBoard.hash(board)
-    if transposition and transposition[hash] then
-        return transposition[hash]
-    end
+    -- local hash = BitBoard.hash(board)
+    -- if transposition and transposition[hash] then
+    --     return transposition[hash]
+    -- end
 
     local mate = ""--BitBoard.get_game_state(board)
     if mate == "stalemate" then
@@ -116,6 +116,6 @@ return function (board)
         end
     end
 
-    if transposition then transposition[hash] = value end
+    -- if transposition then transposition[hash] = value end
     return value
 end

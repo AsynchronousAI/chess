@@ -1,8 +1,8 @@
 --!native
 --!optimize 2
-
 local Utils = require("./utils")
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ;
+local split_pair = Utils.split_pair
 
 local Zobrist = {}
 Zobrist.piece_square = {}
@@ -40,13 +40,12 @@ return function(board)
     local hash = 0
 
     -- Pieces
-    for color = Utils.WHITE, Utils.BLACK do
-        for piece = Utils.PAWN, Utils.KING do
-            local bb = board.pieces[color][piece]
-            Utils.iterate_bits(bb, function(square)
-                hash = bit32.bxor(hash, Zobrist.piece_square[color][piece][square])
-            end)
-        end
+    for pos = 0, 63 do
+        local pieceAtPos = board.pieceTable[pos]
+        if not pieceAtPos then continue end
+
+        local piece, color = split_pair(pieceAtPos)
+        hash = bit32.bxor(hash, Zobrist.piece_square[color][piece][pos])
     end
 
     -- Castling

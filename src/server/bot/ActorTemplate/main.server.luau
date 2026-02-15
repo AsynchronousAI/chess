@@ -18,10 +18,10 @@ local UPPERBOUND = 2
 
 local nodes = 0;
 local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
-    local hash = libs.BitBoard.hash(board)
+    -- local hash = libs.BitBoard.hash(board)
 
     -- TT lookup
-    local entry = TT[hash]
+    local entry --= TT[hash]
     if entry then
         -- entry: {depth, score, flag, alpha, beta, bestMove}
         if entry.depth >= maxDepth - depth then
@@ -104,13 +104,13 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
         flag = EXACT
     end
 
-    TT[hash] = SharedTable.new({
-        depth = maxDepth - depth,
-        score = bestScore,
-        flag = flag,
-        sequence = branchedSequence,
-        bestMove = bestMove,
-    })
+    -- TT[hash] = SharedTable.new({
+    --     depth = maxDepth - depth,
+    --     score = bestScore,
+    --     flag = flag,
+    --     sequence = branchedSequence,
+    --     bestMove = bestMove,
+    -- })
 
 
     return bestScore, maxDepthReached, branchedSequence
