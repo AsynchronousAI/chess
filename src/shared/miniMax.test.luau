@@ -3,11 +3,47 @@ local Move = require("./engine/move").Move
 local eval = require("../server/bot/eval")
 local moveOrdering = require("../server/bot/moveOrdering")
 
+
+local UNICODE = {
+    { -- White
+        "♙", "♘", "♗", "♖", "♕", "♔",
+    },
+    { -- Black
+        "♟", "♞", "♝", "♜", "♛", "♚",
+    }
+}
+local CHAR = {
+    { -- White
+        "p", "n", "b", "r", "q", "k",
+    },
+    { -- Black
+        "P", "N", "B", "R", "Q", "K",
+    }
+}
+
 local DEPTH = 4
 local MAX_MOVES = math.huge
 
 local nodes = 0
 
+local function printBoard(board)
+    for rank = 7, 0, -1 do
+        local row = tostring(rank + 1) .. " "
+        for file = 0, 7 do
+            local square = rank * 8 + file
+            local piece = bitboard.get_piece(board, square) -- returns {type, color} or nil
+            if piece then
+                local pieceType = piece[1]
+                local color = piece[2]
+                row = row .. (CHAR[color+1][pieceType+1]) .. " "
+            else
+                row = row .. ". "
+            end
+        end
+        print(row)
+    end
+    print("  a b c d e f g h")
+end
 local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     if depth >= maxDepth then
         return eval(board), nil
@@ -74,6 +110,7 @@ while moveCount < MAX_MOVES do
     bitboard.make_move(board, move)
     moveCount = moveCount + 1
 
+    printBoard(board)
     print(string.format(
         "Move %d: %s\n %s | eval: %.2f | time: %dms | nodes: %d",
         moveCount,

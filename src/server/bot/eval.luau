@@ -18,6 +18,7 @@ local Piece = {
   queen = 4,
   king = 5,
 }
+local NOISE = 0
 
 local transposition = game and game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
 
@@ -92,12 +93,9 @@ local pst = {
 return function (board)
     local value = 0
 
-    local hash
-    if transposition then
-        hash = BitBoard.hash(board)
-        if transposition[hash] then
-            return transposition[hash]
-        end
+    local hash = BitBoard.hash(board)
+    if transposition and transposition[hash] then
+        return transposition[hash]
     end
 
     local mate = ""--BitBoard.get_game_state(board)
@@ -114,6 +112,7 @@ return function (board)
             local v = pst[piece][square+1] or 0
 
             value += v * (if color == 1 then 1 else -1)
+            value += math.random(-NOISE, NOISE)
         end
     end
 
