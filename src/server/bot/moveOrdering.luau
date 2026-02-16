@@ -1,24 +1,26 @@
 --!optimize 2
 --!native
 
-local bitboard, moveLib
+local bitboard, moveLib, Utils
 if game then
     local libs = require(script.Parent.import)
     bitboard = libs.BitBoard
     moveLib = libs.Move
+    Utils = libs.Utils
 else
     bitboard = require("../../shared/engine/bitboard").BitBoard
     moveLib = require("../../shared/engine/move").Move
+    Utils = require("../../shared/engine/utils")
 end
 
 local PieceValues = {
-  [-1] = 0, -- none
-  [0]  = 5, -- pawn
-  [1] = 3, -- knight
-  [2] = 3, -- bishop
-  [3] = 5, -- rook
-  [4] = 100, -- queen
-  [5] = 1, -- king
+  [Utils.NONE]   = 0,
+  [Utils.PAWN]   = 100,
+  [Utils.KNIGHT] = 320,
+  [Utils.BISHOP] = 330,
+  [Utils.ROOK]   = 500,
+  [Utils.QUEEN]  = 900,
+  [Utils.KING]   = 20000,
 };
 
 local TT = game and game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
@@ -35,8 +37,8 @@ return function(board, moves)
 
     local new = {}
 
-    local promoTypes = {1,2,3,4}
-    local promoValues = {18,17,19,20}
+    local promoTypes  = {1,  2,  3,  4}
+    local promoValues = {18, 17, 19, 20}
 
     for _, move in ipairs(moves) do
         local from = moveLib.getFrom(move)
