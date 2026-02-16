@@ -7,5 +7,5 @@
 - Rewrite minimax algorithm
 
 ## Benchmarking:
-- `luau src/shared/miniMax.test.luau --codegen -O2 --profile && python3 tools/perfgraph.py profile.out > profile.svg`
-- `luau src/shared/legalMoveGen.test.luau --codegen -O2 --profile && python3 tools/perfgraph.py profile.out > profile.svg`
+- `luau src/shared/miniMax.test.luau --codegen --profile && python3 tools/perfgraph.py profile.out > profile.svg`
+- `luau src/shared/perft.test.luau --codegen --profile && python3 tools/perfgraph.py profile.out > profile.svg`
