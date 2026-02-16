@@ -68,7 +68,7 @@ export namespace BitBoard {
   export function get_piece(
     board: BitBoard,
     square: Square,
-  ): LuaTuple<[Piece, Color]> | undefined;
+  ): LuaTuple<[Piece, Color]>;
   export function find_piece(
     board: BitBoard,
     piece_type: Piece,

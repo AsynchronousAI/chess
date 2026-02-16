@@ -62,7 +62,7 @@ export class Gameplay implements OnStart {
       this.takenPieces.push(prev);
     }
 
-    if (captured) {
+    if (captured !== undefined) {
       const piece = captured[0];
       const idx = color === this.activeGame.color ? 0 : 1;
       if (board === this.board)

@@ -74,7 +74,7 @@ export class Gameplay implements OnStart {
     /* illegal moves, in future check for promotions also */
     const fromPiece = BitBoard.get_piece(activeGame.board, from);
     if (
-      !fromPiece ||
+      fromPiece[0] === undefined ||
       (promotion !== undefined && !IsPromotion(to, fromPiece[0], fromPiece[1]))
     ) {
       return;

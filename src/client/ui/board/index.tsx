@@ -64,7 +64,7 @@ export default function Board() {
     }
 
     const piece = BitBoard.get_piece(board, holdingPiece);
-    if (!piece) return;
+    if (piece[0] === undefined) return;
 
     if (IsPromotion(location, piece[0], piece[1])) {
       setPromoting(location);
