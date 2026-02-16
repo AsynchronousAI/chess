@@ -146,7 +146,7 @@ function Board.set_start_position(board: Board)
     board.pieces[BLACK][QUEEN]  = u64.from_pair(0x08000000, 0x00000000)
     board.pieces[BLACK][KING]   = u64.from_pair(0x10000000, 0x00000000)
 
-    -- Board.from_fen(board, "6K1/1r6/8/8/8/4k3/4N3/8 w - - 7 169");
+    -- Board.from_fen(board, "8/8/8/k7/8/q7/4K3/3Q1B2 w - - 0 1");
 
 	Board.update_occupied(board)
 	for color = WHITE, BLACK do
@@ -414,6 +414,14 @@ function generate_castle_moves(board: Board, moves: {number}, color: number, att
 end
 
 -- Generate Legal Moves
+local function is_between_slider_and_king(slider: number, king: number, square: number, pieceType: number): boolean
+	if square == slider or square == king then
+		return false
+	end
+
+	local between = Attacks.between_squares(slider, king, pieceType)
+	return between ~= u64.ZERO and Utils.get_bit(between, square)
+end
 function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): {number}
     local color = givenColor or board.side_to_move
 	local moves = table.create(30)
@@ -474,20 +482,21 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 		for _, block in blocking do
 		    local blocker, slider = split_pair(block)
 
+            local piece = Board.get_piece(board, slider)
+            if not piece then continue end
+
 			if isKing and blocker == to then -- king will take spot of blocker
 			    valid = false
 				break
 			end
-			if blocker ~= from then -- we are not moving the blocker
+			local interposing = blocker == headKingPos and is_between_slider_and_king(slider, headKingPos, to, piece[1])
+			if blocker ~= from and blocker ~= to and not interposing then -- we are not affecting this ray
 			    continue
 			end
 
-            local piece = Board.get_piece(board, slider)
-            if not piece then continue end
-
             -- if it is opponents piece and not already regenerated
             if piece[2] == 1-color and not alreadyGenerated[piece[1]] then
-                alreadyGenerated[piece[2]] = true;
+                alreadyGenerated[piece[1]] = true;
 				cachePiece(piece[1])
                 Board.regenerate_piece_attacked(board, 1-color, piece[1])
             end

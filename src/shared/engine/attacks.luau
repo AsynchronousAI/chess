@@ -5,6 +5,7 @@ local u64 = require("./int64")
 local Utils = require("./utils")
 
 local WHITE = Utils.WHITE
+local BISHOP, ROOK, QUEEN = Utils.BISHOP, Utils.ROOK, Utils.QUEEN
 local NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH = Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
 
 local Attacks = {}
@@ -149,6 +150,36 @@ function Attacks.knight_attacks(square: number): vector
 end
 function Attacks.king_attacks(square: number): vector
 	return KING_MOVES[square]
+end
+
+function Attacks.between_squares(a: number, b: number, pieceType: number): vector
+	if pieceType ~= ROOK and pieceType ~= BISHOP and pieceType ~= QUEEN then
+		return u64.ZERO
+	end
+
+	local between = u64.ZERO
+	local allowStraight = pieceType == ROOK or pieceType == QUEEN
+	local allowDiagonal = pieceType == BISHOP or pieceType == QUEEN
+
+	if allowStraight and Utils.get_bit(RAY_NORTH[a], b) then
+		return u64.band(RAY_NORTH[a], RAY_SOUTH[b])
+	elseif allowStraight and Utils.get_bit(RAY_SOUTH[a], b) then
+		return u64.band(RAY_SOUTH[a], RAY_NORTH[b])
+	elseif allowStraight and Utils.get_bit(RAY_EAST[a], b) then
+		return u64.band(RAY_EAST[a], RAY_WEST[b])
+	elseif allowStraight and Utils.get_bit(RAY_WEST[a], b) then
+		return u64.band(RAY_WEST[a], RAY_EAST[b])
+	elseif allowDiagonal and Utils.get_bit(RAY_NE[a], b) then
+		return u64.band(RAY_NE[a], RAY_SW[b])
+	elseif allowDiagonal and Utils.get_bit(RAY_NW[a], b) then
+		return u64.band(RAY_NW[a], RAY_SE[b])
+	elseif allowDiagonal and Utils.get_bit(RAY_SE[a], b) then
+		return u64.band(RAY_SE[a], RAY_NW[b])
+	elseif allowDiagonal and Utils.get_bit(RAY_SW[a], b) then
+		return u64.band(RAY_SW[a], RAY_NE[b])
+	end
+
+	return between
 end
 
 -- Compute attacks in a direction using countlz/countrz

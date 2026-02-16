@@ -3,6 +3,7 @@ local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_incl
 local BitBoard = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "bitboard").BitBoard
 local Move = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "move").Move
 local Board = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "board")
+local Utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "utils")
 local Notation = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "notation").Notation
 
 return {
@@ -10,4 +11,5 @@ return {
     Move = Move,
     Board = Board,
     Notation = Notation,
+    Utils = Utils,
 }

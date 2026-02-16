@@ -23,9 +23,6 @@ local PieceValues = {
 
 local TT = game and game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
 
-local function isPromotion(loc: number, piece: number, color: number)
-    return piece == 0 and (if color == 0 then loc > 55 else loc < 8);
-end
 return function(board, moves)
     local color = board.side_to_move
     local ttEntry --= TT and TT[bitboard.hash(board)]

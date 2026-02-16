@@ -212,11 +212,12 @@ local function handle_castling_rook_move(board: Board, color: number, kingside: 
 end
 
 local function update_occupied_for_basic_move(board: Board, color: number, from: number, to: number)
-	board.occupied.all = Utils.clear_bit(board.occupied.all, from)
-	board.occupied.all = Utils.set_bit(board.occupied.all, to)
+	local occupied = board.occupied
+    occupied.all = Utils.clear_bit(occupied.all, from)
+    occupied.all = Utils.set_bit(occupied.all, to)
 
-	board.occupied[color] = Utils.clear_bit(board.occupied[color], from)
-	board.occupied[color] = Utils.set_bit(board.occupied[color], to)
+    occupied[color] = Utils.clear_bit(occupied[color], from)
+    occupied[color] = Utils.set_bit(occupied[color], to)
 end
 
 local function restore_captured_piece(board: Board, packed: number)

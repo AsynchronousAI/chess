@@ -41,6 +41,7 @@ function FEN.from_fen(board, fen)
 	end
 
 	-- clear all bitboards first
+	board.pieceTable = {}
 	for _, color in {WHITE, BLACK} do
 		for _, typ in {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING} do
 			board.pieces[color][typ] = u64.ZERO
@@ -61,8 +62,9 @@ function FEN.from_fen(board, fen)
 					local square = (8 - rank) * 8 + file
 					local r = u64.lshift(u64.ONE, square)
 					board.pieces[info.color][info.type] = u64.bor(board.pieces[info.color][info.type], r)
-                    board.occupied[info.color] = u64.bor(board.occupied[info.color], r)
-                    board.occupied.all = u64.bor(board.occupied.all, r)
+					board.occupied[info.color] = u64.bor(board.occupied[info.color], r)
+					board.occupied.all = u64.bor(board.occupied.all, r)
+					board.pieceTable[square] = Utils.make_pair(info.type, info.color)
 				end
 				file = file + 1
 			end
