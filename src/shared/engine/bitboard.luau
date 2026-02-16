@@ -447,7 +447,11 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
     for _, move in moves do
 		local isKing = Move.getPieceType(move) == KING
 
-        local capturingPiece = if Move.getCaptured(move) then Board.get_piece(board, Move.getTo(move)) else nil
+        local capturedType;
+        if Move.getCaptured(move) then
+            capturedType = Board.get_piece(board, Move.getTo(move))
+        end
+
 		local attackedCache = {
 			all = board.attacked[1-color].all,
 			pieces = {},
@@ -467,9 +471,9 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 
         --- Regenerate attack bitboards
         -- Capturing piece (to escape check)
-        if capturingPiece then
-			cachePiece(capturingPiece[1])
-			Board.regenerate_piece_attacked(board, 1-color, capturingPiece[1])
+        if capturedType then
+			cachePiece(capturedType)
+			Board.regenerate_piece_attacked(board, 1-color, capturedType)
 		end
 
 		-- Blocking sliding pieces
@@ -482,23 +486,23 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 		for _, block in blocking do
 		    local blocker, slider = split_pair(block)
 
-            local piece = Board.get_piece(board, slider)
-            if not piece then continue end
+            local pieceType, pieceColor = Board.get_piece(board, slider)
+            if pieceType == nil or pieceColor == nil then continue end
 
 			if isKing and blocker == to then -- king will take spot of blocker
 			    valid = false
 				break
 			end
-			local interposing = blocker == headKingPos and is_between_slider_and_king(slider, headKingPos, to, piece[1])
+			local interposing = blocker == headKingPos and is_between_slider_and_king(slider, headKingPos, to, pieceType)
 			if blocker ~= from and blocker ~= to and not interposing then -- we are not affecting this ray
 			    continue
 			end
 
             -- if it is opponents piece and not already regenerated
-            if piece[2] == 1-color and not alreadyGenerated[piece[1]] then
-                alreadyGenerated[piece[1]] = true;
-				cachePiece(piece[1])
-                Board.regenerate_piece_attacked(board, 1-color, piece[1])
+            if pieceColor == 1-color and not alreadyGenerated[pieceType] then
+                alreadyGenerated[pieceType] = true;
+				cachePiece(pieceType)
+                Board.regenerate_piece_attacked(board, 1-color, pieceType)
             end
         end
 
@@ -543,10 +547,15 @@ function Board.generate_legal_moves_from(board: Board, from: number, filePseudoL
 end
 
 -- Pieces
-function Board.get_piece(board: Board, loc: number): {[number]: number}?
+local rshift = bit32.rshift
+local band   = bit32.band
+
+function Board.get_piece(board: Board, loc: number): (number?, number?)
     local val = board.pieceTable[loc]
-    if not val then return nil end
-    return {split_pair(val)}
+    if not val then
+        return nil, nil
+    end
+    return rshift(val, 6), band(val, 63) -- one less func call, inline split_pair
 end
 
 function Board.get_all_pieces(board: Board)

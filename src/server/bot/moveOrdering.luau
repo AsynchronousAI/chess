@@ -43,11 +43,11 @@ return function(board, moves)
         local to = moveLib.getTo(move)
         local promotion = moveLib.getPromotion(move)
         local piece = moveLib.getPieceType(move)
-        local victim = bitboard.get_piece(board, to)
+        local victimType = bitboard.get_piece(board, to)
 
         -- Base value
         local value = 1
-        if victim then value = (PieceValues[victim[1]]*10)-PieceValues[piece] end
+        if victimType then value = (PieceValues[victimType]*10)-PieceValues[piece] end
 
         -- TT boost
         if ttEntry and from==tt_from and to==tt_to and promotion==tt_promo then

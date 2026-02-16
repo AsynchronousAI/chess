@@ -75,7 +75,7 @@ export class Gameplay implements OnStart {
     const fromPiece = BitBoard.get_piece(activeGame.board, from);
     if (
       !fromPiece ||
-      (promotion !== undefined && !IsPromotion(to, ...fromPiece))
+      (promotion !== undefined && !IsPromotion(to, fromPiece[0], fromPiece[1]))
     ) {
       return;
     }
