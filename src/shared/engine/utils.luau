@@ -49,10 +49,10 @@ local WHITE = 0
 local BLACK = 1
 
 export type Board = {
-    pieceTable: {[number]: number},
-    pieces: {[number]: {[number]: vector}},
+    pieceTable: {number},
+    pieces: {{vector}},
     occupied: {[number]: vector, all: vector},
-    attacked: {[number]: {[number]: vector, all: vector}},
+    attacked: {{[number]: vector, all: vector}},
     side_to_move: number,
     castling_rights: number,
     en_passant_square: number?,

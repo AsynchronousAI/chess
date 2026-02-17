@@ -16,17 +16,7 @@ local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ;
 
-export type Board = {
-    pieceTable: {[number]: number},
-    pieces: {[number]: {[number]: vector}},
-    occupied: {[number]:vector, all: vector},
-    attacked: {[number]: {[number]: vector, all: vector}},
-    side_to_move: number,
-    castling_rights: number,
-    en_passant_square: number?,
-    halfmove_clock: number,
-    fullmove_number: number
-}
+export type Board = Utils.Board;
 
 local Board = {
     hash = Zobrist,
@@ -47,7 +37,7 @@ function Board.create(blank: boolean?): Board
 
     local board: Board = {
         -- Bitboards for each piece type and color
-        pieceTable = {},
+        pieceTable = table.create(64),
         pieces = {
             [WHITE] = {
                 [PAWN] = u64.ZERO,
@@ -189,9 +179,7 @@ end
 export type UndoRecord = MoveOps.UndoRecord
 
 Board.make_move = MoveOps.make_move
-
 Board.undo_move = MoveOps.undo_move
-
 Board.get_undo_record_data = MoveOps.get_undo_record_data
 
 -- Attacked squares
@@ -263,6 +251,21 @@ function Board.is_square_attacked(board: Board, square: number, by_color: number
 end
 
 -- Move generation
+local function add_pawn_moves(moves: {number}, targets: vector, from_offset: number, is_capture: boolean, promo_rank: vector)
+	Utils.iterate_bits(targets, function(to_square: number)
+		local from_square = to_square - from_offset
+
+		-- Check for promotion
+		if Utils.get_bit(promo_rank, to_square) then
+			for promo = KNIGHT, QUEEN do
+				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
+			end
+		else
+			table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
+		end
+	end)
+end
+
 local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 	local pawns = board.pieces[color][PAWN]
 	local empty = u64.bnot(board.occupied.all)
@@ -294,25 +297,10 @@ local function generate_pawn_moves(board: Board, moves: {number}, color: number)
 	right_captures = u64.band(right_captures, enemies)
 
 	-- Generate moves
-	local function add_pawn_moves(targets, from_offset, is_capture)
-	    Utils.iterate_bits(targets, function(to_square: number)
-			local from_square = to_square - from_offset
-
-			-- Check for promotion
-			if Utils.get_bit(promo_rank, to_square) then
-				for promo = KNIGHT, QUEEN do
-					table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
-				end
-			else
-				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
-			end
-		end)
-	end
-
-	add_pawn_moves(push_targets, push_dir, false)
-	add_pawn_moves(double_push_targets, push_dir * 2, false)
-	add_pawn_moves(left_captures, if color == WHITE then 7 else -7, true)
-	add_pawn_moves(right_captures, if color == WHITE then 9 else -9, true)
+	add_pawn_moves(moves, push_targets, push_dir, false, promo_rank)
+	add_pawn_moves(moves, double_push_targets, push_dir * 2, false, promo_rank)
+	add_pawn_moves(moves, left_captures, if color == WHITE then 7 else -7, true, promo_rank)
+	add_pawn_moves(moves, right_captures, if color == WHITE then 9 else -9, true, promo_rank)
 
 	-- En passant
 	if board.en_passant_square and board.en_passant_square>0 then -- NOTE: running a perft test shows that en_passant has a small bug
@@ -454,25 +442,13 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 
 		local attackedCache = {
 			all = board.attacked[1-color].all,
-			pieces = {},
 		}
-		local function cachePiece(pieceType: number)
-			if attackedCache.pieces[pieceType] == nil then
-				attackedCache.pieces[pieceType] = board.attacked[1-color][pieceType]
-			end
-		end
-		local function restoreAttacks()
-			for pieceType, bb in pairs(attackedCache.pieces) do
-				board.attacked[1-color][pieceType] = bb
-			end
-			board.attacked[1-color].all = attackedCache.all
-		end
 		local record = Board.make_move(board, move)
 
         --- Regenerate attack bitboards
         -- Capturing piece (to escape check)
         if capturedType then
-			cachePiece(capturedType)
+            attackedCache[capturedType] = board.attacked[1-color][capturedType]
 			Board.regenerate_piece_attacked(board, 1-color, capturedType)
 		end
 
@@ -501,16 +477,18 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
             -- if it is opponents piece and not already regenerated
             if pieceColor == 1-color and not alreadyGenerated[pieceType] then
                 alreadyGenerated[pieceType] = true;
-				cachePiece(pieceType)
+                attackedCache[pieceType] = board.attacked[1-color][pieceType]
                 Board.regenerate_piece_attacked(board, 1-color, pieceType)
             end
         end
 
-        if not valid then
+		if not valid then
 			Board.undo_move(board, move, record)
-			restoreAttacks()
-            continue
-        end
+			for pieceType, bb in attackedCache do
+				board.attacked[1-color][pieceType] = bb
+			end
+			continue
+		end
 
 		Board.attacked_occupancy(board, 1-color)
 
@@ -526,7 +504,9 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
         end
 
 		Board.undo_move(board, move, record)
-		restoreAttacks()
+		for pieceType, bb in attackedCache do
+			board.attacked[1-color][pieceType] = bb
+		end
     end
 
     return filtered_moves

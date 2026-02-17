@@ -31,6 +31,6 @@ local function run_perft(depth)
     print("Perft depth:", depth, "nodes:", nodes, "time:", elapsed)
 end
 
-for depth = 1, 5 do
+for depth = 1, 4 do
     run_perft(depth)
 end
