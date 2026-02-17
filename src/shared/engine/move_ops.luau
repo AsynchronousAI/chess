@@ -33,17 +33,15 @@ local function unpack_captured_piece(packed: number)
 	return cap_type, cap_color, square
 end
 
--- Flat undo stack (LIFO, no clearing)
-local STRIDE = 3
-local SENTINEL = -1
 local EP_SENTINEL = 0x7F
+local LANE_MASK = 0xFFFFFF
+local CAPTURED_SENTINEL = 0x3FF
+local ROOK_PAIR_SENTINEL = 0xFFF
+local STATE_LOW_MASK = 0xFFFFFF
+local STATE_HIGH_MASK = 0x1F
 
 local undo_top = 0
-local undo_stack = table.create(1000 * STRIDE)
-
-local OFF_CAPTURED = 0
-local OFF_STATE = 1
-local OFF_ROOK_PAIR = 2
+local undo_stack = table.create(32)
 
 local STATE_CASTLING_MASK = 0xF
 local STATE_EP_MASK = 0x7F
@@ -55,14 +53,9 @@ local STATE_HALF_SHIFT = 11
 local STATE_FULL_SHIFT = 19
 
 local function pack_state(castling_rights: number, en_passant_square: number?, halfmove_clock: number, fullmove_number: number)
-	local ep = en_passant_square
-	if ep == nil then
-		ep = EP_SENTINEL
-	end
-
 	return bit32.bor(
 		bit32.band(castling_rights, STATE_CASTLING_MASK),
-		bit32.lshift(bit32.band(ep, STATE_EP_MASK), STATE_EP_SHIFT),
+		bit32.lshift(bit32.band(en_passant_square or EP_SENTINEL, STATE_EP_MASK), STATE_EP_SHIFT),
 		bit32.lshift(bit32.band(halfmove_clock, STATE_HALF_MASK), STATE_HALF_SHIFT),
 		bit32.lshift(bit32.band(fullmove_number, STATE_FULL_MASK), STATE_FULL_SHIFT)
 	)
@@ -75,6 +68,40 @@ local function unpack_state(packed: number)
 	local fullmove_number = bit32.band(bit32.rshift(packed, STATE_FULL_SHIFT), STATE_FULL_MASK)
 
 	return castling_rights, if ep == EP_SENTINEL then nil else ep, halfmove_clock, fullmove_number
+end
+
+local function pack_undo_record(captured_piece: number?, state_packed: number, rook_pair: number?)
+	local captured = captured_piece or CAPTURED_SENTINEL
+	local rook = rook_pair or ROOK_PAIR_SENTINEL
+
+	local lane0 = bit32.bor(
+		bit32.band(captured, 0x3FF),
+		bit32.lshift(bit32.band(rook, 0xFFF), 10)
+	)
+
+	local lane1 = bit32.band(state_packed, STATE_LOW_MASK)
+	local lane2 = bit32.band(bit32.rshift(state_packed, 24), STATE_HIGH_MASK)
+
+	return vector.create(
+		bit32.band(lane0, LANE_MASK),
+		bit32.band(lane1, LANE_MASK),
+		bit32.band(lane2, LANE_MASK)
+	)
+end
+
+local function unpack_undo_record(record_vec: vector)
+	local lane0 = bit32.band(record_vec.x, LANE_MASK)
+	local lane1 = bit32.band(record_vec.y, LANE_MASK)
+	local lane2 = bit32.band(record_vec.z, LANE_MASK)
+
+	local captured = bit32.band(lane0, 0x3FF)
+	local rook_pair = bit32.band(bit32.rshift(lane0, 10), 0xFFF)
+	local state_packed = bit32.bor(
+		bit32.band(lane1, STATE_LOW_MASK),
+		bit32.lshift(bit32.band(lane2, STATE_HIGH_MASK), 24)
+	)
+
+	return captured, state_packed, rook_pair
 end
 
 local function get_captured_piece(board: Board, to: number, en_passant: boolean, color: number): number?
@@ -263,11 +290,9 @@ local function make_move(board: Board, move: number): UndoRecord
 
 	-- Save pre-move state
 	undo_top += 1
-	local base = (undo_top - 1) * STRIDE
-	local idx = base + 1
-	undo_stack[idx + OFF_CAPTURED] = captured_piece or SENTINEL
-	undo_stack[idx + OFF_STATE] = pack_state(board.castling_rights, board.en_passant_square, board.halfmove_clock, board.fullmove_number)
-	undo_stack[idx + OFF_ROOK_PAIR] = SENTINEL
+	local idx = undo_top
+	local state_packed = pack_state(board.castling_rights, board.en_passant_square, board.halfmove_clock, board.fullmove_number)
+	local rook_pair_packed: number? = nil
 
 	clear_from_square(board, color, piece_type, from)
 
@@ -286,8 +311,10 @@ local function make_move(board: Board, move: number): UndoRecord
 
 	if castling then
 		local rook_from, rook_to = handle_castling_rook_move(board, color, kingside)
-		undo_stack[idx + OFF_ROOK_PAIR] = make_pair(rook_from, rook_to)
+		rook_pair_packed = make_pair(rook_from, rook_to)
 	end
+
+	undo_stack[idx] = pack_undo_record(captured_piece, state_packed, rook_pair_packed)
 
 	update_occupied_for_basic_move(board, color, from, to)
 
@@ -300,7 +327,7 @@ local function make_move(board: Board, move: number): UndoRecord
 end
 
 local function undo_move(board: Board, move: number, record: UndoRecord?)
-	local idx = record or ((undo_top - 1) * STRIDE + 1)
+	local idx = record or undo_top
 
 	local from = Move.getFrom(move)
 	local to = Move.getTo(move)
@@ -310,7 +337,10 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	local color = 1 - board.side_to_move
 
 	board.side_to_move = color
-	local castling_rights, en_passant_square, halfmove_clock, fullmove_number = unpack_state(undo_stack[idx + OFF_STATE])
+	local record_vec = undo_stack[idx]
+	local packed_captured, packed_state, packed_rook_pair = unpack_undo_record(record_vec)
+
+	local castling_rights, en_passant_square, halfmove_clock, fullmove_number = unpack_state(packed_state)
 	board.castling_rights = castling_rights
 	board.en_passant_square = en_passant_square
 	board.halfmove_clock = halfmove_clock
@@ -329,33 +359,31 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	board.occupied.all = Utils.set_bit(board.occupied.all, from)
 	board.occupied[color] = Utils.set_bit(board.occupied[color], from)
 
-	local packed_captured = undo_stack[idx + OFF_CAPTURED]
-	if packed_captured ~= SENTINEL then
+	if packed_captured ~= CAPTURED_SENTINEL then
 		restore_captured_piece(board, packed_captured)
 	end
 
-	local rook_pair = undo_stack[idx + OFF_ROOK_PAIR]
-	if rook_pair ~= SENTINEL then
-		local rook_from, rook_to = split_pair(rook_pair)
+	if packed_rook_pair ~= ROOK_PAIR_SENTINEL then
+		local rook_from, rook_to = split_pair(packed_rook_pair)
 		undo_castling_rook(board, color, rook_from, rook_to)
 	end
 
-	undo_top = (idx - 1) / STRIDE
+	undo_top = idx - 1
 end
 
 local function get_undo_record_data(record: UndoRecord)
 	local idx = record
-	local captured_piece = undo_stack[idx + OFF_CAPTURED]
-	local castling_rights, en_passant_square, halfmove_clock, fullmove_number = unpack_state(undo_stack[idx + OFF_STATE])
-	local rook_pair = undo_stack[idx + OFF_ROOK_PAIR]
+	local record_vec = undo_stack[idx]
+	local captured_piece, packed_state, rook_pair = unpack_undo_record(record_vec)
+	local castling_rights, en_passant_square, halfmove_clock, fullmove_number = unpack_state(packed_state)
 
 	return {
-		captured_piece = if captured_piece == SENTINEL then nil else captured_piece,
+		captured_piece = if captured_piece == CAPTURED_SENTINEL then nil else captured_piece,
 		castling_rights = castling_rights,
 		en_passant_square = en_passant_square,
 		halfmove_clock = halfmove_clock,
 		fullmove_number = fullmove_number,
-		additionallyMoved = if rook_pair ~= SENTINEL then { split_pair(rook_pair) } else nil,
+		additionallyMoved = if rook_pair ~= ROOK_PAIR_SENTINEL then { split_pair(rook_pair) } else nil,
 	}
 end
 

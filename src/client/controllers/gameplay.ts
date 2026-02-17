@@ -49,7 +49,11 @@ export class Gameplay implements OnStart {
     color: Color,
     board: BitBoard = this.board,
   ) {
-    const captured = BitBoard.get_piece(board, to);
+    const capturedVal = board.pieceTable[to];
+    const captured =
+      capturedVal !== undefined
+        ? ([bit32.rshift(capturedVal, 6), bit32.band(capturedVal, 63)] as const)
+        : undefined;
 
     if (board === this.board) {
       const prev: [Piece[], Piece[]] =

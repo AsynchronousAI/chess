@@ -31,8 +31,10 @@ local function printBoard(board)
         local row = tostring(rank + 1) .. " "
         for file = 0, 7 do
             local square = rank * 8 + file
-            local pieceType, pieceColor = bitboard.get_piece(board, square)
-            if pieceType then
+            local val = board.pieceTable[square]
+            if val then
+                local pieceType = bit32.rshift(val, 6)
+                local pieceColor = bit32.band(val, 63)
                 row = row .. (CHAR[pieceColor+1][pieceType+1]) .. " "
             else
                 row = row .. ". "

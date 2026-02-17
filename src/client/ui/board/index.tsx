@@ -63,8 +63,12 @@ export default function Board() {
       return;
     }
 
-    const piece = BitBoard.get_piece(board, holdingPiece);
-    if (piece[0] === undefined) return;
+    const pieceVal = board.pieceTable[holdingPiece];
+    if (pieceVal === undefined) return;
+    const piece = [
+      bit32.rshift(pieceVal, 6),
+      bit32.band(pieceVal, 63),
+    ] as const;
 
     if (IsPromotion(location, piece[0], piece[1])) {
       setPromoting(location);
@@ -94,10 +98,10 @@ export default function Board() {
         Move.getPromotion(moveHistory[moveIndex].move),
       ],
       false,
-      BitBoard.get_piece(
-        prevBoard,
-        Move.getFrom(moveHistory[moveIndex].move),
-      )![1],
+      bit32.band(
+        prevBoard.pieceTable[Move.getFrom(moveHistory[moveIndex].move)]!,
+        63,
+      ),
       prevBoard, // temporary!
       moveHistory[moveIndex].additionallyMoved,
     );

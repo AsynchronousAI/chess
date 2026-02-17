@@ -72,9 +72,16 @@ export class Gameplay implements OnStart {
     const currentTime = os.clock();
 
     /* illegal moves, in future check for promotions also */
-    const fromPiece = BitBoard.get_piece(activeGame.board, from);
+    const fromPieceVal = activeGame.board.pieceTable[from];
+    const fromPiece =
+      fromPieceVal !== undefined
+        ? ([
+            bit32.rshift(fromPieceVal, 6),
+            bit32.band(fromPieceVal, 63),
+          ] as const)
+        : undefined;
     if (
-      fromPiece[0] === undefined ||
+      fromPiece === undefined ||
       (promotion !== undefined && !IsPromotion(to, fromPiece[0], fromPiece[1]))
     ) {
       return;

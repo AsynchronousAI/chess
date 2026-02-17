@@ -102,13 +102,7 @@ local function popcount(bb)
 	return count
 end
 
-local function iterate_bits(bb, callback)
-    while bb ~= ZERO do
-        local index = countrz(bb)
-        callback(index)
-        bb = band(bb, bnot(BIT_MASKS[index]))
-    end
-end
+
 
 -- 32-bit Helpers
 local function set_bit32(num: number, index: number)
@@ -181,7 +175,7 @@ return {
     clear_bit = clear_bit,
     pop_lsb = pop_lsb,
     popcount = popcount,
-    iterate_bits = iterate_bits,
+
     unit_board = unit_board,
 
     -- 32-bit helpers

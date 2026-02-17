@@ -45,7 +45,8 @@ return function(board, moves)
         local to = moveLib.getTo(move)
         local promotion = moveLib.getPromotion(move)
         local piece = moveLib.getPieceType(move)
-        local victimType = bitboard.get_piece(board, to)
+        local victimVal = board.pieceTable[to]
+        local victimType = if victimVal then bit32.rshift(victimVal, 6) else nil
 
         -- Base value
         local value = 1

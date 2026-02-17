@@ -141,9 +141,12 @@ function Board.set_start_position(board: Board)
 	Board.update_occupied(board)
 	for color = WHITE, BLACK do
 		for pieceType = PAWN, KING do
-			Utils.iterate_bits(board.pieces[color][pieceType], function(bitIndex)
+			local bb = board.pieces[color][pieceType]
+			while bb ~= u64.ZERO do
+				local bitIndex = u64.countrz(bb)
 				board.pieceTable[bitIndex] = make_pair(pieceType, color)
-			end)
+				bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, bitIndex)))
+			end
 		end
 	end
 end
@@ -206,14 +209,18 @@ function Board.regenerate_piece_attacked(board: Board, by_color: number, piece: 
     -- SLIDING PIECES:
     -- Note: In the future, we can regenerate individuals or maybe even single rays (NE, NW) of a sliding piece based on pins.
     if attack_func then
-        Utils.iterate_bits(board.pieces[by_color][piece], function(s)
+        local bb = board.pieces[by_color][piece]
+        while bb ~= u64.ZERO do
+            local s = u64.countrz(bb)
             local attack, blockers = attack_func(s, board.occupied[by_color], board.occupied[1-by_color])
             attacks = u64.bor(attacks, attack)
 
             for _, blocker in blockers do
                 table.insert(blockingPairs, make_pair(blocker, s))
             end
-        end)
+
+            bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, s)))
+        end
     end
 
     board.attacked[by_color][piece] = attacks
@@ -252,7 +259,9 @@ end
 
 -- Move generation
 local function add_pawn_moves(moves: {number}, targets: vector, from_offset: number, is_capture: boolean, promo_rank: vector)
-	Utils.iterate_bits(targets, function(to_square: number)
+	local bb = targets
+	while bb ~= u64.ZERO do
+		local to_square = u64.countrz(bb)
 		local from_square = to_square - from_offset
 
 		-- Check for promotion
@@ -263,7 +272,9 @@ local function add_pawn_moves(moves: {number}, targets: vector, from_offset: num
 		else
 			table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
 		end
-	end)
+
+		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
+	end
 end
 
 local function generate_pawn_moves(board: Board, moves: {number}, color: number)
@@ -322,15 +333,22 @@ local function generate_piece_moves(board: Board, moves: {number}, piece_type: n
 	local own_pieces = board.occupied[color]
 	local other_pieces = board.occupied[1 - color]
 
-	Utils.iterate_bits(board.pieces[color][piece_type], function(from_square)
+	local bb = board.pieces[color][piece_type]
+	while bb ~= u64.ZERO do
+		local from_square = u64.countrz(bb)
         local attacks = attack_func(from_square, own_pieces, other_pieces)
         attacks = u64.band(attacks, u64.bnot(own_pieces))
 
-        Utils.iterate_bits(attacks, function(to_square)
+		local attacks_bb = attacks
+		while attacks_bb ~= u64.ZERO do
+			local to_square = u64.countrz(attacks_bb)
             local is_capture = Utils.get_bit(other_pieces, to_square)
             table.insert(moves, Move.create(from_square, to_square, piece_type, is_capture))
-        end)
-    end)
+			attacks_bb = u64.band(attacks_bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
+		end
+
+		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from_square)))
+	end
 end
 
 -- Castling
@@ -437,7 +455,8 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 
         local capturedType;
         if Move.getCaptured(move) then
-            capturedType = Board.get_piece(board, Move.getTo(move))
+            local capVal = board.pieceTable[Move.getTo(move)]
+            capturedType = if capVal then bit32.rshift(capVal, 6) else nil
         end
 
 		local attackedCache = {
@@ -462,8 +481,10 @@ function Board.generate_legal_moves(board: Board, filePseudoLegal: boolean?, giv
 		for _, block in blocking do
 		    local blocker, slider = split_pair(block)
 
-            local pieceType, pieceColor = Board.get_piece(board, slider)
-            if pieceType == nil or pieceColor == nil then continue end
+            local sliderVal = board.pieceTable[slider]
+            if not sliderVal then continue end
+            local pieceType = bit32.rshift(sliderVal, 6)
+            local pieceColor = bit32.band(sliderVal, 63)
 
 			if isKing and blocker == to then -- king will take spot of blocker
 			    valid = false
