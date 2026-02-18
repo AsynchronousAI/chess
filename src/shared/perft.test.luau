@@ -1,7 +1,5 @@
 local bitboard = require("./engine/bitboard").BitBoard
-local Move = require("./engine/move").Move
 
-local FEN = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
 local DEPTH = 4
 
 local function perft(board, depth)
@@ -24,32 +22,14 @@ local function perft(board, depth)
     return nodes
 end
 
-
-local function perft_divide(board, depth)
-    local legal_moves = bitboard.generate_legal_moves(board)
-    for _, move in legal_moves do
-        local record = bitboard.make_move(board, move)
-        local nodes = perft(board, depth - 1)
-        bitboard.undo_move(board, move, record)
-        print(Move.toString(move), nodes)
-    end
-end
-
 local function run_perft(depth)
     local board = bitboard.create()
-    bitboard.from_fen(board, FEN)
 
     local startTime = os.clock()
-    local nodes
-    if depth == DEPTH then
-        perft_divide(board, depth)
-    else
-        nodes = perft(board, depth)
-    end
+    local nodes = perft(board, depth)
     local elapsed = os.clock() - startTime
 
-    print("Perft depth:", depth, "nodes:", nodes, "time:", elapsed)
-
+    print(string.format("Perft depth: %d, nodes: %d, time: %.4fs. %.2f nodes/sec", depth, nodes, elapsed, nodes / elapsed))
 end
 
 for depth = 1, DEPTH do

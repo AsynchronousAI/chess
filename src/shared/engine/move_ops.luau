@@ -296,7 +296,7 @@ local function make_move(board: Board, move: number): UndoRecord
 
 	clear_from_square(board, color, piece_type, from)
 
-	board.pieceTable[to] = make_pair(piece_type, color)
+
 
 	if captured then
 		handle_capture(board, opponent, to, en_passant, color)

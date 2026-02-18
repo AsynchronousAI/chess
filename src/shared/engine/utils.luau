@@ -14,13 +14,7 @@ local countrz  = u64.countrz
 local ZERO     = u64.ZERO
 local ONE      = u64.ONE
 
--- Preimport bit32
-local band32    = bit32.band
-local bor32     = bit32.bor
-local bnot32    = bit32.bnot
-local lshift32  = bit32.lshift
-local rshift32  = bit32.rshift
-local arshift32 = bit32.arshift
+
 
 -- Constants
 local RANK_1 = u64.from_pair(0x00000000, 0x000000FF)
@@ -68,7 +62,7 @@ end
 
 local BIT_MASKS32 = table.create(32)
 for i = 0, 31 do
-    BIT_MASKS32[i] = lshift32(1, i)
+    BIT_MASKS32[i] = bit32.lshift(1, i)
 end
 
 -- 64-bit Helpers
@@ -106,32 +100,32 @@ end
 
 -- 32-bit Helpers
 local function set_bit32(num: number, index: number)
-    return bor32(num, BIT_MASKS32[index])
+    return bit32.bor(num, BIT_MASKS32[index])
 end
 
 local function clear_bit32(num: number, index: number)
-    return band32(num, bnot32(BIT_MASKS32[index]))
+    return bit32.band(num, bit32.bnot(BIT_MASKS32[index]))
 end
 
 local function get_bit32(num: number, index: number)
-    return band32(num, BIT_MASKS32[index]) ~= 0
+    return bit32.band(num, BIT_MASKS32[index]) ~= 0
 end
 
 -- Square / Encoding Helpers
 local function separate_square_index(loc: number)
-	return {band32(loc, 7), arshift32(loc, 3)}
+	return {bit32.band(loc, 7), bit32.arshift(loc, 3)}
 end
 
 local function get_square_index(file: number, rank: number)
-    return bor32(lshift32(rank, 3), file)
+    return bit32.bor(bit32.lshift(rank, 3), file)
 end
 
 local function make_pair(a: number, b: number)
-    return bor32(lshift32(a, 6), band32(b, 63))
+    return bit32.bor(bit32.lshift(a, 6), bit32.band(b, 63))
 end
 
 local function split_pair(pair: number)
-    return rshift32(pair, 6), band32(pair, 63)
+    return bit32.rshift(pair, 6), bit32.band(pair, 63)
 end
 
 ------------------------------------------------------------------
