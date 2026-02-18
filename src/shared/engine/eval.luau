@@ -2,9 +2,6 @@
 --!optimize 2
 --!strict
 
--- Shared evaluation module (PST-based)
--- Returns a function: eval(board) -> number
-
 local Utils = require("./utils")
 
 local pst = {

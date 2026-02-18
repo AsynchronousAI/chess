@@ -35,12 +35,12 @@ return function(board, moves)
         tt_promo = moveLib.getPromotion(ttEntry.bestMove)
     end
 
-    local new = {}
+    local new = table.create(#moves * 2)
 
     local promoTypes  = {1,  2,  3,  4}
     local promoValues = {18, 17, 19, 20}
 
-    for _, move in ipairs(moves) do
+    for _, move in moves do
         local from = moveLib.getFrom(move)
         local to = moveLib.getTo(move)
         local promotion = moveLib.getPromotion(move)
@@ -68,6 +68,38 @@ return function(board, moves)
         end
     end
 
-    table.sort(new, function(a,b) return moveLib.getValue(a) > moveLib.getValue(b) end)
+    -- Radix sort (two 4-bit passes over 7-bit values)
+    local getValue = moveLib.getValue
+    local n = #new
+    local tmp = table.create(n)
+
+    local function radix_pass(src, dst, shift)
+        local counts = table.create(16, 0)
+        for i = 1, n do
+            local v = bit32.band(bit32.rshift(getValue(src[i]), shift), 0xF) + 1
+            counts[v] += 1
+        end
+        for i = 2, 16 do
+            counts[i] += counts[i - 1]
+        end
+        for i = n, 1, -1 do
+            local v = bit32.band(bit32.rshift(getValue(src[i]), shift), 0xF) + 1
+            local pos = counts[v]
+            dst[pos] = src[i]
+            counts[v] = pos - 1
+        end
+    end
+
+    radix_pass(new, tmp, 0)
+    radix_pass(tmp, new, 4)
+
+    -- Reverse for descending order
+    local i, j = 1, n
+    while i < j do
+        new[i], new[j] = new[j], new[i]
+        i += 1
+        j -= 1
+    end
+
     return new
 end
