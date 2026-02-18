@@ -4,10 +4,12 @@
 
 local Utils = require("./utils")
 local Move = require("./move").Move
+local Eval = require("./eval")
 
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
+local pstForColor = Eval.pstForColor
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
 
 export type Board = Utils.Board
@@ -31,6 +33,31 @@ local function unpack_captured_piece(packed: number)
 	local cap_type = bit32.band(bit32.rshift(packed, CAPTURED_TYPE_SHIFT), 0x7)
 	local cap_color = bit32.band(bit32.rshift(packed, CAPTURED_COLOR_SHIFT), 0x1)
 	return cap_type, cap_color, square
+end
+
+local function eval_delta_for_move(
+	color: number,
+	from: number,
+	to: number,
+	piece_type: number,
+	promotion: number?,
+	captured_piece: number?,
+	rook_pair_packed: number?
+): number
+	local final_piece_type = promotion or piece_type
+	local delta = pstForColor[color][final_piece_type][to] - pstForColor[color][piece_type][from]
+
+	if captured_piece then
+		local cap_type, cap_color, cap_square = unpack_captured_piece(captured_piece)
+		delta -= pstForColor[cap_color][cap_type][cap_square]
+	end
+
+	if rook_pair_packed then
+		local rook_from, rook_to = split_pair(rook_pair_packed)
+		delta += pstForColor[color][ROOK][rook_to] - pstForColor[color][ROOK][rook_from]
+	end
+
+	return delta
 end
 
 local EP_SENTINEL = 0x7F
@@ -275,6 +302,10 @@ local function make_move(board: Board, move: number): UndoRecord
 	local color = board.side_to_move
 	local opponent = 1 - color
 
+	if board.eval == nil then
+		board.eval = Eval.evaluate(board)
+	end
+
 	local from = Move.getFrom(move)
 	local to = Move.getTo(move)
 	local piece_type = Move.getPieceType(move)
@@ -314,6 +345,9 @@ local function make_move(board: Board, move: number): UndoRecord
 		rook_pair_packed = make_pair(rook_from, rook_to)
 	end
 
+	local delta = eval_delta_for_move(color, from, to, piece_type, promotion, captured_piece, rook_pair_packed)
+	board.eval += delta
+
 	undo_stack[idx] = pack_undo_record(captured_piece, state_packed, rook_pair_packed)
 
 	update_occupied_for_basic_move(board, color, from, to)
@@ -345,6 +379,14 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	board.en_passant_square = en_passant_square
 	board.halfmove_clock = halfmove_clock
 	board.fullmove_number = fullmove_number
+
+	local captured_piece = if packed_captured ~= CAPTURED_SENTINEL then packed_captured else nil
+	local rook_pair = if packed_rook_pair ~= ROOK_PAIR_SENTINEL then packed_rook_pair else nil
+	if board.eval == nil then
+		board.eval = Eval.evaluate(board)
+	end
+	local delta = eval_delta_for_move(color, from, to, piece_type, promotion, captured_piece, rook_pair)
+	board.eval -= delta
 
 	local final_piece_type = promotion or piece_type
 	board.pieces[color][final_piece_type] = Utils.clear_bit(board.pieces[color][final_piece_type], to)

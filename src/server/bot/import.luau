@@ -4,6 +4,7 @@ local BitBoard = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "
 local Move = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "move").Move
 local Board = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "board")
 local Utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "utils")
+local Eval = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "eval")
 local Notation = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "engine", "notation").Notation
 
 return {
@@ -12,4 +13,5 @@ return {
     Board = Board,
     Notation = Notation,
     Utils = Utils,
+    Eval = Eval,
 }

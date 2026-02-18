@@ -51,7 +51,8 @@ export type Board = {
     castling_rights: number,
     en_passant_square: number?,
     halfmove_clock: number,
-    fullmove_number: number
+    fullmove_number: number,
+    eval: number?
 }
 
 -- Precomputed masks

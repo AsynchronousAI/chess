@@ -113,6 +113,7 @@ function Board.clone(board: Board): Board
 		fullmove_number = board.fullmove_number,
 		side_to_move = board.side_to_move,
 		castling_rights = board.castling_rights,
+		eval = board.eval,
 		occupied = table.clone(board.occupied),
 	}
 end

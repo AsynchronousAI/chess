@@ -11,6 +11,7 @@ export type BitBoard = {
   en_passant_square?: Square;
   halfmove_clock: number;
   fullmove_number: number;
+  eval?: number;
   pieceTable: Record<number, number>;
 };
 

@@ -4,7 +4,7 @@ local libs = require(script.import)
 local eval = require(script.eval)
 local moveOrdering = require(script.moveOrdering)
 
-local DEPTH = if game:GetService("RunService"):IsStudio() then 3 else 3
+local DEPTH = if game:GetService("RunService"):IsStudio() then 5 else 3
 
 local MinimaxTranspositions = game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
 local EvaluationTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
