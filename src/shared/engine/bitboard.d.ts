@@ -12,6 +12,7 @@ export type BitBoard = {
   halfmove_clock: number;
   fullmove_number: number;
   eval?: number;
+  hash?: number;
   pieceTable: Record<number, number>;
 };
 
@@ -21,7 +22,7 @@ export namespace BitBoard {
   export function create(blank?: boolean): BitBoard;
   export function clone(board: BitBoard): BitBoard;
 
-  export function hash(board: BitBoard): string;
+  export function hash(board: BitBoard): number;
 
   export function to_buffer(board: BitBoard): buffer;
   export function from_buffer(buffer: buffer): BitBoard;

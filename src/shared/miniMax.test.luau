@@ -25,6 +25,10 @@ local DEPTH = 3
 local MAX_MOVES = math.huge
 
 local nodes = 0
+local TT = {}
+local EXACT = 0
+local LOWERBOUND = 1
+local UPPERBOUND = 2
 
 local function printBoard(board)
     for rank = 7, 0, -1 do
@@ -45,6 +49,27 @@ local function printBoard(board)
     print("  a b c d e f g h")
 end
 local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
+    local alphaOrig = alpha
+    local betaOrig = beta
+    local hash = bitboard.hash(board)
+
+    local entry = TT[hash]
+    if entry then
+        if entry.depth >= maxDepth - depth then
+            if entry.flag == EXACT then
+                return entry.score, entry.bestMove
+            elseif entry.flag == LOWERBOUND and entry.score > alpha then
+                alpha = entry.score
+            elseif entry.flag == UPPERBOUND and entry.score < beta then
+                beta = entry.score
+            end
+
+            if alpha >= beta then
+                return entry.score, entry.bestMove
+            end
+        end
+    end
+
     if depth >= maxDepth then
         return eval(board), nil
     end
@@ -82,6 +107,22 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
             break
         end
     end
+
+    local flag
+    if bestScore <= alphaOrig then
+        flag = UPPERBOUND
+    elseif bestScore >= betaOrig then
+        flag = LOWERBOUND
+    else
+        flag = EXACT
+    end
+
+    TT[hash] = {
+        depth = maxDepth - depth,
+        score = bestScore,
+        flag = flag,
+        bestMove = bestMove,
+    }
 
     return bestScore, bestMove
 end

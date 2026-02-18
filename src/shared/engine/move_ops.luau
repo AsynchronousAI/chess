@@ -5,6 +5,11 @@
 local Utils = require("./utils")
 local Move = require("./move").Move
 local Eval = require("./eval")
+local Zobrist = require("./zobrist")
+local toggle_piece = Zobrist.toggle_piece
+local toggle_castling = Zobrist.toggle_castling
+local toggle_en_passant = Zobrist.toggle_en_passant
+local toggle_side = Zobrist.toggle_side
 
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
@@ -305,6 +310,12 @@ local function make_move(board: Board, move: number): UndoRecord
 	if board.eval == nil then
 		board.eval = Eval.evaluate(board)
 	end
+	if board.hash == nil then
+		board.hash = Zobrist.hash(board)
+	end
+	local hash = board.hash
+	local old_castling = board.castling_rights
+	local old_ep = board.en_passant_square
 
 	local from = Move.getFrom(move)
 	local to = Move.getTo(move)
@@ -345,6 +356,38 @@ local function make_move(board: Board, move: number): UndoRecord
 		rook_pair_packed = make_pair(rook_from, rook_to)
 	end
 
+	hash = toggle_piece(hash, color, piece_type, from)
+	hash = toggle_piece(hash, color, final_piece_type, to)
+	if captured_piece then
+		local cap_type, cap_color, cap_square = unpack_captured_piece(captured_piece)
+		hash = toggle_piece(hash, cap_color, cap_type, cap_square)
+	end
+	if rook_pair_packed then
+		local rook_from, rook_to = split_pair(rook_pair_packed)
+		hash = toggle_piece(hash, color, ROOK, rook_from)
+		hash = toggle_piece(hash, color, ROOK, rook_to)
+	end
+	if old_ep then
+		hash = toggle_en_passant(hash, old_ep % 8)
+	end
+	if board.en_passant_square then
+		hash = toggle_en_passant(hash, board.en_passant_square % 8)
+	end
+	if Utils.get_bit32(old_castling, WK) ~= Utils.get_bit32(board.castling_rights, WK) then
+		hash = toggle_castling(hash, 1)
+	end
+	if Utils.get_bit32(old_castling, WQ) ~= Utils.get_bit32(board.castling_rights, WQ) then
+		hash = toggle_castling(hash, 2)
+	end
+	if Utils.get_bit32(old_castling, BK) ~= Utils.get_bit32(board.castling_rights, BK) then
+		hash = toggle_castling(hash, 3)
+	end
+	if Utils.get_bit32(old_castling, BQ) ~= Utils.get_bit32(board.castling_rights, BQ) then
+		hash = toggle_castling(hash, 4)
+	end
+	hash = toggle_side(hash)
+	board.hash = hash
+
 	local delta = eval_delta_for_move(color, from, to, piece_type, promotion, captured_piece, rook_pair_packed)
 	board.eval += delta
 
@@ -373,8 +416,34 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	board.side_to_move = color
 	local record_vec = undo_stack[idx]
 	local packed_captured, packed_state, packed_rook_pair = unpack_undo_record(record_vec)
+	local current_castling = board.castling_rights
+	local current_ep = board.en_passant_square
+	if board.hash == nil then
+		board.hash = Zobrist.hash(board)
+	end
+	local hash = board.hash
 
 	local castling_rights, en_passant_square, halfmove_clock, fullmove_number = unpack_state(packed_state)
+
+	if current_ep then
+		hash = toggle_en_passant(hash, current_ep % 8)
+	end
+	if en_passant_square then
+		hash = toggle_en_passant(hash, en_passant_square % 8)
+	end
+	if Utils.get_bit32(current_castling, WK) ~= Utils.get_bit32(castling_rights, WK) then
+		hash = toggle_castling(hash, 1)
+	end
+	if Utils.get_bit32(current_castling, WQ) ~= Utils.get_bit32(castling_rights, WQ) then
+		hash = toggle_castling(hash, 2)
+	end
+	if Utils.get_bit32(current_castling, BK) ~= Utils.get_bit32(castling_rights, BK) then
+		hash = toggle_castling(hash, 3)
+	end
+	if Utils.get_bit32(current_castling, BQ) ~= Utils.get_bit32(castling_rights, BQ) then
+		hash = toggle_castling(hash, 4)
+	end
+
 	board.castling_rights = castling_rights
 	board.en_passant_square = en_passant_square
 	board.halfmove_clock = halfmove_clock
@@ -389,6 +458,21 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	board.eval -= delta
 
 	local final_piece_type = promotion or piece_type
+
+	hash = toggle_piece(hash, color, final_piece_type, to)
+	hash = toggle_piece(hash, color, piece_type, from)
+	if captured_piece then
+		local cap_type, cap_color, cap_square = unpack_captured_piece(captured_piece)
+		hash = toggle_piece(hash, cap_color, cap_type, cap_square)
+	end
+	if rook_pair then
+		local rook_from, rook_to = split_pair(rook_pair)
+		hash = toggle_piece(hash, color, ROOK, rook_to)
+		hash = toggle_piece(hash, color, ROOK, rook_from)
+	end
+	hash = toggle_side(hash)
+	board.hash = hash
+
 	board.pieces[color][final_piece_type] = Utils.clear_bit(board.pieces[color][final_piece_type], to)
 	board.pieceTable[to] = nil
 

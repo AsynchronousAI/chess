@@ -18,10 +18,10 @@ local UPPERBOUND = 2
 
 local nodes = 0;
 local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
-    -- local hash = libs.BitBoard.hash(board)
+    local hash = libs.BitBoard.hash(board)
 
     -- TT lookup
-    local entry --= TT[hash]
+    local entry = TT and TT[hash]
     if entry then
         -- entry: {depth, score, flag, alpha, beta, bestMove}
         if entry.depth >= maxDepth - depth then
@@ -48,6 +48,8 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local bestScore = if isMaximizing then -math.huge else math.huge
     local bestMove = nil
     local bestSequence = nil
+    local alphaOrig = alpha
+    local betaOrig = beta
 
     local allLegalMoves = libs.BitBoard.generate_legal_moves(board, false, board.side_to_move)
     local moves = moveOrdering(board, allLegalMoves)
@@ -95,21 +97,21 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
 
     -- Transpositions
     local flag
-    if bestScore <= alpha then
+    if bestScore <= alphaOrig then
         flag = UPPERBOUND
-    elseif bestScore >= beta then
+    elseif bestScore >= betaOrig then
         flag = LOWERBOUND
     else
         flag = EXACT
     end
 
-    -- TT[hash] = SharedTable.new({
-    --     depth = maxDepth - depth,
-    --     score = bestScore,
-    --     flag = flag,
-    --     sequence = branchedSequence,
-    --     bestMove = bestMove,
-    -- })
+    TT[hash] = SharedTable.new({
+        depth = maxDepth - depth,
+        score = bestScore,
+        flag = flag,
+        sequence = branchedSequence,
+        bestMove = bestMove,
+    })
 
 
     return bestScore, maxDepthReached, branchedSequence

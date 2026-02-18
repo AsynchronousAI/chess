@@ -36,7 +36,11 @@ do
     Zobrist.side_to_move = random()
 end
 
-return function(board)
+local function hash_board(board)
+    if board.hash ~= nil then
+        return board.hash
+    end
+
     local hash = 0
 
     -- Pieces
@@ -65,5 +69,34 @@ return function(board)
         hash = bit32.bxor(hash, Zobrist.side_to_move)
     end
 
+    board.hash = hash
     return hash
 end
+
+local function toggle_piece(hash, color, piece, square)
+    return bit32.bxor(hash, Zobrist.piece_square[color][piece][square])
+end
+
+local function toggle_castling(hash, index)
+    return bit32.bxor(hash, Zobrist.castling[index])
+end
+
+local function toggle_en_passant(hash, file)
+    return bit32.bxor(hash, Zobrist.en_passant[file])
+end
+
+local function toggle_side(hash)
+    return bit32.bxor(hash, Zobrist.side_to_move)
+end
+
+return {
+    hash = hash_board,
+    toggle_piece = toggle_piece,
+    toggle_castling = toggle_castling,
+    toggle_en_passant = toggle_en_passant,
+    toggle_side = toggle_side,
+    piece_square = Zobrist.piece_square,
+    castling = Zobrist.castling,
+    en_passant = Zobrist.en_passant,
+    side_to_move = Zobrist.side_to_move,
+}

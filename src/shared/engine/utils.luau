@@ -52,7 +52,8 @@ export type Board = {
     en_passant_square: number?,
     halfmove_clock: number,
     fullmove_number: number,
-    eval: number?
+    eval: number?,
+    hash: number?
 }
 
 -- Precomputed masks

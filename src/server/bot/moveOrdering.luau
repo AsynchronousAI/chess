@@ -27,7 +27,7 @@ local TT = game and game:GetService("SharedTableRegistry"):GetSharedTable("Minim
 
 return function(board, moves)
     local color = board.side_to_move
-    local ttEntry --= TT and TT[bitboard.hash(board)]
+    local ttEntry = TT and TT[bitboard.hash(board)]
     local tt_from, tt_to, tt_promo
     if ttEntry and ttEntry.bestMove then
         tt_from = moveLib.getFrom(ttEntry.bestMove)

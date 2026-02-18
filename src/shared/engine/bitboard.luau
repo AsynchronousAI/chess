@@ -18,7 +18,7 @@ local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 export type Board = Utils.Board;
 
 local Board = {
-    hash = Zobrist,
+    hash = Zobrist.hash,
 
     to_fen = FEN.to_fen,
     from_fen = FEN.from_fen,
@@ -114,6 +114,7 @@ function Board.clone(board: Board): Board
 		side_to_move = board.side_to_move,
 		castling_rights = board.castling_rights,
 		eval = board.eval,
+		hash = board.hash,
 		occupied = table.clone(board.occupied),
 	}
 end
