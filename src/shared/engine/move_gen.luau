@@ -72,23 +72,6 @@ function MoveGen.is_square_attacked(board: Board, square: number, by_color: numb
 end
 
 -- Move generation helpers
-local function add_pawn_moves(moves: { number }, targets: vector, from_offset: number, is_capture: boolean, promo_rank: vector)
-	local bb = targets
-	while bb ~= u64.ZERO do
-		local to_square = u64.countrz(bb)
-		local from_square = to_square - from_offset
-
-		if Utils.get_bit(promo_rank, to_square) then
-			for promo = KNIGHT, QUEEN do
-				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
-			end
-		else
-			table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
-		end
-
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
-	end
-end
 local function generate_pawn_moves(board: Board, moves: { number }, color: number)
 	local pawns = board.pieces[color][PAWN]
 	local empty = u64.bnot(board.occupied.all)
@@ -118,10 +101,29 @@ local function generate_pawn_moves(board: Board, moves: { number }, color: numbe
 	left_captures = u64.band(left_captures, enemies)
 	right_captures = u64.band(right_captures, enemies)
 
-	add_pawn_moves(moves, push_targets, push_dir, false, promo_rank)
-	add_pawn_moves(moves, double_push_targets, push_dir * 2, false, promo_rank)
-	add_pawn_moves(moves, left_captures, if color == WHITE then 7 else -7, true, promo_rank)
-	add_pawn_moves(moves, right_captures, if color == WHITE then 9 else -9, true, promo_rank)
+	-- inline add_pawn_moves for non-EP pawn moves
+	local function add_pawn_moves_inline(targets: vector, from_offset: number, is_capture: boolean)
+		local bb = targets
+		while bb ~= u64.ZERO do
+			local to_square = u64.countrz(bb)
+			local from_square = to_square - from_offset
+
+			if Utils.get_bit(promo_rank, to_square) then
+				for promo = KNIGHT, QUEEN do
+					table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
+				end
+			else
+				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
+			end
+
+			bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
+		end
+	end
+
+	add_pawn_moves_inline(push_targets, push_dir, false)
+	add_pawn_moves_inline(double_push_targets, push_dir * 2, false)
+	add_pawn_moves_inline(left_captures, if color == WHITE then 7 else -7, true)
+	add_pawn_moves_inline(right_captures, if color == WHITE then 9 else -9, true)
 
 	if board.en_passant_square and board.en_passant_square > 0 then
 		local ep_bb = u64.lshift(u64.ONE, board.en_passant_square)
@@ -136,34 +138,6 @@ local function generate_pawn_moves(board: Board, moves: { number }, color: numbe
 			local from = board.en_passant_square - (if color == WHITE then 9 else -9)
 			table.insert(moves, Move.create(from, board.en_passant_square, PAWN, true, nil, true))
 		end
-	end
-end
-
-local function generate_piece_moves(
-	board: Board,
-	moves: { number },
-	piece_type: number,
-	attack_func: (number, vector, vector) -> vector,
-	color: number
-)
-	local own_pieces = board.occupied[color]
-	local other_pieces = board.occupied[1 - color]
-
-	local bb = board.pieces[color][piece_type]
-	while bb ~= u64.ZERO do
-		local from_square = u64.countrz(bb)
-		local attacks = attack_func(from_square, own_pieces, other_pieces)
-		attacks = u64.band(attacks, u64.bnot(own_pieces))
-
-		local attacks_bb = attacks
-		while attacks_bb ~= u64.ZERO do
-			local to_square = u64.countrz(attacks_bb)
-			local is_capture = Utils.get_bit(other_pieces, to_square)
-			table.insert(moves, Move.create(from_square, to_square, piece_type, is_capture))
-			attacks_bb = u64.band(attacks_bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
-		end
-
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from_square)))
 	end
 end
 
@@ -360,45 +334,6 @@ local function compute_check_and_pins(board: Board, color: number, king_square: 
 	return pin_masks, check_mask, num_checkers, checkers
 end
 
-local function add_moves_from_attacks(moves: { number }, from: number, piece_type: number, attacks: vector, enemy_occ: vector)
-	local bb = attacks
-	while bb ~= u64.ZERO do
-		local to = u64.countrz(bb)
-		local is_capture = Utils.get_bit(enemy_occ, to)
-		table.insert(moves, Move.create(from, to, piece_type, is_capture))
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to)))
-	end
-end
-
-local function add_pawn_moves_masked(
-	moves: { number },
-	targets: vector,
-	from_offset: number,
-	is_capture: boolean,
-	promo_rank: vector,
-	pin_masks: { [number]: vector },
-	enemy_occ: vector
-)
-	local bb = targets
-	while bb ~= u64.ZERO do
-		local to_square = u64.countrz(bb)
-		local from_square = to_square - from_offset
-
-		local pin_mask = pin_masks[from_square]
-		if not pin_mask or Utils.get_bit(pin_mask, to_square) then
-			if Utils.get_bit(promo_rank, to_square) then
-				for promo = KNIGHT, QUEEN do
-					table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
-				end
-			else
-				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
-			end
-		end
-
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
-	end
-end
-
 local function is_en_passant_legal(board: Board, color: number, from: number, to: number, king_square: number): boolean
 	local enemy = 1 - color
 	local own_occ = board.occupied[color]
@@ -441,15 +376,6 @@ local function is_en_passant_legal(board: Board, color: number, from: number, to
 	return true
 end
 
-local function find_piece(board: Board, piece_type: number, color: number): number?
-	local bb = board.pieces[color][piece_type]
-	local square = 63 - u64.countlz(bb)
-	if square == -1 then
-		return nil
-	end
-	return square
-end
-
 -- Generate legal moves
 function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, givenColor: number?): { number }
 	local color = givenColor or board.side_to_move
@@ -457,20 +383,48 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 	local moves = table.create(30)
 
-	local king_square = find_piece(board, KING, color)
-	if not king_square then
+	-- inline find_piece for king lookup
+	local king_bb = board.pieces[color][KING]
+	local king_square = 63 - u64.countlz(king_bb)
+	if king_square == -1 then
 		return {}
 	end
 
 	MoveGen.regenerate_all_attacked(board, enemy)
 
 	if filePseudoLegal then
+		-- keep using generate_pawn_moves helper, but inline piece move generation
 		generate_pawn_moves(board, moves, color)
-		generate_piece_moves(board, moves, KNIGHT, Attacks.knight_attacks, color)
-		generate_piece_moves(board, moves, BISHOP, Attacks.bishop_attacks, color)
-		generate_piece_moves(board, moves, ROOK, Attacks.rook_attacks, color)
-		generate_piece_moves(board, moves, QUEEN, Attacks.queen_attacks, color)
-		generate_piece_moves(board, moves, KING, Attacks.king_attacks, color)
+
+		local own_pieces = board.occupied[color]
+		local other_pieces = board.occupied[1 - color]
+
+		-- inline generate_piece_moves for non-sliding pieces
+		local function gen_piece_inline(piece_type: number, attack_func: (number, vector, vector) -> vector)
+			local bb = board.pieces[color][piece_type]
+			while bb ~= u64.ZERO do
+				local from_square = u64.countrz(bb)
+				local attacks = attack_func(from_square, own_pieces, other_pieces)
+				attacks = u64.band(attacks, u64.bnot(own_pieces))
+
+				local attacks_bb = attacks
+				while attacks_bb ~= u64.ZERO do
+					local to_square = u64.countrz(attacks_bb)
+					local is_capture = Utils.get_bit(other_pieces, to_square)
+					table.insert(moves, Move.create(from_square, to_square, piece_type, is_capture))
+					attacks_bb = u64.band(attacks_bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
+				end
+
+				bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from_square)))
+			end
+		end
+
+		gen_piece_inline(KNIGHT, Attacks.knight_attacks)
+		gen_piece_inline(BISHOP, Attacks.bishop_attacks)
+		gen_piece_inline(ROOK, Attacks.rook_attacks)
+		gen_piece_inline(QUEEN, Attacks.queen_attacks)
+		gen_piece_inline(KING, Attacks.king_attacks)
+
 		generate_castle_moves(board, moves, color, board.attacked[enemy].all)
 		return moves
 	end
@@ -486,7 +440,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 	local checker_val = if checker_sq >= 0 then board.pieceTable[checker_sq] else nil
 	local checker_type = if checker_val then bit32.rshift(checker_val, 6) else nil
 
-	-- Pawns
+	-- Pawns (legal)
 	if not king_only then
 		local pawns = board.pieces[color][PAWN]
 		local push_dir = if color == WHITE then 8 else -8
@@ -518,17 +472,40 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		left_captures = u64.band(left_captures, check_mask)
 		right_captures = u64.band(right_captures, check_mask)
 
-		add_pawn_moves_masked(moves, push_targets, push_dir, false, promo_rank, pin_masks, enemy_occ)
-		add_pawn_moves_masked(moves, double_push_targets, push_dir * 2, false, promo_rank, pin_masks, enemy_occ)
-		add_pawn_moves_masked(moves, left_captures, if color == WHITE then 7 else -7, true, promo_rank, pin_masks, enemy_occ)
-		add_pawn_moves_masked(moves, right_captures, if color == WHITE then 9 else -9, true, promo_rank, pin_masks, enemy_occ)
+		-- inline add_pawn_moves_masked
+		local function add_pawn_moves_masked_inline(targets: vector, from_offset: number, is_capture: boolean)
+			local bb = targets
+			while bb ~= u64.ZERO do
+				local to_square = u64.countrz(bb)
+				local from_square = to_square - from_offset
+
+				local pin_mask = pin_masks[from_square]
+				if not pin_mask or Utils.get_bit(pin_mask, to_square) then
+					if Utils.get_bit(promo_rank, to_square) then
+						for promo = KNIGHT, QUEEN do
+							table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
+						end
+					else
+						table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
+					end
+				end
+
+				bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
+			end
+		end
+
+		add_pawn_moves_masked_inline(push_targets, push_dir, false)
+		add_pawn_moves_masked_inline(double_push_targets, push_dir * 2, false)
+		add_pawn_moves_masked_inline(left_captures, if color == WHITE then 7 else -7, true)
+		add_pawn_moves_masked_inline(right_captures, if color == WHITE then 9 else - 9, true)
 
 		if board.en_passant_square and board.en_passant_square > 0 then
 			local ep_bb = u64.lshift(u64.ONE, board.en_passant_square)
 			local ep_left = if color == WHITE then u64.rshift(ep_bb, 7) else u64.lshift(ep_bb, 7)
 			local ep_right = if color == WHITE then u64.rshift(ep_bb, 9) else u64.lshift(ep_bb, 9)
 
-			local function try_ep(from: number)
+			-- inline try_ep_helper
+			local function try_ep_inline(from: number)
 				local pin_mask = pin_masks[from]
 				if pin_mask and not Utils.get_bit(pin_mask, board.en_passant_square) then
 					return
@@ -553,16 +530,16 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 			if u64.btest(pawns, ep_left) then
 				local from = board.en_passant_square - (if color == WHITE then 7 else -7)
-				try_ep(from)
+				try_ep_inline(from)
 			end
 			if u64.btest(pawns, ep_right) then
 				local from = board.en_passant_square - (if color == WHITE then 9 else -9)
-				try_ep(from)
+				try_ep_inline(from)
 			end
 		end
 	end
 
-	-- Knights
+	-- Knights (legal)
 	if not king_only then
 		local bb = board.pieces[color][KNIGHT]
 		while bb ~= u64.ZERO do
@@ -576,14 +553,22 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 				attacks = u64.band(attacks, pin_mask)
 			end
 
-			add_moves_from_attacks(moves, from, KNIGHT, attacks, enemy_occ)
+			-- inline add_moves_from_attacks
+			local at_bb = attacks
+			while at_bb ~= u64.ZERO do
+				local to = u64.countrz(at_bb)
+				local is_capture = Utils.get_bit(enemy_occ, to)
+				table.insert(moves, Move.create(from, to, KNIGHT, is_capture))
+				at_bb = u64.band(at_bb, u64.bnot(u64.lshift(u64.ONE, to)))
+			end
+
 			bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from)))
 		end
 	end
 
-	-- Bishops, Rooks, Queens
+	-- Bishops, Rooks, Queens (legal)
 	if not king_only then
-		local function add_sliding(piece_type: number, attack_func: (number, vector, vector) -> vector)
+		local function add_sliding_inline(piece_type: number, attack_func: (number, vector, vector) -> vector)
 			local bb = board.pieces[color][piece_type]
 			while bb ~= u64.ZERO do
 				local from = u64.countrz(bb)
@@ -596,26 +581,33 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 					attacks = u64.band(attacks, pin_mask)
 				end
 
-				add_moves_from_attacks(moves, from, piece_type, attacks, enemy_occ)
+				local at_bb = attacks
+				while at_bb ~= u64.ZERO do
+					local to = u64.countrz(at_bb)
+					local is_capture = Utils.get_bit(enemy_occ, to)
+					table.insert(moves, Move.create(from, to, piece_type, is_capture))
+					at_bb = u64.band(at_bb, u64.bnot(u64.lshift(u64.ONE, to)))
+				end
+
 				bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from)))
 			end
 		end
 
-		add_sliding(BISHOP, Attacks.bishop_attacks)
-		add_sliding(ROOK, Attacks.rook_attacks)
-		add_sliding(QUEEN, Attacks.queen_attacks)
+		add_sliding_inline(BISHOP, Attacks.bishop_attacks)
+		add_sliding_inline(ROOK, Attacks.rook_attacks)
+		add_sliding_inline(QUEEN, Attacks.queen_attacks)
 	end
 
-	-- King moves
+	-- King moves (legal)
 	do
-		local king_bb = u64.lshift(u64.ONE, king_square)
+		local king_only_bb = u64.lshift(u64.ONE, king_square)
 		local king_attacks = u64.band(Attacks.king_attacks(king_square), u64.bnot(own_occ))
 		local bb = king_attacks
 		while bb ~= u64.ZERO do
 			local to = u64.countrz(bb)
 			local to_bb = u64.lshift(u64.ONE, to)
 
-			local own_occ_new = u64.bor(u64.band(own_occ, u64.bnot(king_bb)), to_bb)
+			local own_occ_new = u64.bor(u64.band(own_occ, u64.bnot(king_only_bb)), to_bb)
 			local enemy_occ_new = if Utils.get_bit(enemy_occ, to) then u64.band(enemy_occ, u64.bnot(to_bb)) else enemy_occ
 
 			if not is_square_attacked_with_occupancy(board, to, enemy, enemy_occ_new, own_occ_new) then
