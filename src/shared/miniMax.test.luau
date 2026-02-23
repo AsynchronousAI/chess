@@ -149,16 +149,19 @@ while moveCount < MAX_MOVES do
     end
 
     bitboard.make_move(board, move)
+    local time = (os.clock() - start)
+
     moveCount = moveCount + 1
 
     printBoard(board)
     print(string.format(
-        "Move %d: %s\n %s | eval: %.2f | time: %dms | nodes: %d",
+        "Move %d: %s\n %s | eval: %.2f | time: %dms | nodes: %d | %d nodes/sec",
         moveCount,
         bitboard.to_fen(board),
         Move.toString(move),
         score,
-        math.ceil((os.clock() - start) * 1000),
-        nodes
+        math.ceil(time * 1000),
+        nodes,
+        math.floor(nodes / time)
     ))
 end
