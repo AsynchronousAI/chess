@@ -18,9 +18,7 @@ export type Board = Utils.Board
 local MoveGen = {}
 
 -- Attacked squares
-function MoveGen.regenerate_piece_attacked(board: Board, by_color: number, piece: number): { number }
-	local blockingPairs = {}
-
+function MoveGen.regenerate_piece_attacked(board: Board, by_color: number, piece: number)
 	local attacks = u64.ZERO
 	local attack_func
 
@@ -43,20 +41,14 @@ function MoveGen.regenerate_piece_attacked(board: Board, by_color: number, piece
 		local bb = board.pieces[by_color][piece]
 		while bb ~= u64.ZERO do
 			local s = u64.countrz(bb)
-			local attack, blockers = attack_func(s, board.occupied[by_color], board.occupied[1 - by_color])
+			local attack = attack_func(s, board.occupied[by_color], board.occupied[1 - by_color])
 			attacks = u64.bor(attacks, attack)
-
-			for _, blocker in blockers do
-				table.insert(blockingPairs, Utils.make_pair(blocker, s))
-			end
 
 			bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, s)))
 		end
 	end
 
 	board.attacked[by_color][piece] = attacks
-
-	return blockingPairs
 end
 function MoveGen.attacked_occupancy(board: Board, by_color: number)
 	board.attacked[by_color].all = u64.hex_bor(
@@ -69,25 +61,11 @@ function MoveGen.attacked_occupancy(board: Board, by_color: number)
 	)
 end
 function MoveGen.regenerate_all_attacked(board: Board, by_color: number)
-	local blockingPairs = {}
-
-	for _, i in MoveGen.regenerate_piece_attacked(board, by_color, QUEEN) do
-		table.insert(blockingPairs, i)
-	end
-	for _, i in MoveGen.regenerate_piece_attacked(board, by_color, ROOK) do
-		table.insert(blockingPairs, i)
-	end
-	for _, i in MoveGen.regenerate_piece_attacked(board, by_color, BISHOP) do
-		table.insert(blockingPairs, i)
-	end
-
 	MoveGen.regenerate_piece_attacked(board, by_color, KNIGHT)
 	MoveGen.regenerate_piece_attacked(board, by_color, KING)
 	MoveGen.regenerate_piece_attacked(board, by_color, PAWN)
 
 	MoveGen.attacked_occupancy(board, by_color)
-
-	return blockingPairs
 end
 function MoveGen.is_square_attacked(board: Board, square: number, by_color: number): boolean
 	return Utils.get_bit(board.attacked[by_color].all, square)
