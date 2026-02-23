@@ -7,18 +7,20 @@
 local Move = {}
 
 function Move.create(from: number, to: number, piece_type: number, captured: boolean?, promotion: number?, en_passant: boolean?, castling: boolean?, kingside: boolean?, value: number?)
-    local m = 0
+    local captured_bit = captured and 1 or 0
+    local en_passant_bit = en_passant and 1 or 0
+    local castle_bits = castling and (kingside and 1 or 2) or 0
 
-    m = bit32.bor(m, bit32.lshift(from,        0))
-    m = bit32.bor(m, bit32.lshift(to,          6))
-    m = bit32.bor(m, bit32.lshift(piece_type, 12))
-    m = bit32.bor(m, bit32.lshift((if captured then 1 else 0), 15))
-    m = bit32.bor(m, bit32.lshift(promotion or 5,  16))
-    m = bit32.bor(m, bit32.lshift((if en_passant then 1 else 0), 19))
-    m = bit32.bor(m, bit32.lshift((if castling then (if kingside then 1 else 2) else 0), 20))
-    m = bit32.bor(m, bit32.lshift(value or 0, 22)) -- new field
-
-    return m
+    return bit32.bor(
+        bit32.lshift(from,        0),
+        bit32.lshift(to,          6),
+        bit32.lshift(piece_type, 12),
+        bit32.lshift(captured_bit, 15),
+        bit32.lshift(promotion or 5,  16),
+        bit32.lshift(en_passant_bit, 19),
+        bit32.lshift(castle_bits, 20),
+        bit32.lshift(value or 0, 22)
+    )
 end
 
 -- Getters
