@@ -62,7 +62,7 @@ return function(board, moves)
 
         -- Promotions
         if not promotion and piece==0 and ((color==0 and to>55) or (color==1 and to<8)) then
-            for i, p in ipairs(promoTypes) do
+            for i, p in promoTypes do
                 table.insert(new, moveLib.setValue(moveLib.setPromotion(move, p), value + promoValues[i]))
             end
         end
