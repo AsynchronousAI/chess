@@ -136,77 +136,6 @@ local function unpack_undo_record(record_vec: vector)
 	return captured, state_packed, rook_pair
 end
 
-local function get_captured_piece(board: Board, to: number, en_passant: boolean, color: number): number?
-	local captured_square = to
-	if en_passant then
-		captured_square = to - (if color == WHITE then 8 else -8)
-	end
-
-	local captured_info = board.pieceTable[captured_square]
-	if not captured_info then
-		return nil
-	end
-
-	local cap_type, cap_color = split_pair(captured_info)
-	return pack_captured_piece(cap_type, cap_color, captured_square)
-end
-
-local function clear_from_square(board: Board, color: number, piece_type: number, from: number)
-	board.pieces[color][piece_type] = Utils.clear_bit(board.pieces[color][piece_type], from)
-	board.pieceTable[from] = nil
-end
-
-local function place_on_square(board: Board, color: number, piece_type: number, to: number)
-	board.pieces[color][piece_type] = Utils.set_bit(board.pieces[color][piece_type], to)
-	board.pieceTable[to] = make_pair(piece_type, color)
-end
-
-local function handle_capture(
-	board: Board,
-	opponent: number,
-	to: number,
-	en_passant: boolean,
-	color: number
-)
-	for p = PAWN, KING do
-		if Utils.get_bit(board.pieces[opponent][p], to) then
-			board.pieces[opponent][p] = Utils.clear_bit(board.pieces[opponent][p], to)
-			board.occupied.all = Utils.clear_bit(board.occupied.all, to)
-			board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], to)
-			break
-		end
-	end
-
-	if en_passant then
-		local captured_pawn_square = to - (if color == WHITE then 8 else -8)
-		board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
-		board.pieceTable[captured_pawn_square] = nil
-
-		board.occupied.all = Utils.clear_bit(board.occupied.all, captured_pawn_square)
-		board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], captured_pawn_square)
-	end
-end
-
-local function update_halfmove_clock(board: Board, piece_type: number, captured: boolean)
-	if captured or piece_type == PAWN then
-		board.halfmove_clock = 0
-	else
-		board.halfmove_clock += 1
-	end
-end
-
-local function update_en_passant_square(board: Board, piece_type: number, color: number, from: number, to: number)
-	board.en_passant_square = nil
-	if piece_type ~= PAWN then
-		return
-	end
-
-	local move_distance = math.abs(to - from)
-	if move_distance == 16 then
-		board.en_passant_square = if color == WHITE then (from + 8) else (from - 8)
-	end
-end
-
 local function update_castling_rights_for_move(board: Board, piece_type: number, color: number, from: number, to: number, captured: boolean)
 	if piece_type == KING then
 		if color == WHITE then
@@ -245,64 +174,6 @@ local function update_castling_rights_for_move(board: Board, piece_type: number,
 	end
 end
 
-local function handle_castling_rook_move(board: Board, color: number, kingside: boolean): (number, number)
-	local rook_from, rook_to
-	if kingside then
-		rook_from = if color == WHITE then 7 else 63
-		rook_to = if color == WHITE then 5 else 61
-	else
-		rook_from = if color == WHITE then 0 else 56
-		rook_to = if color == WHITE then 3 else 59
-	end
-
-	board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_from)
-	board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_to)
-
-	board.pieceTable[rook_from] = nil
-	board.pieceTable[rook_to] = make_pair(ROOK, color)
-
-	board.occupied.all = Utils.clear_bit(board.occupied.all, rook_from)
-	board.occupied[color] = Utils.clear_bit(board.occupied[color], rook_from)
-
-	board.occupied.all = Utils.set_bit(board.occupied.all, rook_to)
-	board.occupied[color] = Utils.set_bit(board.occupied[color], rook_to)
-
-	return rook_from, rook_to
-end
-
-local function update_occupied_for_basic_move(board: Board, color: number, from: number, to: number)
-	local occupied = board.occupied
-    occupied.all = Utils.clear_bit(occupied.all, from)
-    occupied.all = Utils.set_bit(occupied.all, to)
-
-    occupied[color] = Utils.clear_bit(occupied[color], from)
-    occupied[color] = Utils.set_bit(occupied[color], to)
-end
-
-local function restore_captured_piece(board: Board, packed: number)
-	local cap_type, cap_color, square = unpack_captured_piece(packed)
-
-	board.pieces[cap_color][cap_type] = Utils.set_bit(board.pieces[cap_color][cap_type], square)
-	board.pieceTable[square] = make_pair(cap_type, cap_color)
-
-	board.occupied.all = Utils.set_bit(board.occupied.all, square)
-	board.occupied[cap_color] = Utils.set_bit(board.occupied[cap_color], square)
-end
-
-local function undo_castling_rook(board: Board, color: number, rook_from: number, rook_to: number)
-	board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_to)
-	board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_from)
-
-	board.pieceTable[rook_to] = nil
-	board.pieceTable[rook_from] = make_pair(ROOK, color)
-
-	board.occupied.all = Utils.clear_bit(board.occupied.all, rook_to)
-	board.occupied[color] = Utils.clear_bit(board.occupied[color], rook_to)
-
-	board.occupied.all = Utils.set_bit(board.occupied.all, rook_from)
-	board.occupied[color] = Utils.set_bit(board.occupied[color], rook_from)
-end
-
 local function make_move(board: Board, move: number): UndoRecord
 	local color = board.side_to_move
 	local opponent = 1 - color
@@ -327,7 +198,16 @@ local function make_move(board: Board, move: number): UndoRecord
 
 	local captured_piece = nil
 	if captured then
-		captured_piece = get_captured_piece(board, to, en_passant, color)
+		local captured_square = to
+		if en_passant then
+			captured_square = to - (if color == WHITE then 8 else -8)
+		end
+
+		local captured_info = board.pieceTable[captured_square]
+		if captured_info then
+			local cap_type, cap_color = split_pair(captured_info)
+			captured_piece = pack_captured_piece(cap_type, cap_color, captured_square)
+		end
 	end
 
 	-- Save pre-move state
@@ -336,23 +216,73 @@ local function make_move(board: Board, move: number): UndoRecord
 	local state_packed = pack_state(board.castling_rights, board.en_passant_square, board.halfmove_clock, board.fullmove_number)
 	local rook_pair_packed: number? = nil
 
-	clear_from_square(board, color, piece_type, from)
+	board.pieces[color][piece_type] = Utils.clear_bit(board.pieces[color][piece_type], from)
+	board.pieceTable[from] = nil
 
 
 
 	if captured then
-		handle_capture(board, opponent, to, en_passant, color)
+		for p = PAWN, KING do
+			if Utils.get_bit(board.pieces[opponent][p], to) then
+				board.pieces[opponent][p] = Utils.clear_bit(board.pieces[opponent][p], to)
+				board.occupied.all = Utils.clear_bit(board.occupied.all, to)
+				board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], to)
+				break
+			end
+		end
+
+		if en_passant then
+			local captured_pawn_square = to - (if color == WHITE then 8 else -8)
+			board.pieces[opponent][PAWN] = Utils.clear_bit(board.pieces[opponent][PAWN], captured_pawn_square)
+			board.pieceTable[captured_pawn_square] = nil
+
+			board.occupied.all = Utils.clear_bit(board.occupied.all, captured_pawn_square)
+			board.occupied[opponent] = Utils.clear_bit(board.occupied[opponent], captured_pawn_square)
+		end
 	end
 
 	local final_piece_type = promotion or piece_type
-	place_on_square(board, color, final_piece_type, to)
+	board.pieces[color][final_piece_type] = Utils.set_bit(board.pieces[color][final_piece_type], to)
+	board.pieceTable[to] = make_pair(final_piece_type, color)
 
-	update_halfmove_clock(board, piece_type, captured)
-	update_en_passant_square(board, piece_type, color, from, to)
+	if captured or piece_type == PAWN then
+		board.halfmove_clock = 0
+	else
+		board.halfmove_clock += 1
+	end
+
+	board.en_passant_square = nil
+	if piece_type == PAWN then
+		local move_distance = math.abs(to - from)
+		if move_distance == 16 then
+			board.en_passant_square = if color == WHITE then (from + 8) else (from - 8)
+		end
+	end
+
 	update_castling_rights_for_move(board, piece_type, color, from, to, captured)
 
 	if castling then
-		local rook_from, rook_to = handle_castling_rook_move(board, color, kingside)
+		local rook_from, rook_to
+		if kingside then
+			rook_from = if color == WHITE then 7 else 63
+			rook_to = if color == WHITE then 5 else 61
+		else
+			rook_from = if color == WHITE then 0 else 56
+			rook_to = if color == WHITE then 3 else 59
+		end
+
+		board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_from)
+		board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_to)
+
+		board.pieceTable[rook_from] = nil
+		board.pieceTable[rook_to] = make_pair(ROOK, color)
+
+		board.occupied.all = Utils.clear_bit(board.occupied.all, rook_from)
+		board.occupied[color] = Utils.clear_bit(board.occupied[color], rook_from)
+
+		board.occupied.all = Utils.set_bit(board.occupied.all, rook_to)
+		board.occupied[color] = Utils.set_bit(board.occupied[color], rook_to)
+
 		rook_pair_packed = make_pair(rook_from, rook_to)
 	end
 
@@ -388,12 +318,17 @@ local function make_move(board: Board, move: number): UndoRecord
 	hash = toggle_side(hash)
 	board.hash = hash
 
-	local delta = eval_delta_for_move(color, from, to, piece_type, promotion, captured_piece, rook_pair_packed)
+	local delta = eval_delta_for_move(color, from, to, piece_type, promotion, captured_piece :: number?, rook_pair_packed :: number?)
 	board.eval += delta
 
 	undo_stack[idx] = pack_undo_record(captured_piece, state_packed, rook_pair_packed)
 
-	update_occupied_for_basic_move(board, color, from, to)
+	local occupied = board.occupied
+	occupied.all = Utils.clear_bit(occupied.all, from)
+	occupied.all = Utils.set_bit(occupied.all, to)
+
+	occupied[color] = Utils.clear_bit(occupied[color], from)
+	occupied[color] = Utils.set_bit(occupied[color], to)
 
 	board.side_to_move = opponent
 	if color == BLACK then
@@ -454,7 +389,7 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	if board.eval == nil then
 		board.eval = Eval.evaluate(board)
 	end
-	local delta = eval_delta_for_move(color, from, to, piece_type, promotion, captured_piece, rook_pair)
+	local delta = eval_delta_for_move(color, from, to, piece_type, promotion, captured_piece :: number?, rook_pair :: number?)
 	board.eval -= delta
 
 	local final_piece_type = promotion or piece_type
@@ -486,12 +421,29 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	board.occupied[color] = Utils.set_bit(board.occupied[color], from)
 
 	if packed_captured ~= CAPTURED_SENTINEL then
-		restore_captured_piece(board, packed_captured)
+		local cap_type, cap_color, square = unpack_captured_piece(packed_captured)
+
+		board.pieces[cap_color][cap_type] = Utils.set_bit(board.pieces[cap_color][cap_type], square)
+		board.pieceTable[square] = make_pair(cap_type, cap_color)
+
+		board.occupied.all = Utils.set_bit(board.occupied.all, square)
+		board.occupied[cap_color] = Utils.set_bit(board.occupied[cap_color], square)
 	end
 
 	if packed_rook_pair ~= ROOK_PAIR_SENTINEL then
 		local rook_from, rook_to = split_pair(packed_rook_pair)
-		undo_castling_rook(board, color, rook_from, rook_to)
+
+		board.pieces[color][ROOK] = Utils.clear_bit(board.pieces[color][ROOK], rook_to)
+		board.pieces[color][ROOK] = Utils.set_bit(board.pieces[color][ROOK], rook_from)
+
+		board.pieceTable[rook_to] = nil
+		board.pieceTable[rook_from] = make_pair(ROOK, color)
+
+		board.occupied.all = Utils.clear_bit(board.occupied.all, rook_to)
+		board.occupied[color] = Utils.clear_bit(board.occupied[color], rook_to)
+
+		board.occupied.all = Utils.set_bit(board.occupied.all, rook_from)
+		board.occupied[color] = Utils.set_bit(board.occupied[color], rook_from)
 	end
 
 	undo_top = idx - 1
