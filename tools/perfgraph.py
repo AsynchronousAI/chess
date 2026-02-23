@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # This file is part of the Luau programming language and is licensed under MIT License; see LICENSE.txt for details
-
+#
 # Given a profile dump, this tool generates a flame graph based on the stacks listed in the profile
 # The result of analysis is a .svg file which can be viewed in a browser
-
+#
 # python3 perfgraph.py profile.out > profile.svg
 
 import argparse
@@ -43,14 +43,32 @@ class Node(svg.Node):
             return self.function
 
     def details(self, root):
-        return "Function: {} [{}:{}] ({:,} µs, {:.1%}); self: {:,} µs".format(
+        key = (self.source, self.function, self.line)
+
+        global_percent = 0.0
+        if hasattr(root, "globalTotals"):
+            total_runtime = root.width
+            if total_runtime > 0 and key in root.globalTotals:
+                global_percent = (root.globalTotals[key] / total_runtime) * 100.0
+
+        return (
+            "Function: {} [{}:{}]\n"
+            "({:,} µs, {:.1%}); self: {:,} µs\n"
+            "Global self: {:.2f}%"
+        ).format(
             self.function,
             self.source,
             self.line,
             self.width,
-            self.width / root.width,
+            self.width / root.width if root.width > 0 else 0,
             self.ticks,
+            global_percent,
         )
+
+
+# ------------------------------------------------------------
+# Callstack list format
+# ------------------------------------------------------------
 
 
 def nodeFromCallstackListFile(source_file):
@@ -74,6 +92,11 @@ def nodeFromCallstackListFile(source_file):
         node.ticks += int(ticks)
 
     return root
+
+
+# ------------------------------------------------------------
+# JSON V2
+# ------------------------------------------------------------
 
 
 def getDuration(nodes, nid):
@@ -100,26 +123,24 @@ def recursivelyBuildNodeTree(nodes, functions, parent, fid, nid):
     finfo = functions[fid - 1]
 
     child = parent.child(getFunctionKey(finfo))
-    child.source = finfo["Source"] if "Source" in finfo else ""
-    child.function = finfo["Name"] if "Name" in finfo else ""
-    child.line = int(finfo["Line"]) if "Line" in finfo and finfo["Line"] > 0 else 0
+    child.source = finfo.get("Source", "")
+    child.function = finfo.get("Name", "")
+    child.line = int(finfo["Line"]) if finfo.get("Line", 0) > 0 else 0
 
     child.ticks = getDuration(nodes, nid)
 
     if "FunctionIds" in ninfo:
-        assert len(ninfo["FunctionIds"]) == len(ninfo["NodeIds"])
-
-        for i in range(0, len(ninfo["FunctionIds"])):
+        for i in range(len(ninfo["FunctionIds"])):
             recursivelyBuildNodeTree(
-                nodes, functions, child, ninfo["FunctionIds"][i], ninfo["NodeIds"][i]
+                nodes,
+                functions,
+                child,
+                ninfo["FunctionIds"][i],
+                ninfo["NodeIds"][i],
             )
-
-    return
 
 
 def nodeFromJSONV2(dump):
-    assert dump["Version"] == 2
-
     nodes = dump["Nodes"]
     functions = dump["Functions"]
     categories = dump["Categories"]
@@ -136,22 +157,29 @@ def nodeFromJSONV2(dump):
         child.ticks = getDuration(nodes, nid)
 
         if "FunctionIds" in node:
-            assert len(node["FunctionIds"]) == len(node["NodeIds"])
-
-            for i in range(0, len(node["FunctionIds"])):
+            for i in range(len(node["FunctionIds"])):
                 recursivelyBuildNodeTree(
-                    nodes, functions, child, node["FunctionIds"][i], node["NodeIds"][i]
+                    nodes,
+                    functions,
+                    child,
+                    node["FunctionIds"][i],
+                    node["NodeIds"][i],
                 )
 
     return root
+
+
+# ------------------------------------------------------------
+# JSON V1
+# ------------------------------------------------------------
 
 
 def getDurationV1(obj):
     total = obj["TotalDuration"]
 
     if "Children" in obj:
-        for key, obj in obj["Children"].items():
-            total -= obj["TotalDuration"]
+        for _, child in obj["Children"].items():
+            total -= child["TotalDuration"]
 
     return total
 
@@ -166,14 +194,13 @@ def nodeFromJSONObject(node, key, obj):
     node.ticks = getDurationV1(obj)
 
     if "Children" in obj:
-        for key, obj in obj["Children"].items():
-            nodeFromJSONObject(node.child(key), key, obj)
+        for key, child in obj["Children"].items():
+            nodeFromJSONObject(node.child(key), key, child)
 
     return node
 
 
 def nodeFromJSONV1(dump):
-    assert dump["Version"] == 1
     root = Node()
 
     if "Children" in dump:
@@ -194,6 +221,57 @@ def nodeFromJSONFile(source_file):
     return Node()
 
 
+# ------------------------------------------------------------
+# Global cumulative self-time aggregation
+# ------------------------------------------------------------
+
+
+def computeGlobalSelfTotals(root):
+    totals = {}
+
+    def visit(node):
+        key = (node.source, node.function, node.line)
+
+        if key not in totals:
+            totals[key] = 0
+
+        totals[key] += node.ticks
+
+        for child in node.children.values():
+            visit(child)
+
+    visit(root)
+    return totals
+
+
+def printCumulativeSelfPercent(root):
+    import sys
+
+    totals = root.globalTotals
+    total_time = root.width
+
+    print("\n=== Cumulative Self Time (% of total) ===", file=sys.stderr)
+
+    for (source, function, line), ticks in sorted(
+        totals.items(), key=lambda x: x[1], reverse=True
+    )[:5]:
+        if ticks <= 0:
+            continue
+
+        percent = (ticks / total_time) * 100 if total_time > 0 else 0
+
+        print(
+            "{:6.2f}%  {:,} µs  {} [{}:{}]".format(
+                percent, ticks, function, source, line
+            ),
+            file=sys.stderr,
+        )
+
+
+# ------------------------------------------------------------
+# Main
+# ------------------------------------------------------------
+
 arguments = argumentParser.parse_args()
 
 if arguments.useJson:
@@ -201,6 +279,14 @@ if arguments.useJson:
 else:
     root = nodeFromCallstackListFile(arguments.source_file)
 
-
+# Layout computes inclusive widths
 svg.layout(root, lambda n: n.ticks)
+
+# Compute global cumulative self time
+root.globalTotals = computeGlobalSelfTotals(root)
+
+# Optional console output section
+printCumulativeSelfPercent(root)
+
+# Render SVG
 svg.display(root, "Flame Graph", "hot", flip=True)
