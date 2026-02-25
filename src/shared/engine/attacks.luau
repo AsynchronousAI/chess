@@ -12,7 +12,6 @@ local bnot    = u64.bnot
 local Utils      = require("./utils")
 local unit_board = Utils.unit_board
 local WHITE = Utils.WHITE
-local BISHOP, ROOK, QUEEN = Utils.BISHOP, Utils.ROOK, Utils.QUEEN
 local NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH =
 	Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
 local get_bit = Utils.get_bit
@@ -208,7 +207,7 @@ do
                 bb = u64.band(bb, u64.sub(bb, u64.ONE))
                 LINE[a][b] = u64.bor(
                     forward_ray,
-                    u64.bor(backward_ray[a], a_bit)
+                    u64.bor(backward_ray[b], a_bit)
                 )
             end
         end
