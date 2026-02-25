@@ -281,36 +281,18 @@ local function scan_sliders_for_pins_and_checks(
 	while sliders ~= ZERO do
 		local slider_sq = countrz(sliders)
 
-		local between = ZERO;
-		if pieceType == ROOK then
-			between = Attacks.between_squares_rook(slider_sq, king_square)
-		elseif pieceType == BISHOP then
-			between = Attacks.between_squares_bishop(slider_sq, king_square)
-		elseif pieceType == QUEEN then
-			between = bor(Attacks.between_squares_rook(slider_sq, king_square), Attacks.between_squares_bishop(slider_sq, king_square))
-		end
-
-		local aligned = between ~= ZERO
-		if not aligned then
-			local attacks = attack_func(slider_sq, enemy_occ, own_occ, true)
-			aligned = get_bit(attacks, king_square)
-		end
-
-		if aligned then
-			local between_occ = if between == ZERO then ZERO else band(occupied, between)
-			if between_occ == ZERO then
-				checkers = bor(checkers, lshift(ONE, slider_sq))
-			else
-				if Utils.popcount(between_occ) == 1 and band(between_occ, own_occ) ~= ZERO then
-					local pinned_sq = countrz(between_occ)
-					local line_mask = bor(
-						between,
-						bor(lshift(ONE, slider_sq), lshift(ONE, king_square))
-					)
-					pin_masks[pinned_sq] = line_mask
-				end
-			end
-		end
+		local line = Attacks.LINE[slider_sq][king_square]
+        if line ~= ZERO then
+            -- between = line minus the two endpoints
+            local between = band(line, band(bnot(lshift(ONE, slider_sq)), bnot(lshift(ONE, king_square))))
+            local between_occ = band(occupied, between)
+            if between_occ == ZERO then
+                checkers = bor(checkers, lshift(ONE, slider_sq))
+            elseif popcount(between_occ) == 1 and band(between_occ, own_occ) ~= ZERO then
+                local pinned_sq = countrz(between_occ)
+                pin_masks[pinned_sq] = line  -- the full line is already the correct pin mask
+            end
+        end
 
 		sliders = band(sliders, bnot(lshift(ONE, slider_sq)))
 	end

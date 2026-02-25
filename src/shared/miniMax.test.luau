@@ -21,7 +21,7 @@ local CHAR = {
     }
 }
 
-local DEPTH = 3
+local DEPTH = 5
 local MAX_MOVES = math.huge
 
 local nodes = 0

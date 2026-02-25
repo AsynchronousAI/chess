@@ -179,4 +179,42 @@ function Attacks.between_squares_bishop(a: number, b: number): vector
 	return ZERO
 end
 
+local LINE = table.create(64)
+for a = 0, 63 do
+    LINE[a] = table.create(64, ZERO)
+end
+
+do
+    local ray_pairs = {
+        { RAY_NORTH, RAY_SOUTH },
+        { RAY_SOUTH, RAY_NORTH },
+        { RAY_EAST,  RAY_WEST  },
+        { RAY_WEST,  RAY_EAST  },
+        { RAY_NE,    RAY_SW    },
+        { RAY_SW,    RAY_NE    },
+        { RAY_NW,    RAY_SE    },
+        { RAY_SE,    RAY_NW    },
+    }
+
+    local a_bit = u64.lshift(u64.ONE, 0)
+    for a = 0, 63 do
+        a_bit = u64.lshift(u64.ONE, a)
+        for _, pair in ray_pairs do
+            local forward_ray = pair[1][a]
+            local backward_ray = pair[2]
+            local bb = forward_ray
+            while bb ~= ZERO do
+                local b = u64.countrz(bb)
+                bb = u64.band(bb, u64.sub(bb, u64.ONE))
+                LINE[a][b] = u64.bor(
+                    forward_ray,
+                    u64.bor(backward_ray[a], a_bit)
+                )
+            end
+        end
+    end
+end
+
+Attacks.LINE = LINE;
+
 return Attacks
