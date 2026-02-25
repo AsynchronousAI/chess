@@ -13,13 +13,31 @@ local RANK_1, RANK_2, RANK_7, RANK_8, NOT_FILE_A, NOT_FILE_H =
 	Utils.RANK_1, Utils.RANK_2, Utils.RANK_7, Utils.RANK_8, Utils.NOT_FILE_A, Utils.NOT_FILE_H
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
 
+local ZERO = u64.ZERO
+local ONE = u64.ONE
+local countrz = u64.countrz
+local countlz = u64.countlz
+local bor = u64.bor
+local band = u64.band
+local bnot = u64.bnot
+local lshift = u64.lshift
+local rshift = u64.rshift
+local hex_bor = u64.hex_bor
+local from_pair = u64.from_pair
+local btest = u64.btest
+local sub = u64.sub
+
+local get_bit = Utils.get_bit
+local get_bit32 = Utils.get_bit32
+local popcount = Utils.popcount
+
 export type Board = Utils.Board
 
 local MoveGen = {}
 
 -- Attacked squares
 function MoveGen.regenerate_piece_attacked(board: Board, by_color: number, piece: number)
-	local attacks = u64.ZERO
+	local attacks = ZERO
 	local attack_func
 
 	if piece == KNIGHT then
@@ -39,19 +57,19 @@ function MoveGen.regenerate_piece_attacked(board: Board, by_color: number, piece
 	-- Sliding pieces
 	if attack_func then
 		local bb = board.pieces[by_color][piece]
-		while bb ~= u64.ZERO do
-			local s = u64.countrz(bb)
+		while bb ~= ZERO do
+			local s = countrz(bb)
 			local attack = attack_func(s, board.occupied[by_color], board.occupied[1 - by_color])
-			attacks = u64.bor(attacks, attack)
+			attacks = bor(attacks, attack)
 
-			bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, s)))
+			bb = band(bb, bnot(lshift(ONE, s)))
 		end
 	end
 
 	board.attacked[by_color][piece] = attacks
 end
 function MoveGen.attacked_occupancy(board: Board, by_color: number)
-	board.attacked[by_color].all = u64.hex_bor(
+	board.attacked[by_color].all = hex_bor(
 		board.attacked[by_color][ROOK],
 		board.attacked[by_color][BISHOP],
 		board.attacked[by_color][QUEEN],
@@ -68,7 +86,7 @@ function MoveGen.regenerate_all_attacked(board: Board, by_color: number)
 	MoveGen.attacked_occupancy(board, by_color)
 end
 function MoveGen.is_square_attacked(board: Board, square: number, by_color: number): boolean
-	return Utils.get_bit(board.attacked[by_color].all, square)
+	return get_bit(board.attacked[by_color].all, square)
 end
 
 -- Move generation helpers
@@ -80,11 +98,11 @@ local function add_pawn_moves(
 	is_capture: boolean
 )
 	local bb = targets
-	while bb ~= u64.ZERO do
-		local to_square = u64.countrz(bb)
+	while bb ~= ZERO do
+		local to_square = countrz(bb)
 		local from_square = to_square - from_offset
 
-		if Utils.get_bit(promo_rank, to_square) then
+		if get_bit(promo_rank, to_square) then
 			for promo = KNIGHT, QUEEN do
 				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
 			end
@@ -92,38 +110,38 @@ local function add_pawn_moves(
 			table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
 		end
 
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
+		bb = band(bb, bnot(lshift(ONE, to_square)))
 	end
 end
 
 local function generate_pawn_moves(board: Board, moves: { number }, color: number)
 	local pawns = board.pieces[color][PAWN]
-	local empty = u64.bnot(board.occupied.all)
+	local empty = bnot(board.occupied.all)
 	local enemies = board.occupied[1 - color]
 
 	local push_dir = if color == WHITE then 8 else -8
 	local start_rank = if color == WHITE then RANK_2 else RANK_7
 	local promo_rank = if color == WHITE then RANK_8 else RANK_1
 
-	local push_targets = if color == WHITE then u64.lshift(pawns, 8) else u64.rshift(pawns, 8)
-	push_targets = u64.band(push_targets, empty)
+	local push_targets = if color == WHITE then lshift(pawns, 8) else rshift(pawns, 8)
+	push_targets = band(push_targets, empty)
 
-	local double_push_targets = if color == WHITE then u64.lshift(push_targets, 8) else u64.rshift(push_targets, 8)
-	double_push_targets = u64.band(
-		u64.band(double_push_targets, empty),
-		if color == WHITE then u64.lshift(start_rank, 16) else u64.rshift(start_rank, 16)
+	local double_push_targets = if color == WHITE then lshift(push_targets, 8) else rshift(push_targets, 8)
+	double_push_targets = band(
+		band(double_push_targets, empty),
+		if color == WHITE then lshift(start_rank, 16) else rshift(start_rank, 16)
 	)
 
 	local left_captures, right_captures
 	if color == WHITE then
-		left_captures = u64.band(u64.lshift(pawns, 7), NOT_FILE_H)
-		right_captures = u64.band(u64.lshift(pawns, 9), NOT_FILE_A)
+		left_captures = band(lshift(pawns, 7), NOT_FILE_H)
+		right_captures = band(lshift(pawns, 9), NOT_FILE_A)
 	else
-		left_captures = u64.band(u64.rshift(pawns, 7), NOT_FILE_A)
-		right_captures = u64.band(u64.rshift(pawns, 9), NOT_FILE_H)
+		left_captures = band(rshift(pawns, 7), NOT_FILE_A)
+		right_captures = band(rshift(pawns, 9), NOT_FILE_H)
 	end
-	left_captures = u64.band(left_captures, enemies)
-	right_captures = u64.band(right_captures, enemies)
+	left_captures = band(left_captures, enemies)
+	right_captures = band(right_captures, enemies)
 
 	add_pawn_moves(moves, promo_rank, push_targets, push_dir, false)
 	add_pawn_moves(moves, promo_rank, double_push_targets, push_dir * 2, false)
@@ -131,15 +149,15 @@ local function generate_pawn_moves(board: Board, moves: { number }, color: numbe
 	add_pawn_moves(moves, promo_rank, right_captures, if color == WHITE then 9 else -9, true)
 
 	if board.en_passant_square and board.en_passant_square > 0 then
-		local ep_bb = u64.lshift(u64.ONE, board.en_passant_square)
-		local ep_left = if color == WHITE then u64.rshift(ep_bb, 7) else u64.lshift(ep_bb, 7)
-		local ep_right = if color == WHITE then u64.rshift(ep_bb, 9) else u64.lshift(ep_bb, 9)
+		local ep_bb = lshift(ONE, board.en_passant_square)
+		local ep_left = if color == WHITE then rshift(ep_bb, 7) else lshift(ep_bb, 7)
+		local ep_right = if color == WHITE then rshift(ep_bb, 9) else lshift(ep_bb, 9)
 
-		if u64.btest(pawns, ep_left) then
+		if btest(pawns, ep_left) then
 			local from = board.en_passant_square - (if color == WHITE then 7 else -7)
 			table.insert(moves, Move.create(from, board.en_passant_square, PAWN, true, nil, true))
 		end
-		if u64.btest(pawns, ep_right) then
+		if btest(pawns, ep_right) then
 			local from = board.en_passant_square - (if color == WHITE then 9 else -9)
 			table.insert(moves, Move.create(from, board.en_passant_square, PAWN, true, nil, true))
 		end
@@ -150,22 +168,22 @@ end
 local CASTLE_MASKS = {
 	[WHITE] = {
 		[true] = {
-			no_checks = u64.from_pair(0x0, 0x70),
-			no_pieces = u64.from_pair(0x0, 0x60),
+			no_checks = from_pair(0x0, 0x70),
+			no_pieces = from_pair(0x0, 0x60),
 		},
 		[false] = {
-			no_checks = u64.from_pair(0x0, 0x1C),
-			no_pieces = u64.from_pair(0x0, 0x0E),
+			no_checks = from_pair(0x0, 0x1C),
+			no_pieces = from_pair(0x0, 0x0E),
 		},
 	},
 	[BLACK] = {
 		[true] = {
-			no_checks = u64.from_pair(0x70000000, 0x0),
-			no_pieces = u64.from_pair(0x60000000, 0x0),
+			no_checks = from_pair(0x70000000, 0x0),
+			no_pieces = from_pair(0x60000000, 0x0),
 		},
 		[false] = {
-			no_checks = u64.from_pair(0x1C000000, 0x0),
-			no_pieces = u64.from_pair(0x0E000000, 0x0),
+			no_checks = from_pair(0x1C000000, 0x0),
+			no_pieces = from_pair(0x0E000000, 0x0),
 		},
 	},
 }
@@ -175,24 +193,24 @@ local function generate_castle_moves(board: Board, moves: { number }, color: num
 	local masks = CASTLE_MASKS[color]
 
 	if color == WHITE then
-		if Utils.get_bit32(board.castling_rights, WK) then
-			if u64.band(occupied, masks[true].no_pieces) == u64.ZERO and u64.band(attacked, masks[true].no_checks) == u64.ZERO then
+		if get_bit32(board.castling_rights, WK) then
+			if band(occupied, masks[true].no_pieces) == ZERO and band(attacked, masks[true].no_checks) == ZERO then
 				table.insert(moves, Move.create(4, 6, KING, false, nil, false, true, true))
 			end
 		end
-		if Utils.get_bit32(board.castling_rights, WQ) then
-			if u64.band(occupied, masks[false].no_pieces) == u64.ZERO and u64.band(attacked, masks[false].no_checks) == u64.ZERO then
+		if get_bit32(board.castling_rights, WQ) then
+			if band(occupied, masks[false].no_pieces) == ZERO and band(attacked, masks[false].no_checks) == ZERO then
 				table.insert(moves, Move.create(4, 2, KING, false, nil, false, true, false))
 			end
 		end
 	else
-		if Utils.get_bit32(board.castling_rights, BK) then
-			if u64.band(occupied, masks[true].no_pieces) == u64.ZERO and u64.band(attacked, masks[true].no_checks) == u64.ZERO then
+		if get_bit32(board.castling_rights, BK) then
+			if band(occupied, masks[true].no_pieces) == ZERO and band(attacked, masks[true].no_checks) == ZERO then
 				table.insert(moves, Move.create(60, 62, KING, false, nil, false, true, true))
 			end
 		end
-		if Utils.get_bit32(board.castling_rights, BQ) then
-			if u64.band(occupied, masks[false].no_pieces) == u64.ZERO and u64.band(attacked, masks[false].no_checks) == u64.ZERO then
+		if get_bit32(board.castling_rights, BQ) then
+			if band(occupied, masks[false].no_pieces) == ZERO and band(attacked, masks[false].no_checks) == ZERO then
 				table.insert(moves, Move.create(60, 58, KING, false, nil, false, true, false))
 			end
 		end
@@ -201,15 +219,15 @@ end
 
 -- Legal move helpers
 local function pawn_attackers_to_square(square: number, enemy_color: number): vector
-	local king_bb = u64.lshift(u64.ONE, square)
+	local king_bb = lshift(ONE, square)
 	if enemy_color == WHITE then
-		local from_left = u64.band(u64.rshift(king_bb, 7), NOT_FILE_H)
-		local from_right = u64.band(u64.rshift(king_bb, 9), NOT_FILE_A)
-		return u64.bor(from_left, from_right)
+		local from_left = band(rshift(king_bb, 7), NOT_FILE_H)
+		local from_right = band(rshift(king_bb, 9), NOT_FILE_A)
+		return bor(from_left, from_right)
 	else
-		local from_left = u64.band(u64.lshift(king_bb, 7), NOT_FILE_A)
-		local from_right = u64.band(u64.lshift(king_bb, 9), NOT_FILE_H)
-		return u64.bor(from_left, from_right)
+		local from_left = band(lshift(king_bb, 7), NOT_FILE_A)
+		local from_right = band(lshift(king_bb, 9), NOT_FILE_H)
+		return bor(from_left, from_right)
 	end
 end
 
@@ -221,26 +239,26 @@ local function is_square_attacked_with_occupancy(
 	enemy_occ: vector
 ): boolean
 	local pawn_attackers = pawn_attackers_to_square(square, by_color)
-	if u64.band(board.pieces[by_color][PAWN], pawn_attackers) ~= u64.ZERO then
+	if band(board.pieces[by_color][PAWN], pawn_attackers) ~= ZERO then
 		return true
 	end
 
-	if u64.band(board.pieces[by_color][KNIGHT], Attacks.knight_attacks(square)) ~= u64.ZERO then
+	if band(board.pieces[by_color][KNIGHT], Attacks.knight_attacks(square)) ~= ZERO then
 		return true
 	end
 
-	if u64.band(board.pieces[by_color][KING], Attacks.king_attacks(square)) ~= u64.ZERO then
+	if band(board.pieces[by_color][KING], Attacks.king_attacks(square)) ~= ZERO then
 		return true
 	end
 
-	local occupied = u64.bor(own_occ, enemy_occ)
-	local rook_attacks = Attacks.rook_attacks(square, u64.ZERO, occupied)
-	if u64.band(rook_attacks, u64.bor(board.pieces[by_color][ROOK], board.pieces[by_color][QUEEN])) ~= u64.ZERO then
+	local occupied = bor(own_occ, enemy_occ)
+	local rook_attacks = Attacks.rook_attacks(square, ZERO, occupied)
+	if band(rook_attacks, bor(board.pieces[by_color][ROOK], board.pieces[by_color][QUEEN])) ~= ZERO then
 		return true
 	end
 
-	local bishop_attacks = Attacks.bishop_attacks(square, u64.ZERO, occupied)
-	if u64.band(bishop_attacks, u64.bor(board.pieces[by_color][BISHOP], board.pieces[by_color][QUEEN])) ~= u64.ZERO then
+	local bishop_attacks = Attacks.bishop_attacks(square, ZERO, occupied)
+	if band(bishop_attacks, bor(board.pieces[by_color][BISHOP], board.pieces[by_color][QUEEN])) ~= ZERO then
 		return true
 	end
 
@@ -260,80 +278,77 @@ local function scan_sliders_for_pins_and_checks(
 	checkers: vector
 )
 	local sliders = board.pieces[enemy][pieceType]
-	while sliders ~= u64.ZERO do
-		local slider_sq = u64.countrz(sliders)
+	while sliders ~= ZERO do
+		local slider_sq = countrz(sliders)
 
 		local between = Attacks.between_squares(slider_sq, king_square, pieceType)
-		local aligned = between ~= u64.ZERO
+		local aligned = between ~= ZERO
 		if not aligned then
 			local attacks = attack_func(slider_sq, enemy_occ, own_occ, true)
-			aligned = Utils.get_bit(attacks, king_square)
+			aligned = get_bit(attacks, king_square)
 		end
 
 		if aligned then
-			local between_occ = if between == u64.ZERO then u64.ZERO else u64.band(occupied, between)
-			if between_occ == u64.ZERO then
-				checkers = u64.bor(checkers, u64.lshift(u64.ONE, slider_sq))
+			local between_occ = if between == ZERO then ZERO else band(occupied, between)
+			if between_occ == ZERO then
+				checkers = bor(checkers, lshift(ONE, slider_sq))
 			else
-				if Utils.popcount(between_occ) == 1 and u64.band(between_occ, own_occ) ~= u64.ZERO then
-					local pinned_sq = u64.countrz(between_occ)
-					local line_mask = u64.bor(
+				if Utils.popcount(between_occ) == 1 and band(between_occ, own_occ) ~= ZERO then
+					local pinned_sq = countrz(between_occ)
+					local line_mask = bor(
 						between,
-						u64.bor(u64.lshift(u64.ONE, slider_sq), u64.lshift(u64.ONE, king_square))
+						bor(lshift(ONE, slider_sq), lshift(ONE, king_square))
 					)
 					pin_masks[pinned_sq] = line_mask
 				end
 			end
 		end
 
-		sliders = u64.band(sliders, u64.bnot(u64.lshift(u64.ONE, slider_sq)))
+		sliders = band(sliders, bnot(lshift(ONE, slider_sq)))
 	end
 
 	return checkers
 end
 
 local function compute_check_and_pins(board: Board, color: number, king_square: number)
-	local enemy = 1 - color
+	local enemy    = 1 - color
 	local occupied = board.occupied.all
-	local own_occ = board.occupied[color]
+	local own_occ  = board.occupied[color]
 	local enemy_occ = board.occupied[enemy]
-
 	local pin_masks = {}
-	local checkers = u64.ZERO
 
-	local pawn_checkers = u64.band(board.pieces[enemy][PAWN], pawn_attackers_to_square(king_square, enemy))
-	if pawn_checkers ~= u64.ZERO then
-		checkers = u64.bor(checkers, pawn_checkers)
-	end
+	local checkers = bor(
+		band(board.pieces[enemy][PAWN],   pawn_attackers_to_square(king_square, enemy)),
+		band(board.pieces[enemy][KNIGHT], Attacks.knight_attacks(king_square))
+	)
 
-	local knight_checkers = u64.band(board.pieces[enemy][KNIGHT], Attacks.knight_attacks(king_square))
-	if knight_checkers ~= u64.ZERO then
-		checkers = u64.bor(checkers, knight_checkers)
-	end
-
-	checkers = scan_sliders_for_pins_and_checks(board, enemy, king_square, ROOK, Attacks.rook_attacks, occupied, own_occ, enemy_occ, pin_masks, checkers)
+	checkers = scan_sliders_for_pins_and_checks(board, enemy, king_square, ROOK,   Attacks.rook_attacks,   occupied, own_occ, enemy_occ, pin_masks, checkers)
 	checkers = scan_sliders_for_pins_and_checks(board, enemy, king_square, BISHOP, Attacks.bishop_attacks, occupied, own_occ, enemy_occ, pin_masks, checkers)
-	checkers = scan_sliders_for_pins_and_checks(board, enemy, king_square, QUEEN, Attacks.queen_attacks, occupied, own_occ, enemy_occ, pin_masks, checkers)
+	checkers = scan_sliders_for_pins_and_checks(board, enemy, king_square, QUEEN,  Attacks.queen_attacks,  occupied, own_occ, enemy_occ, pin_masks, checkers)
 
-	local num_checkers = Utils.popcount(checkers)
-	local check_mask = u64.bnot(u64.ZERO)
+	local num_checkers = popcount(checkers)
 
 	if num_checkers >= 2 then
-		check_mask = u64.ZERO
-	elseif num_checkers == 1 then
-		local checker_sq = u64.countrz(checkers)
-		local checker_val = board.pieceTable[checker_sq]
-		if checker_val then
-			local checker_type = bit32.rshift(checker_val, 6)
-			if checker_type == KNIGHT or checker_type == PAWN or checker_type == KING then
-				check_mask = u64.lshift(u64.ONE, checker_sq)
-			else
-				local between = Attacks.between_squares(king_square, checker_sq, checker_type)
-				check_mask = u64.bor(between, u64.lshift(u64.ONE, checker_sq))
-			end
+		return pin_masks, ZERO, num_checkers, checkers
+	elseif num_checkers == 0 then
+		return pin_masks, bnot(ZERO), num_checkers, checkers
+	end
+
+	-- exactly one checker
+	local checker_sq   = countrz(checkers)
+	local checker_bit  = lshift(ONE, checker_sq)
+	local checker_val  = board.pieceTable[checker_sq]
+	local check_mask
+
+	if checker_val then
+		local checker_type = bit32.rshift(checker_val, 6)
+		if checker_type == BISHOP or checker_type == ROOK or checker_type == QUEEN then
+			check_mask = bor(Attacks.between_squares(king_square, checker_sq, checker_type), checker_bit)
 		else
-			check_mask = u64.lshift(u64.ONE, checker_sq)
+			check_mask = checker_bit
 		end
+	else
+		check_mask = checker_bit
 	end
 
 	return pin_masks, check_mask, num_checkers, checkers
@@ -344,37 +359,37 @@ local function is_en_passant_legal(board: Board, color: number, from: number, to
 	local own_occ = board.occupied[color]
 	local enemy_occ = board.occupied[enemy]
 
-	local from_bb = u64.lshift(u64.ONE, from)
-	local to_bb = u64.lshift(u64.ONE, to)
+	local from_bb = lshift(ONE, from)
+	local to_bb = lshift(ONE, to)
 	local cap_sq = to - (if color == WHITE then 8 else -8)
-	local cap_bb = u64.lshift(u64.ONE, cap_sq)
+	local cap_bb = lshift(ONE, cap_sq)
 
-	own_occ = u64.band(own_occ, u64.bnot(from_bb))
-	own_occ = u64.bor(own_occ, to_bb)
-	enemy_occ = u64.band(enemy_occ, u64.bnot(cap_bb))
+	own_occ = band(own_occ, bnot(from_bb))
+	own_occ = bor(own_occ, to_bb)
+	enemy_occ = band(enemy_occ, bnot(cap_bb))
 
-	local enemy_pawns = u64.band(board.pieces[enemy][PAWN], u64.bnot(cap_bb))
+	local enemy_pawns = band(board.pieces[enemy][PAWN], bnot(cap_bb))
 	local pawn_attackers = pawn_attackers_to_square(king_square, enemy)
-	if u64.band(enemy_pawns, pawn_attackers) ~= u64.ZERO then
+	if band(enemy_pawns, pawn_attackers) ~= ZERO then
 		return false
 	end
 
-	if u64.band(board.pieces[enemy][KNIGHT], Attacks.knight_attacks(king_square)) ~= u64.ZERO then
+	if band(board.pieces[enemy][KNIGHT], Attacks.knight_attacks(king_square)) ~= ZERO then
 		return false
 	end
 
-	if u64.band(board.pieces[enemy][KING], Attacks.king_attacks(king_square)) ~= u64.ZERO then
+	if band(board.pieces[enemy][KING], Attacks.king_attacks(king_square)) ~= ZERO then
 		return false
 	end
 
-	local occupied = u64.bor(own_occ, enemy_occ)
-	local rook_attacks = Attacks.rook_attacks(king_square, u64.ZERO, occupied)
-	if u64.band(rook_attacks, u64.bor(board.pieces[enemy][ROOK], board.pieces[enemy][QUEEN])) ~= u64.ZERO then
+	local occupied = bor(own_occ, enemy_occ)
+	local rook_attacks = Attacks.rook_attacks(king_square, ZERO, occupied)
+	if band(rook_attacks, bor(board.pieces[enemy][ROOK], board.pieces[enemy][QUEEN])) ~= ZERO then
 		return false
 	end
 
-	local bishop_attacks = Attacks.bishop_attacks(king_square, u64.ZERO, occupied)
-	if u64.band(bishop_attacks, u64.bor(board.pieces[enemy][BISHOP], board.pieces[enemy][QUEEN])) ~= u64.ZERO then
+	local bishop_attacks = Attacks.bishop_attacks(king_square, ZERO, occupied)
+	if band(bishop_attacks, bor(board.pieces[enemy][BISHOP], board.pieces[enemy][QUEEN])) ~= ZERO then
 		return false
 	end
 
@@ -390,22 +405,22 @@ local function add_pawn_moves_masked(
 	is_capture: boolean
 )
 	local bb = targets
-	while bb ~= u64.ZERO do
-		local to_square = u64.countrz(bb)
+	while bb ~= ZERO do
+		local to_square = countrz(bb)
+		bb = band(bb, sub(bb, ONE))
 		local from_square = to_square - from_offset
-
 		local pin_mask = pin_masks[from_square]
-		if not pin_mask or Utils.get_bit(pin_mask, to_square) then
-			if Utils.get_bit(promo_rank, to_square) then
-				for promo = KNIGHT, QUEEN do
-					table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, promo))
-				end
+		if not pin_mask or get_bit(pin_mask, to_square) then
+			if get_bit(promo_rank, to_square) then
+				local n = #moves
+				moves[n+1] = Move.create(from_square, to_square, PAWN, is_capture, KNIGHT)
+				moves[n+2] = Move.create(from_square, to_square, PAWN, is_capture, BISHOP)
+				moves[n+3] = Move.create(from_square, to_square, PAWN, is_capture, ROOK)
+				moves[n+4] = Move.create(from_square, to_square, PAWN, is_capture, QUEEN)
 			else
-				table.insert(moves, Move.create(from_square, to_square, PAWN, is_capture, nil))
+				moves[#moves+1] = Move.create(from_square, to_square, PAWN, is_capture)
 			end
 		end
-
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
 	end
 end
 
@@ -419,20 +434,20 @@ local function generate_piece_moves(
 	attack_func: (number, vector, vector) -> vector
 )
 	local bb = board.pieces[color][piece_type]
-	while bb ~= u64.ZERO do
-		local from_square = u64.countrz(bb)
+	while bb ~= ZERO do
+		local from_square = countrz(bb)
 		local attacks = attack_func(from_square, own_pieces, other_pieces)
-		attacks = u64.band(attacks, u64.bnot(own_pieces))
+		attacks = band(attacks, bnot(own_pieces))
 
 		local attacks_bb = attacks
-		while attacks_bb ~= u64.ZERO do
-			local to_square = u64.countrz(attacks_bb)
-			local is_capture = Utils.get_bit(other_pieces, to_square)
+		while attacks_bb ~= ZERO do
+			local to_square = countrz(attacks_bb)
+			local is_capture = get_bit(other_pieces, to_square)
 			table.insert(moves, Move.create(from_square, to_square, piece_type, is_capture))
-			attacks_bb = u64.band(attacks_bb, u64.bnot(u64.lshift(u64.ONE, to_square)))
+			attacks_bb = band(attacks_bb, bnot(lshift(ONE, to_square)))
 		end
 
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from_square)))
+		bb = band(bb, bnot(lshift(ONE, from_square)))
 	end
 end
 
@@ -446,29 +461,28 @@ local function add_knight_moves(
 	pin_masks: { [number]: vector }
 )
 	local bb = board.pieces[color][KNIGHT]
-	while bb ~= u64.ZERO do
-		local from = u64.countrz(bb)
+	while bb ~= ZERO do
+		local from = countrz(bb)
 		local attacks = Attacks.knight_attacks(from)
-		attacks = u64.band(attacks, u64.bnot(own_occ))
-		attacks = u64.band(attacks, check_mask)
+		attacks = band(attacks, bnot(own_occ))
+		attacks = band(attacks, check_mask)
 
 		local pin_mask = pin_masks[from]
 		if pin_mask then
-			attacks = u64.band(attacks, pin_mask)
+			attacks = band(attacks, pin_mask)
 		end
 
 		local at_bb = attacks
-		while at_bb ~= u64.ZERO do
-			local to = u64.countrz(at_bb)
-			local is_capture = Utils.get_bit(enemy_occ, to)
+		while at_bb ~= ZERO do
+			local to = countrz(at_bb)
+			local is_capture = get_bit(enemy_occ, to)
 			table.insert(moves, Move.create(from, to, KNIGHT, is_capture))
-			at_bb = u64.band(at_bb, u64.bnot(u64.lshift(u64.ONE, to)))
+			at_bb = band(at_bb, bnot(lshift(ONE, to)))
 		end
 
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from)))
+		bb = band(bb, bnot(lshift(ONE, from)))
 	end
 end
-
 local function add_sliding_moves(
 	board: Board,
 	moves: { number },
@@ -481,26 +495,23 @@ local function add_sliding_moves(
 	attack_func: (number, vector, vector) -> vector
 )
 	local bb = board.pieces[color][piece_type]
-	while bb ~= u64.ZERO do
-		local from = u64.countrz(bb)
-		local attacks = attack_func(from, own_occ, enemy_occ)
-		attacks = u64.band(attacks, u64.bnot(own_occ))
-		attacks = u64.band(attacks, check_mask)
+	while bb ~= ZERO do
+		local from = countrz(bb)
+		bb = band(bb, sub(bb, ONE))
 
+		local attacks = band(attack_func(from, own_occ, enemy_occ), check_mask)
 		local pin_mask = pin_masks[from]
 		if pin_mask then
-			attacks = u64.band(attacks, pin_mask)
+			attacks = band(attacks, pin_mask)
 		end
 
-		local at_bb = attacks
-		while at_bb ~= u64.ZERO do
-			local to = u64.countrz(at_bb)
-			local is_capture = Utils.get_bit(enemy_occ, to)
-			table.insert(moves, Move.create(from, to, piece_type, is_capture))
-			at_bb = u64.band(at_bb, u64.bnot(u64.lshift(u64.ONE, to)))
+		local n = #moves
+		while attacks ~= ZERO do
+			local to = countrz(attacks)
+			attacks = band(attacks, sub(attacks, ONE))
+			n += 1
+			moves[n] = Move.create(from, to, piece_type, get_bit(enemy_occ, to))
 		end
-
-		bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, from)))
 	end
 end
 
@@ -516,7 +527,7 @@ local function try_ep_helper(
 	king_square: number
 )
 	local pin_mask = pin_masks[from]
-	if pin_mask and not Utils.get_bit(pin_mask, board.en_passant_square) then
+	if pin_mask and not get_bit(pin_mask, board.en_passant_square) then
 		return
 	end
 
@@ -546,7 +557,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 	-- inline find_piece for king lookup
 	local king_bb = board.pieces[color][KING]
-	local king_square = 63 - u64.countlz(king_bb)
+	local king_square = 63 - countlz(king_bb)
 	if king_square == -1 then
 		return {}
 	end
@@ -574,9 +585,9 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 	local own_occ = board.occupied[color]
 	local enemy_occ = board.occupied[enemy]
-	local empty = u64.bnot(board.occupied.all)
+	local empty = bnot(board.occupied.all)
 
-	local checker_sq = if num_checkers == 1 then u64.countrz(checkers) else -1
+	local checker_sq = if num_checkers == 1 then countrz(checkers) else -1
 	local checker_val = if checker_sq >= 0 then board.pieceTable[checker_sq] else nil
 	local checker_type = if checker_val then bit32.rshift(checker_val, 6) else nil
 
@@ -587,30 +598,30 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		local start_rank = if color == WHITE then RANK_2 else RANK_7
 		local promo_rank = if color == WHITE then RANK_8 else RANK_1
 
-		local push_targets = if color == WHITE then u64.lshift(pawns, 8) else u64.rshift(pawns, 8)
-		push_targets = u64.band(push_targets, empty)
-		push_targets = u64.band(push_targets, check_mask)
+		local push_targets = if color == WHITE then lshift(pawns, 8) else rshift(pawns, 8)
+		push_targets = band(push_targets, empty)
+		push_targets = band(push_targets, check_mask)
 
-		local double_push_targets = if color == WHITE then u64.lshift(push_targets, 8) else u64.rshift(push_targets, 8)
-		double_push_targets = u64.band(
-			u64.band(double_push_targets, empty),
-			if color == WHITE then u64.lshift(start_rank, 16) else u64.rshift(start_rank, 16)
+		local double_push_targets = if color == WHITE then lshift(push_targets, 8) else rshift(push_targets, 8)
+		double_push_targets = band(
+			band(double_push_targets, empty),
+			if color == WHITE then lshift(start_rank, 16) else rshift(start_rank, 16)
 		)
-		double_push_targets = u64.band(double_push_targets, check_mask)
+		double_push_targets = band(double_push_targets, check_mask)
 
 		local left_captures, right_captures
 		if color == WHITE then
-			left_captures = u64.band(u64.lshift(pawns, 7), NOT_FILE_H)
-			right_captures = u64.band(u64.lshift(pawns, 9), NOT_FILE_A)
+			left_captures = band(lshift(pawns, 7), NOT_FILE_H)
+			right_captures = band(lshift(pawns, 9), NOT_FILE_A)
 		else
-			left_captures = u64.band(u64.rshift(pawns, 7), NOT_FILE_A)
-			right_captures = u64.band(u64.rshift(pawns, 9), NOT_FILE_H)
+			left_captures = band(rshift(pawns, 7), NOT_FILE_A)
+			right_captures = band(rshift(pawns, 9), NOT_FILE_H)
 		end
-		left_captures = u64.band(left_captures, enemy_occ)
-		right_captures = u64.band(right_captures, enemy_occ)
+		left_captures = band(left_captures, enemy_occ)
+		right_captures = band(right_captures, enemy_occ)
 
-		left_captures = u64.band(left_captures, check_mask)
-		right_captures = u64.band(right_captures, check_mask)
+		left_captures = band(left_captures, check_mask)
+		right_captures = band(right_captures, check_mask)
 
 		add_pawn_moves_masked(moves, promo_rank, pin_masks, push_targets, push_dir, false)
 		add_pawn_moves_masked(moves, promo_rank, pin_masks, double_push_targets, push_dir * 2, false)
@@ -618,15 +629,15 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		add_pawn_moves_masked(moves, promo_rank, pin_masks, right_captures, if color == WHITE then 9 else - 9, true)
 
 		if board.en_passant_square and board.en_passant_square > 0 then
-			local ep_bb = u64.lshift(u64.ONE, board.en_passant_square)
-			local ep_left = if color == WHITE then u64.rshift(ep_bb, 7) else u64.lshift(ep_bb, 7)
-			local ep_right = if color == WHITE then u64.rshift(ep_bb, 9) else u64.lshift(ep_bb, 9)
+			local ep_bb = lshift(ONE, board.en_passant_square)
+			local ep_left = if color == WHITE then rshift(ep_bb, 7) else lshift(ep_bb, 7)
+			local ep_right = if color == WHITE then rshift(ep_bb, 9) else lshift(ep_bb, 9)
 
-			if u64.btest(pawns, ep_left) then
+			if btest(pawns, ep_left) then
 				local from = board.en_passant_square - (if color == WHITE then 7 else -7)
 				try_ep_helper(board, moves, from, pin_masks, num_checkers, checker_type, checker_sq, color, king_square)
 			end
-			if u64.btest(pawns, ep_right) then
+			if btest(pawns, ep_right) then
 				local from = board.en_passant_square - (if color == WHITE then 9 else -9)
 				try_ep_helper(board, moves, from, pin_masks, num_checkers, checker_type, checker_sq, color, king_square)
 			end
@@ -647,22 +658,22 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 	-- King moves (legal)
 	do
-		local king_only_bb = u64.lshift(u64.ONE, king_square)
-		local king_attacks = u64.band(Attacks.king_attacks(king_square), u64.bnot(own_occ))
+		local king_only_bb = lshift(ONE, king_square)
+		local king_attacks = band(Attacks.king_attacks(king_square), bnot(own_occ))
 		local bb = king_attacks
-		while bb ~= u64.ZERO do
-			local to = u64.countrz(bb)
-			local to_bb = u64.lshift(u64.ONE, to)
+		while bb ~= ZERO do
+			local to = countrz(bb)
+			local to_bb = lshift(ONE, to)
 
-			local own_occ_new = u64.bor(u64.band(own_occ, u64.bnot(king_only_bb)), to_bb)
-			local enemy_occ_new = if Utils.get_bit(enemy_occ, to) then u64.band(enemy_occ, u64.bnot(to_bb)) else enemy_occ
+			local own_occ_new = bor(band(own_occ, bnot(king_only_bb)), to_bb)
+			local enemy_occ_new = if get_bit(enemy_occ, to) then band(enemy_occ, bnot(to_bb)) else enemy_occ
 
 			if not is_square_attacked_with_occupancy(board, to, enemy, enemy_occ_new, own_occ_new) then
-				local is_capture = Utils.get_bit(enemy_occ, to)
+				local is_capture = get_bit(enemy_occ, to)
 				table.insert(moves, Move.create(king_square, to, KING, is_capture))
 			end
 
-			bb = u64.band(bb, u64.bnot(u64.lshift(u64.ONE, to)))
+			bb = band(bb, bnot(lshift(ONE, to)))
 		end
 	end
 

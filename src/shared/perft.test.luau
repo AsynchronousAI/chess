@@ -1,6 +1,6 @@
 local bitboard = require("./engine/bitboard").BitBoard
 
-local DEPTH = 4
+local DEPTH = 5
 
 local function perft(board, depth)
     if depth == 0 then

@@ -14,6 +14,7 @@ local WHITE = Utils.WHITE
 local BISHOP, ROOK, QUEEN = Utils.BISHOP, Utils.ROOK, Utils.QUEEN
 local NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH =
 	Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
+local get_bit = Utils.get_bit
 
 local Attacks = {}
 
@@ -123,9 +124,7 @@ end
 function Attacks.king_attacks(square: number): vector
 	return KING_MOVES[square]
 end
-
-function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
-	local occ = bor(my_occupied, other_occupied)
+local function rook_attacks_occ(square: number, occ: vector, my_occupied: vector): vector
 	local idx = rook_magic_index(
 		band(occ, ROOK_MASK[square]),
 		ROOK_MAGICS_HI[square + 1],
@@ -134,8 +133,8 @@ function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupie
 	)
 	return band(ROOK_TABLE[square][idx], bnot(my_occupied))
 end
-function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
-	local occ = bor(my_occupied, other_occupied)
+
+local function bishop_attacks_occ(square: number, occ: vector, my_occupied: vector): vector
 	local idx = bishop_magic_index(
 		band(occ, BISHOP_MASK[square]),
 		BISHOP_MAGICS_LO[square + 1],
@@ -143,35 +142,48 @@ function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occup
 	)
 	return band(BISHOP_TABLE[square][idx], bnot(my_occupied))
 end
+
+function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+	return rook_attacks_occ(square, bor(my_occupied, other_occupied), my_occupied)
+end
+
+function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+	return bishop_attacks_occ(square, bor(my_occupied, other_occupied), my_occupied)
+end
+
 function Attacks.queen_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+	local occ     = bor(my_occupied, other_occupied)
+	local not_own = bnot(my_occupied)
+	local s1      = square + 1
+	local ridx = rook_magic_index(band(occ, ROOK_MASK[square]),   ROOK_MAGICS_HI[s1], ROOK_MAGICS_LO[s1], ROOK_BITS[s1])
+	local bidx = bishop_magic_index(band(occ, BISHOP_MASK[square]), BISHOP_MAGICS_LO[s1], BISHOP_BITS[s1])
 	return bor(
-		Attacks.rook_attacks(square, my_occupied, other_occupied),
-		Attacks.bishop_attacks(square, my_occupied, other_occupied)
+		band(ROOK_TABLE[square][ridx],   not_own),
+		band(BISHOP_TABLE[square][bidx], not_own)
 	)
 end
-function Attacks.between_squares(a: number, b: number, pieceType: number): vector
-	if pieceType ~= ROOK and pieceType ~= BISHOP and pieceType ~= QUEEN then
-		return ZERO
-	end
-	local allowStraight = pieceType == ROOK  or pieceType == QUEEN
-	local allowDiagonal = pieceType == BISHOP or pieceType == QUEEN
+function Attacks.between_squares_rook(a: number, b: number): vector
+	if get_bit(RAY_NORTH[a], b) then return band(RAY_NORTH[a], RAY_SOUTH[b]) end
+	if get_bit(RAY_SOUTH[a], b) then return band(RAY_SOUTH[a], RAY_NORTH[b]) end
+	if get_bit(RAY_EAST[a],  b) then return band(RAY_EAST[a],  RAY_WEST[b])  end
+	if get_bit(RAY_WEST[a],  b) then return band(RAY_WEST[a],  RAY_EAST[b])  end
+	return ZERO
+end
 
-	if allowStraight and Utils.get_bit(RAY_NORTH[a], b) then
-		return band(RAY_NORTH[a], RAY_SOUTH[b])
-	elseif allowStraight and Utils.get_bit(RAY_SOUTH[a], b) then
-		return band(RAY_SOUTH[a], RAY_NORTH[b])
-	elseif allowStraight and Utils.get_bit(RAY_EAST[a], b) then
-		return band(RAY_EAST[a], RAY_WEST[b])
-	elseif allowStraight and Utils.get_bit(RAY_WEST[a], b) then
-		return band(RAY_WEST[a], RAY_EAST[b])
-	elseif allowDiagonal and Utils.get_bit(RAY_NE[a], b) then
-		return band(RAY_NE[a], RAY_SW[b])
-	elseif allowDiagonal and Utils.get_bit(RAY_NW[a], b) then
-		return band(RAY_NW[a], RAY_SE[b])
-	elseif allowDiagonal and Utils.get_bit(RAY_SE[a], b) then
-		return band(RAY_SE[a], RAY_NW[b])
-	elseif allowDiagonal and Utils.get_bit(RAY_SW[a], b) then
-		return band(RAY_SW[a], RAY_NE[b])
+function Attacks.between_squares_bishop(a: number, b: number): vector
+	if get_bit(RAY_NE[a], b) then return band(RAY_NE[a], RAY_SW[b]) end
+	if get_bit(RAY_NW[a], b) then return band(RAY_NW[a], RAY_SE[b]) end
+	if get_bit(RAY_SE[a], b) then return band(RAY_SE[a], RAY_NW[b]) end
+	if get_bit(RAY_SW[a], b) then return band(RAY_SW[a], RAY_NE[b]) end
+	return ZERO
+end
+
+function Attacks.between_squares(a: number, b: number, pieceType: number): vector
+	if pieceType == ROOK   then return Attacks.between_squares_rook(a, b)   end
+	if pieceType == BISHOP then return Attacks.between_squares_bishop(a, b) end
+	if pieceType == QUEEN  then
+		local r = Attacks.between_squares_rook(a, b)
+		return if r ~= ZERO then r else Attacks.between_squares_bishop(a, b)
 	end
 	return ZERO
 end
