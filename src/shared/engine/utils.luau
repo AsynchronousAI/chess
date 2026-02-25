@@ -73,7 +73,7 @@ local function unit_board(square: number)
 end
 
 local function get_bit(bb, square: number)
-	return btest(bb, BIT_MASKS[square])
+	return band(bb, BIT_MASKS[square]) ~= u64.ZERO
 end
 
 local function set_bit(bb, square: number)

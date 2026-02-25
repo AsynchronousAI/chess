@@ -1,257 +1,179 @@
 --!native
 --!optimize 2
-
+local Magics = require("./magics")
 local u64 = require("./int64")
-local Utils = require("./utils")
-
+local ZERO    = u64.ZERO
+local bor     = u64.bor
+local band    = u64.band
+local lshift  = u64.lshift
+local rshift  = u64.rshift
+local bnot    = u64.bnot
+local Utils      = require("./utils")
+local unit_board = Utils.unit_board
 local WHITE = Utils.WHITE
 local BISHOP, ROOK, QUEEN = Utils.BISHOP, Utils.ROOK, Utils.QUEEN
-local NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH = Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
+local NOT_FILE_A, NOT_FILE_H, NOT_FILE_AB, NOT_FILE_GH =
+	Utils.NOT_FILE_A, Utils.NOT_FILE_H, Utils.NOT_FILE_AB, Utils.NOT_FILE_GH
 
 local Attacks = {}
 
-local RAY_NORTH = {}
-local RAY_SOUTH = {}
-local RAY_EAST = {}
-local RAY_WEST = {}
-local RAY_NE = {}
-local RAY_NW = {}
-local RAY_SE = {}
-local RAY_SW = {}
+local KNIGHT_MOVES = table.create(64)
+local KING_MOVES   = table.create(64)
+local RAY_NORTH = table.create(64)
+local RAY_SOUTH = table.create(64)
+local RAY_EAST  = table.create(64)
+local RAY_WEST  = table.create(64)
+local RAY_NE    = table.create(64)
+local RAY_NW    = table.create(64)
+local RAY_SE    = table.create(64)
+local RAY_SW    = table.create(64)
 
-local KNIGHT_MOVES = {}
-local KING_MOVES = {}
-
--- Bulk movements
 function Attacks.bulk_pawn_attacks(bb: vector, color: number): vector
-	local attacks = u64.ZERO
-
 	if color == WHITE then
-		attacks = u64.bor(
-			u64.band(u64.lshift(bb, 7), NOT_FILE_H),
-			u64.band(u64.lshift(bb, 9), NOT_FILE_A)
-		)
+		return bor(band(lshift(bb, 7), NOT_FILE_H), band(lshift(bb, 9), NOT_FILE_A))
 	else
-		attacks = u64.bor(
-			u64.band(u64.rshift(bb, 7), NOT_FILE_A),
-			u64.band(u64.rshift(bb, 9), NOT_FILE_H)
-		)
+		return bor(band(rshift(bb, 7), NOT_FILE_A), band(rshift(bb, 9), NOT_FILE_H))
 	end
-
-	return attacks
 end
 function Attacks.bulk_knight_attacks(bb: vector): vector
-    local attacks = u64.ZERO;
-
-    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 17), NOT_FILE_A))
-    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 15), NOT_FILE_H))
-    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 10), NOT_FILE_AB))
-    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 6), NOT_FILE_GH))
-    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 17), NOT_FILE_H))
-    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 15), NOT_FILE_A))
-    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 10), NOT_FILE_GH))
-    attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 6), NOT_FILE_AB))
-
-    return attacks
+	local attacks = ZERO
+	attacks = bor(attacks, band(lshift(bb, 17), NOT_FILE_A))
+	attacks = bor(attacks, band(lshift(bb, 15), NOT_FILE_H))
+	attacks = bor(attacks, band(lshift(bb, 10), NOT_FILE_AB))
+	attacks = bor(attacks, band(lshift(bb, 6),  NOT_FILE_GH))
+	attacks = bor(attacks, band(rshift(bb, 17), NOT_FILE_H))
+	attacks = bor(attacks, band(rshift(bb, 15), NOT_FILE_A))
+	attacks = bor(attacks, band(rshift(bb, 10), NOT_FILE_GH))
+	attacks = bor(attacks, band(rshift(bb, 6),  NOT_FILE_AB))
+	return attacks
 end
 function Attacks.bulk_king_attacks(bb: vector): vector
-    local attacks = u64.ZERO;
-
-    attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 1), NOT_FILE_A))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 1), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.lshift(bb, 8))
-	attacks = u64.bor(attacks, u64.rshift(bb, 8))
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 9), NOT_FILE_A))
-	attacks = u64.bor(attacks, u64.band(u64.lshift(bb, 7), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 9), NOT_FILE_H))
-	attacks = u64.bor(attacks, u64.band(u64.rshift(bb, 7), NOT_FILE_A))
-
+	local attacks = ZERO
+	attacks = bor(attacks, band(lshift(bb, 1), NOT_FILE_A))
+	attacks = bor(attacks, band(rshift(bb, 1), NOT_FILE_H))
+	attacks = bor(attacks, lshift(bb, 8))
+	attacks = bor(attacks, rshift(bb, 8))
+	attacks = bor(attacks, band(lshift(bb, 9), NOT_FILE_A))
+	attacks = bor(attacks, band(lshift(bb, 7), NOT_FILE_H))
+	attacks = bor(attacks, band(rshift(bb, 9), NOT_FILE_H))
+	attacks = bor(attacks, band(rshift(bb, 7), NOT_FILE_A))
 	return attacks
 end
 
--- Initialize precomputed rays & knight/king movement
+local ROOK_BITS        = Magics.rook.bits
+local ROOK_MAGICS_HI   = Magics.rook.hi
+local ROOK_MAGICS_LO   = Magics.rook.lo
+local BISHOP_BITS      = Magics.bishop.bits
+local BISHOP_MAGICS_LO = Magics.bishop.lo
+
 do
 	for square = 0, 63 do
-		RAY_NORTH[square] = u64.ZERO
-		RAY_SOUTH[square] = u64.ZERO
-		RAY_EAST[square] = u64.ZERO
-		RAY_WEST[square] = u64.ZERO
-		RAY_NE[square] = u64.ZERO
-		RAY_NW[square] = u64.ZERO
-		RAY_SE[square] = u64.ZERO
-		RAY_SW[square] = u64.ZERO
+		local bb = unit_board(square)
+		KNIGHT_MOVES[square] = Attacks.bulk_knight_attacks(bb)
+		KING_MOVES[square]   = Attacks.bulk_king_attacks(bb)
 
-		local bb = Utils.unit_board(square)
+		RAY_NORTH[square] = ZERO; RAY_SOUTH[square] = ZERO
+		RAY_EAST[square]  = ZERO; RAY_WEST[square]  = ZERO
+		RAY_NE[square]    = ZERO; RAY_NW[square]    = ZERO
+		RAY_SE[square]    = ZERO; RAY_SW[square]    = ZERO
 
 		local rank = math.floor(square / 8)
-		local file = square % 8
+		local file  = square % 8
 
-		-- Knight & king
-		KNIGHT_MOVES[square] = Attacks.bulk_knight_attacks(bb)
-		KING_MOVES[square] = Attacks.bulk_king_attacks(bb)
+		for r = rank + 1, 7 do RAY_NORTH[square] = Utils.set_bit(RAY_NORTH[square], r*8+file) end
+		for r = rank - 1, 0, -1 do RAY_SOUTH[square] = Utils.set_bit(RAY_SOUTH[square], r*8+file) end
+		for f = file + 1, 7 do RAY_EAST[square] = Utils.set_bit(RAY_EAST[square], rank*8+f) end
+		for f = file - 1, 0, -1 do RAY_WEST[square] = Utils.set_bit(RAY_WEST[square], rank*8+f) end
 
-		-- North
-		for r = rank + 1, 7 do
-			RAY_NORTH[square] = Utils.set_bit(RAY_NORTH[square], r * 8 + file)
-		end
-
-		-- South
-		for r = rank - 1, 0, -1 do
-			RAY_SOUTH[square] = Utils.set_bit(RAY_SOUTH[square], r * 8 + file)
-		end
-
-		-- East
-		for f = file + 1, 7 do
-			RAY_EAST[square] = Utils.set_bit(RAY_EAST[square], rank * 8 + f)
-		end
-
-		-- West
-		for f = file - 1, 0, -1 do
-			RAY_WEST[square] = Utils.set_bit(RAY_WEST[square], rank * 8 + f)
-		end
-
-		-- NE
-		local r, f = rank + 1, file + 1
-		while r <= 7 and f <= 7 do
-			RAY_NE[square] = Utils.set_bit(RAY_NE[square], r * 8 + f)
-			r = r + 1
-			f = f + 1
-		end
-
-		-- NW
-		r, f = rank + 1, file - 1
-		while r <= 7 and f >= 0 do
-			RAY_NW[square] = Utils.set_bit(RAY_NW[square], r * 8 + f)
-			r = r + 1
-			f = f - 1
-		end
-
-		-- SE
-		r, f = rank - 1, file + 1
-		while r >= 0 and f <= 7 do
-			RAY_SE[square] = Utils.set_bit(RAY_SE[square], r * 8 + f)
-			r = r - 1
-			f = f + 1
-		end
-
-		-- SW
-		r, f = rank - 1, file - 1
-		while r >= 0 and f >= 0 do
-			RAY_SW[square] = Utils.set_bit(RAY_SW[square], r * 8 + f)
-			r = r - 1
-			f = f - 1
-		end
+		local r2, f2
+		r2, f2 = rank+1, file+1; while r2<=7 and f2<=7 do RAY_NE[square]=Utils.set_bit(RAY_NE[square],r2*8+f2); r2+=1;f2+=1 end
+		r2, f2 = rank+1, file-1; while r2<=7 and f2>=0 do RAY_NW[square]=Utils.set_bit(RAY_NW[square],r2*8+f2); r2+=1;f2-=1 end
+		r2, f2 = rank-1, file+1; while r2>=0 and f2<=7 do RAY_SE[square]=Utils.set_bit(RAY_SE[square],r2*8+f2); r2-=1;f2+=1 end
+		r2, f2 = rank-1, file-1; while r2>=0 and f2>=0 do RAY_SW[square]=Utils.set_bit(RAY_SW[square],r2*8+f2); r2-=1;f2-=1 end
 	end
 end
+local ROOK_MASK, BISHOP_MASK, ROOK_TABLE, BISHOP_TABLE =
+	require("./attacks_init")(
+		ROOK_BITS, BISHOP_BITS,
+		ROOK_MAGICS_HI, ROOK_MAGICS_LO, BISHOP_MAGICS_LO,
+		{
+			NORTH = RAY_NORTH, SOUTH = RAY_SOUTH,
+			EAST  = RAY_EAST,  WEST  = RAY_WEST,
+			NE    = RAY_NE,    NW    = RAY_NW,
+			SE    = RAY_SE,    SW    = RAY_SW,
+		}
+	)
 
--- Singular attacks (precomputed)
+
+local SHIFT32 = 2 ^ 32
+local function rook_magic_index(occ: vector, magic_hi: number, magic_lo: number, bits: number): number
+	local occ_hi, occ_lo = u64.to_pair(occ)
+	local hi32 = (occ_hi * magic_hi) // SHIFT32 + (occ_lo * magic_lo) // SHIFT32
+	return bit32.rshift(bit32.band(hi32, 0xFFFFFFFF), 32 - bits)
+end
+local function bishop_magic_index(occ: vector, magic_lo: number, bits: number): number
+	local occ_hi, occ_lo = u64.to_pair(occ)
+	local folded = bit32.bxor(occ_lo, occ_hi)
+	local hi32   = (folded * magic_lo) // SHIFT32
+	return bit32.rshift(bit32.band(hi32, 0xFFFFFFFF), 32 - bits)
+end
 function Attacks.knight_attacks(square: number): vector
-    return KNIGHT_MOVES[square]
+	return KNIGHT_MOVES[square]
 end
 function Attacks.king_attacks(square: number): vector
 	return KING_MOVES[square]
 end
 
+function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+	local occ = bor(my_occupied, other_occupied)
+	local idx = rook_magic_index(
+		band(occ, ROOK_MASK[square]),
+		ROOK_MAGICS_HI[square + 1],
+		ROOK_MAGICS_LO[square + 1],
+		ROOK_BITS[square + 1]
+	)
+	return band(ROOK_TABLE[square][idx], bnot(my_occupied))
+end
+function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+	local occ = bor(my_occupied, other_occupied)
+	local idx = bishop_magic_index(
+		band(occ, BISHOP_MASK[square]),
+		BISHOP_MAGICS_LO[square + 1],
+		BISHOP_BITS[square + 1]
+	)
+	return band(BISHOP_TABLE[square][idx], bnot(my_occupied))
+end
+function Attacks.queen_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
+	return bor(
+		Attacks.rook_attacks(square, my_occupied, other_occupied),
+		Attacks.bishop_attacks(square, my_occupied, other_occupied)
+	)
+end
 function Attacks.between_squares(a: number, b: number, pieceType: number): vector
 	if pieceType ~= ROOK and pieceType ~= BISHOP and pieceType ~= QUEEN then
-		return u64.ZERO
+		return ZERO
 	end
-
-	local between = u64.ZERO
-	local allowStraight = pieceType == ROOK or pieceType == QUEEN
+	local allowStraight = pieceType == ROOK  or pieceType == QUEEN
 	local allowDiagonal = pieceType == BISHOP or pieceType == QUEEN
 
 	if allowStraight and Utils.get_bit(RAY_NORTH[a], b) then
-		return u64.band(RAY_NORTH[a], RAY_SOUTH[b])
+		return band(RAY_NORTH[a], RAY_SOUTH[b])
 	elseif allowStraight and Utils.get_bit(RAY_SOUTH[a], b) then
-		return u64.band(RAY_SOUTH[a], RAY_NORTH[b])
+		return band(RAY_SOUTH[a], RAY_NORTH[b])
 	elseif allowStraight and Utils.get_bit(RAY_EAST[a], b) then
-		return u64.band(RAY_EAST[a], RAY_WEST[b])
+		return band(RAY_EAST[a], RAY_WEST[b])
 	elseif allowStraight and Utils.get_bit(RAY_WEST[a], b) then
-		return u64.band(RAY_WEST[a], RAY_EAST[b])
+		return band(RAY_WEST[a], RAY_EAST[b])
 	elseif allowDiagonal and Utils.get_bit(RAY_NE[a], b) then
-		return u64.band(RAY_NE[a], RAY_SW[b])
+		return band(RAY_NE[a], RAY_SW[b])
 	elseif allowDiagonal and Utils.get_bit(RAY_NW[a], b) then
-		return u64.band(RAY_NW[a], RAY_SE[b])
+		return band(RAY_NW[a], RAY_SE[b])
 	elseif allowDiagonal and Utils.get_bit(RAY_SE[a], b) then
-		return u64.band(RAY_SE[a], RAY_NW[b])
+		return band(RAY_SE[a], RAY_NW[b])
 	elseif allowDiagonal and Utils.get_bit(RAY_SW[a], b) then
-		return u64.band(RAY_SW[a], RAY_NE[b])
+		return band(RAY_SW[a], RAY_NE[b])
 	end
-
-	return between
-end
-
--- Compute attacks in a direction using countlz/countrz
-local function ray_attack_positive(ray: vector, occupied: vector): vector
-    local blockers = u64.band(ray, occupied)
-    if blockers == u64.ZERO then
-        return ray
-    end
-
-    local blocker_square = u64.countrz(blockers)
-    if blocker_square == -1 then
-        return ray
-    end
-
-    local mask = u64.lshift(u64.ONE, blocker_square)
-    local attack = u64.band(ray, u64.bor(mask, u64.sub(mask, u64.ONE)))
-    return attack
-end
-local function ray_attack_negative(ray: vector, occupied: vector): vector
-    local blockers = u64.band(ray, occupied)
-    if blockers == u64.ZERO then
-        return ray
-    end
-
-    local blocker_square = 63 - u64.countlz(blockers)
-    if blocker_square == -1 then
-        return ray
-    end
-
-    local mask = u64.lshift(u64.ONE, blocker_square)
-    local attack = u64.band(ray, u64.bnot(u64.sub(mask, u64.ONE)))
-    return attack
-end
-
--- Optimized sliding attacks using CLZ/CTZ
-function Attacks.rook_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
-	local occupied = u64.bor(my_occupied, other_occupied)
-	local attacks = u64.ZERO
-
-	local north = ray_attack_positive(RAY_NORTH[square], occupied)
-	local east = ray_attack_positive(RAY_EAST[square], occupied)
-	local south = ray_attack_negative(RAY_SOUTH[square], occupied)
-	local west = ray_attack_negative(RAY_WEST[square], occupied)
-
-	attacks = u64.bor(attacks, north)
-	attacks = u64.bor(attacks, east)
-	attacks = u64.bor(attacks, south)
-	attacks = u64.bor(attacks, west)
-
-	return u64.band(attacks, u64.bnot(my_occupied))
-end
-function Attacks.bishop_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
-	local occupied = u64.bor(my_occupied, other_occupied)
-	local attacks = u64.ZERO
-
-	local northEast = ray_attack_positive(RAY_NE[square], occupied)
-	local northWest = ray_attack_positive(RAY_NW[square], occupied)
-	local southEast = ray_attack_negative(RAY_SE[square], occupied)
-	local southWest = ray_attack_negative(RAY_SW[square], occupied)
-
-	attacks = u64.bor(attacks, northEast)
-	attacks = u64.bor(attacks, northWest)
-	attacks = u64.bor(attacks, southEast)
-	attacks = u64.bor(attacks, southWest)
-
-	return u64.band(attacks, u64.bnot(my_occupied))
-end
-function Attacks.queen_attacks(square: number, my_occupied: vector, other_occupied: vector): vector
-    local rookAttacks = Attacks.rook_attacks(square, my_occupied, other_occupied)
-	local bishopAttacks = Attacks.bishop_attacks(square, my_occupied, other_occupied)
-
-	return u64.bor(rookAttacks, bishopAttacks)
+	return ZERO
 end
 
 return Attacks
