@@ -4,6 +4,7 @@ local Magics = require("./magics")
 local u64 = require("./int64")
 local ZERO    = u64.ZERO
 local bor     = u64.bor
+local oct_bor     = u64.oct_bor
 local band    = u64.band
 local lshift  = u64.lshift
 local rshift  = u64.rshift
@@ -37,28 +38,28 @@ function Attacks.bulk_pawn_attacks(bb: vector, color: number): vector
 	end
 end
 function Attacks.bulk_knight_attacks(bb: vector): vector
-	local attacks = ZERO
-	attacks = bor(attacks, band(lshift(bb, 17), NOT_FILE_A))
-	attacks = bor(attacks, band(lshift(bb, 15), NOT_FILE_H))
-	attacks = bor(attacks, band(lshift(bb, 10), NOT_FILE_AB))
-	attacks = bor(attacks, band(lshift(bb, 6),  NOT_FILE_GH))
-	attacks = bor(attacks, band(rshift(bb, 17), NOT_FILE_H))
-	attacks = bor(attacks, band(rshift(bb, 15), NOT_FILE_A))
-	attacks = bor(attacks, band(rshift(bb, 10), NOT_FILE_GH))
-	attacks = bor(attacks, band(rshift(bb, 6),  NOT_FILE_AB))
-	return attacks
+	return oct_bor(
+		band(lshift(bb, 17), NOT_FILE_A),
+		band(lshift(bb, 15), NOT_FILE_H),
+		band(lshift(bb, 10), NOT_FILE_AB),
+		band(lshift(bb, 6),  NOT_FILE_GH),
+		band(rshift(bb, 17), NOT_FILE_H),
+		band(rshift(bb, 15), NOT_FILE_A),
+		band(rshift(bb, 10), NOT_FILE_GH),
+		band(rshift(bb, 6),  NOT_FILE_AB)
+	)
 end
 function Attacks.bulk_king_attacks(bb: vector): vector
-	local attacks = ZERO
-	attacks = bor(attacks, band(lshift(bb, 1), NOT_FILE_A))
-	attacks = bor(attacks, band(rshift(bb, 1), NOT_FILE_H))
-	attacks = bor(attacks, lshift(bb, 8))
-	attacks = bor(attacks, rshift(bb, 8))
-	attacks = bor(attacks, band(lshift(bb, 9), NOT_FILE_A))
-	attacks = bor(attacks, band(lshift(bb, 7), NOT_FILE_H))
-	attacks = bor(attacks, band(rshift(bb, 9), NOT_FILE_H))
-	attacks = bor(attacks, band(rshift(bb, 7), NOT_FILE_A))
-	return attacks
+	return oct_bor(
+		band(lshift(bb, 1), NOT_FILE_A),
+		band(rshift(bb, 1), NOT_FILE_H),
+		lshift(bb, 8),
+		rshift(bb, 8),
+		band(lshift(bb, 9), NOT_FILE_A),
+		band(lshift(bb, 7), NOT_FILE_H),
+		band(rshift(bb, 9), NOT_FILE_H),
+		band(rshift(bb, 7), NOT_FILE_A)
+	)
 end
 
 local ROOK_BITS        = Magics.rook.bits
@@ -175,16 +176,6 @@ function Attacks.between_squares_bishop(a: number, b: number): vector
 	if get_bit(RAY_NW[a], b) then return band(RAY_NW[a], RAY_SE[b]) end
 	if get_bit(RAY_SE[a], b) then return band(RAY_SE[a], RAY_NW[b]) end
 	if get_bit(RAY_SW[a], b) then return band(RAY_SW[a], RAY_NE[b]) end
-	return ZERO
-end
-
-function Attacks.between_squares(a: number, b: number, pieceType: number): vector
-	if pieceType == ROOK   then return Attacks.between_squares_rook(a, b)   end
-	if pieceType == BISHOP then return Attacks.between_squares_bishop(a, b) end
-	if pieceType == QUEEN  then
-		local r = Attacks.between_squares_rook(a, b)
-		return if r ~= ZERO then r else Attacks.between_squares_bishop(a, b)
-	end
 	return ZERO
 end
 

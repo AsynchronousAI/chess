@@ -281,7 +281,15 @@ local function scan_sliders_for_pins_and_checks(
 	while sliders ~= ZERO do
 		local slider_sq = countrz(sliders)
 
-		local between = Attacks.between_squares(slider_sq, king_square, pieceType)
+		local between = ZERO;
+		if pieceType == ROOK then
+			between = Attacks.between_squares_rook(slider_sq, king_square)
+		elseif pieceType == BISHOP then
+			between = Attacks.between_squares_bishop(slider_sq, king_square)
+		elseif pieceType == QUEEN then
+			between = bor(Attacks.between_squares_rook(slider_sq, king_square), Attacks.between_squares_bishop(slider_sq, king_square))
+		end
+
 		local aligned = between ~= ZERO
 		if not aligned then
 			local attacks = attack_func(slider_sq, enemy_occ, own_occ, true)
@@ -343,7 +351,15 @@ local function compute_check_and_pins(board: Board, color: number, king_square: 
 	if checker_val then
 		local checker_type = bit32.rshift(checker_val, 6)
 		if checker_type == BISHOP or checker_type == ROOK or checker_type == QUEEN then
-			check_mask = bor(Attacks.between_squares(king_square, checker_sq, checker_type), checker_bit)
+		    local between = ZERO;
+			if checker_type == ROOK then
+				between = Attacks.between_squares_rook(king_square, checker_sq)
+			elseif checker_type == BISHOP then
+				between = Attacks.between_squares_bishop(king_square, checker_sq)
+			elseif checker_type == QUEEN then
+				between = bor(Attacks.between_squares_rook(king_square, checker_sq), Attacks.between_squares_bishop(king_square, checker_sq))
+			end
+			check_mask = bor(between, checker_bit)
 		else
 			check_mask = checker_bit
 		end
@@ -397,31 +413,37 @@ local function is_en_passant_legal(board: Board, color: number, from: number, to
 end
 
 local function add_pawn_moves_masked(
-	moves: { number },
-	promo_rank: vector,
-	pin_masks: { [number]: vector },
-	targets: vector,
-	from_offset: number,
-	is_capture: boolean
+    moves: { number },
+    promo_rank: vector,
+    pin_masks: { [number]: vector },
+    targets: vector,
+    from_offset: number,
+    is_capture: boolean
 )
-	local bb = targets
-	while bb ~= ZERO do
-		local to_square = countrz(bb)
-		bb = band(bb, sub(bb, ONE))
-		local from_square = to_square - from_offset
-		local pin_mask = pin_masks[from_square]
-		if not pin_mask or get_bit(pin_mask, to_square) then
-			if get_bit(promo_rank, to_square) then
-				local n = #moves
-				moves[n+1] = Move.create(from_square, to_square, PAWN, is_capture, KNIGHT)
-				moves[n+2] = Move.create(from_square, to_square, PAWN, is_capture, BISHOP)
-				moves[n+3] = Move.create(from_square, to_square, PAWN, is_capture, ROOK)
-				moves[n+4] = Move.create(from_square, to_square, PAWN, is_capture, QUEEN)
-			else
-				moves[#moves+1] = Move.create(from_square, to_square, PAWN, is_capture)
-			end
-		end
-	end
+    local captured_bit = if is_capture then 0x8000 else 0
+    local promo_sentinel = bit32.lshift(5, 16)
+
+    local bb = targets
+    while bb ~= ZERO do
+        local to_square = countrz(bb)
+        bb = band(bb, sub(bb, ONE))
+        local from_square = to_square - from_offset
+
+        local pin_mask = pin_masks[from_square]
+        if not pin_mask or get_bit(pin_mask, to_square) then
+            local base = bit32.bor(from_square, bit32.lshift(to_square, 6), captured_bit)
+
+            if get_bit(promo_rank, to_square) then
+                local n = #moves
+                moves[n+1] = bit32.bor(base, 0x10000) -- KNIGHT << 16
+                moves[n+2] = bit32.bor(base, 0x20000) -- BISHOP << 16
+                moves[n+3] = bit32.bor(base, 0x30000) -- ROOK   << 16
+                moves[n+4] = bit32.bor(base, 0x40000) -- QUEEN  << 16
+            else
+                moves[#moves+1] = bit32.bor(base, promo_sentinel)
+            end
+        end
+    end
 end
 
 local function generate_piece_moves(

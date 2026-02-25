@@ -166,6 +166,9 @@ end
 local function hex_bor(a: vector, b: vector, c: vector, d: vector, e: vector, f: vector): vector
 	return vector.create(bit32.bor(a.x, b.x, c.x, d.x, e.x, f.x), bit32.bor(a.y, b.y, c.y, d.y, e.y, f.y), bit32.bor(a.z, b.z, c.z, d.z, e.z, f.z))
 end
+local function oct_bor(a: vector, b: vector, c: vector, d: vector, e: vector, f: vector, g: vector, h: vector): vector
+	return vector.create(bit32.bor(a.x, b.x, c.x, d.x, e.x, f.x, g.x, h.x), bit32.bor(a.y, b.y, c.y, d.y, e.y, f.y, g.y, h.y), bit32.bor(a.z, b.z, c.z, d.z, e.z, f.z, g.z, h.z))
+end
 
 --[=[
 	Computes the bitwise XOR of the two provide values.
@@ -755,6 +758,7 @@ return {
 	band = band,
 	bor = bor,
 	hex_bor = hex_bor,
+	oct_bor = oct_bor,
 	bxor = bxor,
 	btest = btest,
 

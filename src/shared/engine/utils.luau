@@ -49,7 +49,7 @@ export type Board = {
     attacked: {{[number]: vector, all: vector}},
     side_to_move: number,
     castling_rights: number,
-    en_passant_square: number?,
+    en_passant_square: number,
     halfmove_clock: number,
     fullmove_number: number,
     eval: number?,

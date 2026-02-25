@@ -165,11 +165,6 @@ local function make_move(board: Board, move: number): UndoRecord
 	undo_halfmove[idx] = board.halfmove_clock
 	undo_fullmove[idx] = board.fullmove_number
 
-	undo_castling[idx] = board.castling_rights
-	undo_ep[idx] = board.en_passant_square or -1
-	undo_halfmove[idx] = board.halfmove_clock
-	undo_fullmove[idx] = board.fullmove_number
-
 	board.pieces[color][piece_type] = Utils.clear_bit(board.pieces[color][piece_type], from)
 	board.pieceTable[from] = nil
 
