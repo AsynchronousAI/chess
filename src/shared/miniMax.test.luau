@@ -131,6 +131,8 @@ local board = bitboard.create()
 bitboard.set_start_position(board)
 
 local moveCount = 0
+local maxNPS = 0
+local sumNPS = 0
 while moveCount < MAX_MOVES do
     nodes = 0
     local start = os.clock()
@@ -153,6 +155,10 @@ while moveCount < MAX_MOVES do
 
     moveCount = moveCount + 1
 
+    local nps = math.floor(nodes / time)
+    maxNPS = math.max(maxNPS, nps)
+    sumNPS += nps
+
     printBoard(board)
     print(string.format(
         "Move %d: %s\n %s | eval: %.2f | time: %dms | nodes: %d | %d nodes/sec",
@@ -162,6 +168,8 @@ while moveCount < MAX_MOVES do
         score,
         math.ceil(time * 1000),
         nodes,
-        math.floor(nodes / time)
+        nps
     ))
 end
+
+print(string.format("Complete\nMaximum NPS: %d\nAverage NPS: %d", maxNPS, sumNPS/moveCount))
