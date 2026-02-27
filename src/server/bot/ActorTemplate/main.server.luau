@@ -10,6 +10,8 @@ local libs = require(script.Parent.Parent.Parent.import)
 local eval = require(script.Parent.Parent.Parent.eval)
 local moveOrdering = require(script.Parent.Parent.Parent.moveOrdering)
 
+local move = libs.Move;
+
 local SEQUENCE  = true
 
 local EXACT = 0
@@ -52,14 +54,38 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local betaOrig = beta
 
     local allLegalMoves = libs.BitBoard.generate_legal_moves(board, false, board.side_to_move)
-    local moves = moveOrdering(board, allLegalMoves)
+    moveOrdering(board, allLegalMoves)
 
-    for _, move in moves do
+    local n = #allLegalMoves
+
+    for i = 1, n do
+        local bestIndex = i
+        local bestMoveLocal = allLegalMoves[i]
+        local bestValue = move.getValue(bestMoveLocal)
+
+        for j = i + 1, n do
+            local m = allLegalMoves[j]
+            local v = move.getValue(m)
+            if v > bestValue then
+                bestValue = v
+                bestIndex = j
+                bestMoveLocal = m
+            end
+        end
+
+        -- swap
+        allLegalMoves[i], allLegalMoves[bestIndex] =
+            allLegalMoves[bestIndex], allLegalMoves[i]
+
+        local move = allLegalMoves[i]
+
         local record = libs.BitBoard.make_move(board, move)
 
-        nodes += 1;
+        nodes += 1
 
-        local currentScore, childDepth, subSequence = minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+        local currentScore, childDepth, subSequence =
+            minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+
         libs.BitBoard.undo_move(board, move, record)
 
         if isMaximizing then

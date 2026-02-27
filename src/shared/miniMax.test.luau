@@ -77,16 +77,35 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
     local bestScore = isMaximizing and -math.huge or math.huge
 
     local allLegalMoves = bitboard.generate_legal_moves(board, false, board.side_to_move)
-    local moves = moveOrdering(board, allLegalMoves)
+    moveOrdering(board, allLegalMoves)
+    local n = #allLegalMoves
+    local getValue = Move.getValue
 
-    local bestMove = moves[1]
+    local bestMove = allLegalMoves[1]
 
-    for _, move in moves do
+    for i = 1, n do
+        local bestIndex = i
+        local bestMoveLocal = allLegalMoves[i]
+        local bestValue = getValue(bestMoveLocal)
+
+        for j = i + 1, n do
+            local m = allLegalMoves[j]
+            local v = getValue(m)
+            if v > bestValue then
+                bestValue = v
+                bestIndex = j
+                bestMoveLocal = m
+            end
+        end
+        allLegalMoves[i], allLegalMoves[bestIndex] = allLegalMoves[bestIndex], allLegalMoves[i]
+
+        local move = allLegalMoves[i]
+
         local record = bitboard.make_move(board, move)
-
         nodes = nodes + 1
 
         local score = minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
+
         bitboard.undo_move(board, move, record)
 
         if isMaximizing then
