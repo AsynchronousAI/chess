@@ -21,7 +21,7 @@ local CHAR = {
     }
 }
 
-local DEPTH = 5
+local DEPTH = 6
 local MAX_MOVES = math.huge
 
 local nodes = 0
@@ -102,7 +102,7 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
         local move = allLegalMoves[i]
 
         local record = bitboard.make_move(board, move)
-        nodes = nodes + 1
+        nodes += 1
 
         local score = minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
 
@@ -150,6 +150,7 @@ local board = bitboard.create()
 bitboard.set_start_position(board)
 
 local moveCount = 0
+local moveComputeCount = 0
 local maxNPS = 0
 local sumNPS = 0
 while moveCount < MAX_MOVES do
@@ -172,11 +173,12 @@ while moveCount < MAX_MOVES do
     bitboard.make_move(board, move)
     local time = (os.clock() - start)
 
-    moveCount = moveCount + 1
+    moveCount += 1
 
     local nps = math.floor(nodes / time)
     maxNPS = math.max(maxNPS, nps)
     sumNPS += nps
+    if nps ~= 0 then moveComputeCount += 1 end
 
     printBoard(board)
     print(string.format(
@@ -191,4 +193,4 @@ while moveCount < MAX_MOVES do
     ))
 end
 
-print(string.format("Complete\nMaximum NPS: %d\nAverage NPS: %d", maxNPS, sumNPS/moveCount))
+print(string.format("Complete\nMaximum NPS: %d\nAverage NPS: %d", maxNPS, sumNPS/moveComputeCount))

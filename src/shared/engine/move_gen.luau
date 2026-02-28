@@ -265,7 +265,7 @@ local function scan_sliders_for_pins_and_checks(
 		sliders = band(sliders, sub(sliders, ONE))
 
 		local line = LINE[slider_sq][king_square]
-		if line ~= ZERO then
+		if line and line ~= ZERO then
 			local between = band(line, band(bnot(lshift(ONE, slider_sq)), bnot(lshift(ONE, king_square))))
 			local between_occ = band(occupied, between)
 			if between_occ == ZERO then

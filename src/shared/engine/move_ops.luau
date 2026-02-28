@@ -27,7 +27,7 @@ local BQ_MASK = bit32.lshift(1, BQ) -- 0x8
 export type Board = Utils.Board
 export type UndoRecord = number
 
-local MAX_UNDO = 16
+local MAX_UNDO = 256
 
 -- captured_piece packing layout: bits[5:0]=square, bits[8:6]=type, bits[9]=color
 local CAPTURED_SQUARE_MASK = 0x3F
@@ -77,7 +77,6 @@ local function make_move(board: Board, move: number): UndoRecord
 
 	-- Save pre-move state to undo stack
 	undo_top += 1
-	if undo_top > MAX_UNDO then undo_top = MAX_UNDO end
 	local idx = undo_top
 	undo_castling[idx] = old_castling
 	undo_ep[idx]       = old_ep or -1
