@@ -61,10 +61,17 @@ local BIT_MASKS = table.create(64)
 for i = 0, 63 do
     BIT_MASKS[i] = shl(ONE, i)
 end
-
 local BIT_MASKS32 = table.create(32)
 for i = 0, 31 do
     BIT_MASKS32[i] = bit32.lshift(1, i)
+end
+local NOT_BIT_MASKS = table.create(64)
+for i = 0, 63 do
+    NOT_BIT_MASKS[i] = bnot(BIT_MASKS[i])
+end
+local NOT_BIT_MASKS32 = table.create(32)
+for i = 0, 31 do
+    NOT_BIT_MASKS32[i] = bit32.bnot(BIT_MASKS32[i])
 end
 
 -- 64-bit Helpers
@@ -81,18 +88,18 @@ local function set_bit(bb, square: number)
 end
 
 local function clear_bit(bb, square: number)
-    return band(bb, bnot(BIT_MASKS[square]))
+    return band(bb, NOT_BIT_MASKS[square])
 end
 
 local function pop_lsb(bb)
     local i = countrz(bb)
-    return band(bb, bnot(BIT_MASKS[i])), i
+    return band(bb, NOT_BIT_MASKS[i]), i
 end
 
 local function popcount(bb)
 	local count = 0
 	while bb ~= ZERO do
-		bb = band(bb, bnot(BIT_MASKS[countrz(bb)]))
+		bb = band(bb, NOT_BIT_MASKS[countrz(bb)])
 		count += 1
 	end
 	return count
@@ -106,7 +113,7 @@ local function set_bit32(num: number, index: number)
 end
 
 local function clear_bit32(num: number, index: number)
-    return bit32.band(num, bit32.bnot(BIT_MASKS32[index]))
+    return bit32.band(num, NOT_BIT_MASKS32[index])
 end
 
 local function get_bit32(num: number, index: number)
