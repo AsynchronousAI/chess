@@ -1,8 +1,8 @@
 --!native
 --!optimize 2
 --!strict
+
 local Utils   = require("./utils")
-local Move    = require("./move").Move
 local Eval    = require("./eval")
 local Zobrist = require("./zobrist")
 local toggle_piece      = Zobrist.toggle_piece
@@ -18,7 +18,12 @@ local BIT_LO  = Utils.BIT_LO
 local BIT_HI  = Utils.BIT_HI
 local NBIT_LO = Utils.NBIT_LO
 local NBIT_HI = Utils.NBIT_HI
-local pstForColor = Eval.pstForColor
+
+-- Flat PST access
+local PST          = Eval.PST
+local COLOR_STRIDE = Eval.COLOR_STRIDE
+local PIECE_STRIDE = Eval.PIECE_STRIDE
+
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
 
 local WK_MASK = bit32.lshift(1, WK)
@@ -227,16 +232,17 @@ local function make_move(board: Board, move: number): UndoRecord
 	hash = toggle_side(hash)
 	board.hash = hash
 
-	-- Eval update
-	local pst_color = pstForColor[color]
-	local delta = pst_color[final_piece_type][to] - pst_color[piece_type][from]
+	local color_base = color * COLOR_STRIDE
+	local delta = PST[color_base + final_piece_type * PIECE_STRIDE + to]
+	            - PST[color_base + piece_type       * PIECE_STRIDE + from]
 	if captured_piece ~= CAPTURED_SENTINEL then
 		local ct, cc, csq = unpack_captured_piece(captured_piece)
-		delta -= pstForColor[cc][ct][csq]
+		delta -= PST[cc * COLOR_STRIDE + ct * PIECE_STRIDE + csq]
 	end
 	if rook_pair_packed ~= ROOK_PAIR_SENTINEL then
 		local rook_from, rook_to = split_pair(rook_pair_packed)
-		delta += pst_color[ROOK][rook_to] - pst_color[ROOK][rook_from]
+		delta += PST[color_base + ROOK * PIECE_STRIDE + rook_to]
+		       - PST[color_base + ROOK * PIECE_STRIDE + rook_from]
 	end
 	board.eval = (board.eval :: number) + delta
 
@@ -316,19 +322,21 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	hash = toggle_side(hash)
 	board.hash = hash
 
-	-- Eval undo
+	-- Eval undo: mirror of make_move delta, subtracted
 	if board.eval == nil then board.eval = Eval.evaluate(board) end
-	local pst_color = pstForColor[color]
-	local delta = pst_color[final_piece_type][to] - pst_color[piece_type][from]
+	local color_base = color * COLOR_STRIDE
+	local delta = PST[color_base + final_piece_type * PIECE_STRIDE + to]
+	            - PST[color_base + piece_type       * PIECE_STRIDE + from]
 	if has_capture then
-		delta -= pstForColor[cap_color][cap_type][cap_sq]
+		delta -= PST[cap_color * COLOR_STRIDE + cap_type * PIECE_STRIDE + cap_sq]
 	end
 	if has_rook then
-		delta += pst_color[ROOK][rook_to] - pst_color[ROOK][rook_from]
+		delta += PST[color_base + ROOK * PIECE_STRIDE + rook_to]
+		       - PST[color_base + ROOK * PIECE_STRIDE + rook_from]
 	end
 	board.eval = (board.eval :: number) - delta
 
-	-- Restore board
+	-- Restore board state
 	local pieces_lo = board.pieces_lo
 	local pieces_hi = board.pieces_hi
 	local occ_lo    = board.occupied_lo
@@ -346,8 +354,8 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	if has_capture then
 		set_lo(pieces_lo[cap_color], cap_type, cap_sq); set_hi(pieces_hi[cap_color], cap_type, cap_sq)
 		board.pieceTable[cap_sq] = make_pair(cap_type, cap_color)
-		set_lo(occ_lo, ALL, cap_sq);      set_hi(occ_hi, ALL, cap_sq)
-		set_lo(occ_lo, cap_color, cap_sq);  set_hi(occ_hi, cap_color, cap_sq)
+		set_lo(occ_lo, ALL, cap_sq);       set_hi(occ_hi, ALL, cap_sq)
+		set_lo(occ_lo, cap_color, cap_sq); set_hi(occ_hi, cap_color, cap_sq)
 	end
 
 	if has_rook then

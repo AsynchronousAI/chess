@@ -4,9 +4,12 @@
 
 local Utils = require("./utils")
 
-local pst = {
+local COLOR_STRIDE  = 6 * 64  -- 384
+local PIECE_STRIDE  = 64
+
+local pst_raw = {
 	[Utils.PAWN] = {
-		198,198,198,198,198,198,198,
+		198,198,198,198,198,198,198,198,
 		178,198,198,198,198,198,198,178,
 		178,198,198,198,198,198,198,178,
 		178,198,208,218,218,208,198,178,
@@ -15,7 +18,6 @@ local pst = {
 		178,198,198,198,198,198,198,178,
 		198,198,198,198,198,198,198,198,
 	},
-
 	[Utils.BISHOP] = {
 		797,824,817,808,808,817,824,797,
 		814,841,834,825,825,834,841,814,
@@ -26,7 +28,6 @@ local pst = {
 		817,844,837,828,828,837,844,817,
 		792,819,812,803,803,812,819,792,
 	},
-
 	[Utils.KNIGHT] = {
 		627,762,786,798,798,786,762,627,
 		763,798,822,834,834,822,798,763,
@@ -37,7 +38,6 @@ local pst = {
 		739,774,798,810,810,798,774,739,
 		683,718,742,754,754,742,718,683,
 	},
-
 	[Utils.ROOK] = {
 		1258,1263,1268,1272,1272,1268,1263,1258,
 		1258,1263,1268,1272,1272,1268,1263,1258,
@@ -48,7 +48,6 @@ local pst = {
 		1258,1263,1268,1272,1272,1268,1263,1258,
 		1258,1263,1268,1272,1272,1268,1263,1258,
 	},
-
 	[Utils.QUEEN] = {
 		2529,2529,2529,2529,2529,2529,2529,2529,
 		2529,2529,2529,2529,2529,2529,2529,2529,
@@ -59,7 +58,6 @@ local pst = {
 		2529,2529,2529,2529,2529,2529,2529,2529,
 		2529,2529,2529,2529,2529,2529,2529,2529,
 	},
-
 	[Utils.KING] = {
 		60098,60132,60073,60025,60025,60073,60132,60098,
 		60119,60153,60094,60046,60046,60094,60153,60119,
@@ -72,42 +70,34 @@ local pst = {
 	},
 }
 
--- PST by color for fast lookup (white is negated, black mirrored)
-local pstForColor = {}
-for color = 0, 1 do
-	pstForColor[color] = {}
-	for piece, table64 in pst do
-		local out = table.create(64)
-		if color == Utils.WHITE then
-			for square = 0, 63 do
-				out[square] = -(table64[square + 1] or 0)
-			end
-		else
-			for square = 0, 63 do
-				local mirrored = 63 - square
-				out[square] = table64[mirrored + 1] or 0
-			end
-		end
-		pstForColor[color][piece] = out
+local PST = table.create(2 * COLOR_STRIDE, 0)
+
+for piece, table64 in pst_raw do
+	local white_base = Utils.WHITE * COLOR_STRIDE + piece * PIECE_STRIDE
+	local black_base = Utils.BLACK * COLOR_STRIDE + piece * PIECE_STRIDE
+	for square = 0, 63 do
+		PST[white_base + square] = -(table64[square + 1] or 0)
+		PST[black_base + square] =   table64[(63 - square) + 1] or 0
 	end
 end
 
 local function evaluate(board: Utils.Board): number
 	local value = 0
-
 	for pos = 0, 63 do
 		local pieceInfo = board.pieceTable[pos]
 		if pieceInfo then
-			local piece, color = Utils.split_pair(pieceInfo)
-			value += pstForColor[color][piece][pos]
+			local piece = bit32.rshift(pieceInfo, 6)
+			local color = bit32.band(pieceInfo, 63)
+			value += PST[color * COLOR_STRIDE + piece * PIECE_STRIDE + pos]
 		end
 	end
-
 	return value
 end
 
 return {
-	pst = pst,
-	pstForColor = pstForColor,
-	evaluate = evaluate,
+	pst_raw     = pst_raw,
+	PST         = PST,
+	COLOR_STRIDE = COLOR_STRIDE,
+	PIECE_STRIDE = PIECE_STRIDE,
+	evaluate    = evaluate,
 }
