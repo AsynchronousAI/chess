@@ -84,23 +84,25 @@ local ROOK   = 3
 local QUEEN  = 4
 local KING   = 5
 
+-- Color constants
+-- ALL = 2 is used as the integer key for the combined-occupancy slot,
+-- replacing the former string key "all". This lets occupied_lo/hi and
+-- attacked_lo/hi be created with table.create and treated as arrays.
 local WHITE = 0
 local BLACK = 1
+local ALL   = 2
 
 export type Board = {
 	pieceTable: {number},
-	-- Each bitboard is stored as two parallel number tables.
-	-- pieces_lo[color][piece]  = lower 32 bits
-	-- pieces_hi[color][piece]  = upper 32 bits
 	pieces_lo: {{number}},
 	pieces_hi: {{number}},
-	occupied_lo: {[number]: number, all: number},
-	occupied_hi: {[number]: number, all: number},
-	attacked_lo: {{[number]: number, all: number}},
-	attacked_hi: {{[number]: number, all: number}},
+	occupied_lo: {number},
+	occupied_hi: {number},
+	attacked_lo: {{number}},
+	attacked_hi: {{number}},
 	side_to_move: number,
 	castling_rights: number,
-	en_passant_square: number?,
+	en_passant_square: number,
 	halfmove_clock: number,
 	fullmove_number: number,
 	eval: number,
@@ -134,22 +136,17 @@ for i = 0, 31 do
 	NOT_BIT_MASKS32[i] = bit32.bnot(BIT_MASKS32[i])
 end
 
--- 64-bit helpers that operate on lo/hi pairs --------------------
-
 local function unit_board_lo(square: number): number
 	return BIT_LO[square]
 end
 local function unit_board_hi(square: number): number
 	return BIT_HI[square]
 end
-
--- Returns the lo component of (1 << square), kept for compatibility
 local function unit_board(square: number): number
-	return BIT_LO[square]  -- callers that need hi use BIT_HI directly
+	return BIT_LO[square]
 end
 
 local function get_bit(hi: number, lo: number, square: number): boolean
-	-- bit32.bor then compare avoids branch
 	return bit32.bor(
 		bit32.band(lo, BIT_LO[square]),
 		bit32.band(hi, BIT_HI[square])
@@ -183,7 +180,6 @@ local function popcount(hi: number, lo: number): number
 	return count
 end
 
--- 32-bit helpers ------------------------------------------------
 local function set_bit32(num: number, index: number): number
 	return bit32.bor(num, BIT_MASKS32[index])
 end
@@ -194,7 +190,6 @@ local function get_bit32(num: number, index: number): boolean
 	return bit32.band(num, BIT_MASKS32[index]) ~= 0
 end
 
--- Square / encoding helpers ------------------------------------
 local function separate_square_index(loc: number)
 	return {bit32.band(loc, 7), bit32.arshift(loc, 3)}
 end
@@ -208,8 +203,8 @@ local function split_pair(pair: number): (number, number)
 	return bit32.rshift(pair, 6), bit32.band(pair, 63)
 end
 
+local ATTACKED_ALL = 6
 return {
-	-- Shift / count helpers (exported so other modules can inline them)
 	bb_lshift_lo  = bb_lshift_lo,
 	bb_lshift_hi  = bb_lshift_hi,
 	bb_rshift_lo  = bb_rshift_lo,
@@ -219,13 +214,11 @@ return {
 	bb_sub_lo     = bb_sub_lo,
 	bb_sub_hi     = bb_sub_hi,
 
-	-- Bit-mask tables (exported for direct use in hot paths)
 	BIT_LO  = BIT_LO,
 	BIT_HI  = BIT_HI,
 	NBIT_LO = NBIT_LO,
 	NBIT_HI = NBIT_HI,
 
-	-- Rank / file constants (lo, hi pairs exported separately)
 	RANK_1_LO = RANK_1_LO, RANK_1_HI = RANK_1_HI,
 	RANK_2_LO = RANK_2_LO, RANK_2_HI = RANK_2_HI,
 	RANK_7_LO = RANK_7_LO, RANK_7_HI = RANK_7_HI,
@@ -245,6 +238,7 @@ return {
 	-- Colors
 	WHITE = WHITE,
 	BLACK = BLACK,
+	ALL   = ALL,
 
 	-- Pieces
 	NONE   = NONE,
@@ -254,6 +248,7 @@ return {
 	ROOK   = ROOK,
 	QUEEN  = QUEEN,
 	KING   = KING,
+	ATTACKED_ALL = ATTACKED_ALL,
 
 	-- 64-bit helpers
 	get_bit       = get_bit,

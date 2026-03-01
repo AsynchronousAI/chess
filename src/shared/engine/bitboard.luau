@@ -11,6 +11,9 @@ local MoveOps = require("./move_ops")
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 
+local ALL         = Utils.ALL
+local ATTACKED_ALL = Utils.ATTACKED_ALL
+
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 local bb_countlz = Utils.bb_countlz
 local bb_countrz = Utils.bb_countrz
@@ -37,48 +40,66 @@ function Board.create(blank: boolean?): Board
 		pieceTable = table.create(64),
 
 		pieces_lo = {
-			[WHITE] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0 },
-			[BLACK] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0 },
+			[WHITE] = table.create(6, 0),
+			[BLACK] = table.create(6, 0),
 		},
 		pieces_hi = {
-			[WHITE] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0 },
-			[BLACK] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0 },
+			[WHITE] = table.create(6, 0),
+			[BLACK] = table.create(6, 0),
 		},
-
 		attacked_lo = {
-			[WHITE] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0, all=0 },
-			[BLACK] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0, all=0 },
+			[WHITE] = table.create(7, 0),
+			[BLACK] = table.create(7, 0),
 		},
 		attacked_hi = {
-			[WHITE] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0, all=0 },
-			[BLACK] = { [PAWN]=0, [KNIGHT]=0, [BISHOP]=0, [ROOK]=0, [QUEEN]=0, [KING]=0, all=0 },
+			[WHITE] = table.create(7, 0),
+			[BLACK] = table.create(7, 0),
 		},
-
-		occupied_lo = { [WHITE]=0, [BLACK]=0, all=0 },
-		occupied_hi = { [WHITE]=0, [BLACK]=0, all=0 },
+		occupied_lo = table.create(3, 0),
+		occupied_hi = table.create(3, 0),
 
 		side_to_move    = WHITE,
 		castling_rights = 0b1111,
 		en_passant_square = nil,
 		halfmove_clock  = 0,
 		fullmove_number = 1,
-		
+
 		eval = 0,
 		hash = 0,
 	}
+
+	for piece = PAWN, KING do
+		board.pieces_lo[WHITE][piece] = 0
+		board.pieces_hi[WHITE][piece] = 0
+		board.pieces_lo[BLACK][piece] = 0
+		board.pieces_hi[BLACK][piece] = 0
+		board.attacked_lo[WHITE][piece] = 0
+		board.attacked_hi[WHITE][piece] = 0
+		board.attacked_lo[BLACK][piece] = 0
+		board.attacked_hi[BLACK][piece] = 0
+	end
+	board.attacked_lo[WHITE][ATTACKED_ALL] = 0
+	board.attacked_hi[WHITE][ATTACKED_ALL] = 0
+	board.attacked_lo[BLACK][ATTACKED_ALL] = 0
+	board.attacked_hi[BLACK][ATTACKED_ALL] = 0
+	board.occupied_lo[WHITE] = 0
+	board.occupied_hi[WHITE] = 0
+	board.occupied_lo[BLACK] = 0
+	board.occupied_hi[BLACK] = 0
+	board.occupied_lo[ALL]   = 0
+	board.occupied_hi[ALL]   = 0
 
 	if not blank then Board.set_start_position(board) end
 	return board
 end
 
 function Board.clone(board: Board): Board
-	local function clone2(t) return { [WHITE]=table.clone(t[WHITE]), [BLACK]=table.clone(t[BLACK]) } end
 	return {
 		pieceTable      = table.clone(board.pieceTable),
-		pieces_lo       = clone2(board.pieces_lo),
-		pieces_hi       = clone2(board.pieces_hi),
-		attacked_lo     = clone2(board.attacked_lo),
-		attacked_hi     = clone2(board.attacked_hi),
+		pieces_lo       = { [WHITE]=table.clone(board.pieces_lo[WHITE]), [BLACK]=table.clone(board.pieces_lo[BLACK]) },
+		pieces_hi       = { [WHITE]=table.clone(board.pieces_hi[WHITE]), [BLACK]=table.clone(board.pieces_hi[BLACK]) },
+		attacked_lo     = { [WHITE]=table.clone(board.attacked_lo[WHITE]), [BLACK]=table.clone(board.attacked_lo[BLACK]) },
+		attacked_hi     = { [WHITE]=table.clone(board.attacked_hi[WHITE]), [BLACK]=table.clone(board.attacked_hi[BLACK]) },
 		occupied_lo     = table.clone(board.occupied_lo),
 		occupied_hi     = table.clone(board.occupied_hi),
 		en_passant_square = board.en_passant_square,
@@ -115,7 +136,6 @@ function Board.set_start_position(board: Board)
 			while bb_lo ~= 0 or bb_hi ~= 0 do
 				local bitIndex = bb_countrz(bb_hi, bb_lo)
 				board.pieceTable[bitIndex] = make_pair(pieceType, color)
-				-- clear LSB
 				local nlo = bb_sub_lo(bb_lo, 1)
 				local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
 				bb_lo = bit32.band(bb_lo, nlo)
@@ -138,11 +158,10 @@ function Board.update_occupied(board: Board)
 
 	board.occupied_lo[WHITE] = w_lo; board.occupied_hi[WHITE] = w_hi
 	board.occupied_lo[BLACK] = b_lo; board.occupied_hi[BLACK] = b_hi
-	board.occupied_lo.all    = bit32.bor(w_lo, b_lo)
-	board.occupied_hi.all    = bit32.bor(w_hi, b_hi)
+	board.occupied_lo[ALL]   = bit32.bor(w_lo, b_lo)
+	board.occupied_hi[ALL]   = bit32.bor(w_hi, b_hi)
 end
 
--- Move operations
 export type UndoRecord = MoveOps.UndoRecord
 
 Board.make_move            = MoveOps.make_move
@@ -155,7 +174,6 @@ Board.is_square_attacked        = MoveGen.is_square_attacked
 Board.generate_legal_moves      = MoveGen.generate_legal_moves
 Board.generate_legal_moves_from = MoveGen.generate_legal_moves_from
 
--- Piece accessors
 function Board.get_piece(board: Board, loc: number): (number?, number?)
 	local val = board.pieceTable[loc]
 	if not val then return nil, nil end
@@ -182,7 +200,6 @@ function Board.find_piece(board: Board, piece_type: number, color: number): numb
 	return square
 end
 
--- Endgame
 function Board.get_game_state(board: Board, providedMoves: {number}?)
 	local color = board.side_to_move
 	local moves = providedMoves or Board.generate_legal_moves(board, false, color)

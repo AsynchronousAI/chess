@@ -1,7 +1,6 @@
 --!native
 --!optimize 2
 --!strict
-
 local Utils   = require("./utils")
 local Move    = require("./move").Move
 local Eval    = require("./eval")
@@ -13,6 +12,7 @@ local toggle_side       = Zobrist.toggle_side
 
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
+local ALL = Utils.ALL
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 local BIT_LO  = Utils.BIT_LO
 local BIT_HI  = Utils.BIT_HI
@@ -115,7 +115,7 @@ local function make_move(board: Board, move: number): UndoRecord
 				clr_lo(pieces_lo[opponent], PAWN, cap_sq)
 				clr_hi(pieces_hi[opponent], PAWN, cap_sq)
 				board.pieceTable[cap_sq] = nil
-				clr_lo(occ_lo, "all", cap_sq); clr_hi(occ_hi, "all", cap_sq)
+				clr_lo(occ_lo, ALL, cap_sq); clr_hi(occ_hi, ALL, cap_sq)
 				clr_lo(occ_lo, opponent, cap_sq); clr_hi(occ_hi, opponent, cap_sq)
 			end
 		else
@@ -129,7 +129,7 @@ local function make_move(board: Board, move: number): UndoRecord
 					bit32.lshift(bit32.band(cc, 0x1), CAPTURED_COLOR_SHIFT)
 				)
 				clr_lo(pieces_lo[cc], ct, to); clr_hi(pieces_hi[cc], ct, to)
-				clr_lo(occ_lo, "all", to);     clr_hi(occ_hi, "all", to)
+				clr_lo(occ_lo, ALL, to);       clr_hi(occ_hi, ALL, to)
 				clr_lo(occ_lo, opponent, to);  clr_hi(occ_hi, opponent, to)
 			end
 		end
@@ -141,9 +141,8 @@ local function make_move(board: Board, move: number): UndoRecord
 	set_lo(pieces_lo[color], final_piece_type, to); set_hi(pieces_hi[color], final_piece_type, to)
 	board.pieceTable[to] = make_pair(final_piece_type, color)
 
-	-- occupied: clear from, set to
-	clr_lo(occ_lo, "all", from); clr_hi(occ_hi, "all", from)
-	set_lo(occ_lo, "all", to);   set_hi(occ_hi, "all", to)
+	clr_lo(occ_lo, ALL, from);   clr_hi(occ_hi, ALL, from)
+	set_lo(occ_lo, ALL, to);     set_hi(occ_hi, ALL, to)
 	clr_lo(occ_lo, color, from); clr_hi(occ_hi, color, from)
 	set_lo(occ_lo, color, to);   set_hi(occ_hi, color, to)
 
@@ -195,8 +194,8 @@ local function make_move(board: Board, move: number): UndoRecord
 		set_lo(pieces_lo[color], ROOK, rook_to);   set_hi(pieces_hi[color], ROOK, rook_to)
 		board.pieceTable[rook_from] = nil
 		board.pieceTable[rook_to]   = make_pair(ROOK, color)
-		clr_lo(occ_lo, "all", rook_from); clr_hi(occ_hi, "all", rook_from)
-		set_lo(occ_lo, "all", rook_to);   set_hi(occ_hi, "all", rook_to)
+		clr_lo(occ_lo, ALL, rook_from); clr_hi(occ_hi, ALL, rook_from)
+		set_lo(occ_lo, ALL, rook_to);   set_hi(occ_hi, ALL, rook_to)
 		clr_lo(occ_lo, color, rook_from); clr_hi(occ_hi, color, rook_from)
 		set_lo(occ_lo, color, rook_to);   set_hi(occ_hi, color, rook_to)
 		rook_pair_packed = make_pair(rook_from, rook_to)
@@ -339,15 +338,15 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	board.pieceTable[to] = nil
 	set_lo(pieces_lo[color], piece_type, from); set_hi(pieces_hi[color], piece_type, from)
 	board.pieceTable[from] = make_pair(piece_type, color)
-	clr_lo(occ_lo, "all", to);   clr_hi(occ_hi, "all", to)
-	set_lo(occ_lo, "all", from); set_hi(occ_hi, "all", from)
-	clr_lo(occ_lo, color, to);   clr_hi(occ_hi, color, to)
+	clr_lo(occ_lo, ALL, to);    clr_hi(occ_hi, ALL, to)
+	set_lo(occ_lo, ALL, from);  set_hi(occ_hi, ALL, from)
+	clr_lo(occ_lo, color, to);  clr_hi(occ_hi, color, to)
 	set_lo(occ_lo, color, from); set_hi(occ_hi, color, from)
 
 	if has_capture then
 		set_lo(pieces_lo[cap_color], cap_type, cap_sq); set_hi(pieces_hi[cap_color], cap_type, cap_sq)
 		board.pieceTable[cap_sq] = make_pair(cap_type, cap_color)
-		set_lo(occ_lo, "all", cap_sq);      set_hi(occ_hi, "all", cap_sq)
+		set_lo(occ_lo, ALL, cap_sq);      set_hi(occ_hi, ALL, cap_sq)
 		set_lo(occ_lo, cap_color, cap_sq);  set_hi(occ_hi, cap_color, cap_sq)
 	end
 
@@ -356,9 +355,9 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 		set_lo(pieces_lo[color], ROOK, rook_from); set_hi(pieces_hi[color], ROOK, rook_from)
 		board.pieceTable[rook_to]   = nil
 		board.pieceTable[rook_from] = make_pair(ROOK, color)
-		clr_lo(occ_lo, "all", rook_to);   clr_hi(occ_hi, "all", rook_to)
-		set_lo(occ_lo, "all", rook_from); set_hi(occ_hi, "all", rook_from)
-		clr_lo(occ_lo, color, rook_to);   clr_hi(occ_hi, color, rook_to)
+		clr_lo(occ_lo, ALL, rook_to);    clr_hi(occ_hi, ALL, rook_to)
+		set_lo(occ_lo, ALL, rook_from);  set_hi(occ_hi, ALL, rook_from)
+		clr_lo(occ_lo, color, rook_to);  clr_hi(occ_hi, color, rook_to)
 		set_lo(occ_lo, color, rook_from); set_hi(occ_hi, color, rook_from)
 	end
 
