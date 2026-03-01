@@ -2,34 +2,35 @@
 --!optimize 2
 --!strict
 
-local Utils = require("./utils")
-local Move = require("./move").Move
-local Eval = require("./eval")
+local Utils   = require("./utils")
+local Move    = require("./move").Move
+local Eval    = require("./eval")
 local Zobrist = require("./zobrist")
-local toggle_piece = Zobrist.toggle_piece
-local toggle_castling = Zobrist.toggle_castling
+local toggle_piece      = Zobrist.toggle_piece
+local toggle_castling   = Zobrist.toggle_castling
 local toggle_en_passant = Zobrist.toggle_en_passant
-local toggle_side = Zobrist.toggle_side
+local toggle_side       = Zobrist.toggle_side
 
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
-local clear_bit, set_bit = Utils.clear_bit, Utils.set_bit
+local BIT_LO  = Utils.BIT_LO
+local BIT_HI  = Utils.BIT_HI
+local NBIT_LO = Utils.NBIT_LO
+local NBIT_HI = Utils.NBIT_HI
 local pstForColor = Eval.pstForColor
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
 
--- Pre-baked single-bit masks for castling rights — avoids get_bit32 on every move
-local WK_MASK = bit32.lshift(1, WK) -- 0x1
-local WQ_MASK = bit32.lshift(1, WQ) -- 0x2
-local BK_MASK = bit32.lshift(1, BK) -- 0x4
-local BQ_MASK = bit32.lshift(1, BQ) -- 0x8
+local WK_MASK = bit32.lshift(1, WK)
+local WQ_MASK = bit32.lshift(1, WQ)
+local BK_MASK = bit32.lshift(1, BK)
+local BQ_MASK = bit32.lshift(1, BQ)
 
 export type Board = Utils.Board
 export type UndoRecord = number
 
 local MAX_UNDO = 256
 
--- captured_piece packing layout: bits[5:0]=square, bits[8:6]=type, bits[9]=color
 local CAPTURED_SQUARE_MASK = 0x3F
 local CAPTURED_TYPE_SHIFT  = 6
 local CAPTURED_COLOR_SHIFT = 9
@@ -45,12 +46,25 @@ local CAPTURED_SENTINEL  = 0x3FF
 local ROOK_PAIR_SENTINEL = 0xFFF
 
 local undo_top = 0
-local undo_captured:  { number } = table.create(MAX_UNDO)
-local undo_castling:  { number } = table.create(MAX_UNDO)
-local undo_ep:        { number } = table.create(MAX_UNDO)
-local undo_halfmove:  { number } = table.create(MAX_UNDO)
-local undo_fullmove:  { number } = table.create(MAX_UNDO)
-local undo_rook_pair: { number } = table.create(MAX_UNDO)
+local undo_captured:  {number} = table.create(MAX_UNDO)
+local undo_castling:  {number} = table.create(MAX_UNDO)
+local undo_ep:        {number} = table.create(MAX_UNDO)
+local undo_halfmove:  {number} = table.create(MAX_UNDO)
+local undo_fullmove:  {number} = table.create(MAX_UNDO)
+local undo_rook_pair: {number} = table.create(MAX_UNDO)
+
+local function set_lo(tbl, key, sq: number)
+	tbl[key] = bit32.bor(tbl[key], BIT_LO[sq])
+end
+local function set_hi(tbl, key, sq: number)
+	tbl[key] = bit32.bor(tbl[key], BIT_HI[sq])
+end
+local function clr_lo(tbl, key, sq: number)
+	tbl[key] = bit32.band(tbl[key], NBIT_LO[sq])
+end
+local function clr_hi(tbl, key, sq: number)
+	tbl[key] = bit32.band(tbl[key], NBIT_HI[sq])
+end
 
 local function make_move(board: Board, move: number): UndoRecord
 	local color    = board.side_to_move
@@ -62,8 +76,6 @@ local function make_move(board: Board, move: number): UndoRecord
 	local old_castling = board.castling_rights
 	local old_ep       = board.en_passant_square
 
-	-- Decode all move fields in one inline pass — avoids 7 individual getter calls
-	-- Bit layout: from[5:0] | to[11:6] | piece[14:12] | cap[15] | promo[18:16] | ep[19] | castle[21:20]
 	local from         = bit32.band(move, 0x3F)
 	local to           = bit32.band(bit32.rshift(move, 6), 0x3F)
 	local piece_type   = bit32.band(bit32.rshift(move, 12), 0x7)
@@ -75,7 +87,6 @@ local function make_move(board: Board, move: number): UndoRecord
 	local castling     = castle_code ~= 0
 	local kingside     = castle_code == 1
 
-	-- Save pre-move state to undo stack
 	undo_top += 1
 	local idx = undo_top
 	undo_castling[idx] = old_castling
@@ -83,14 +94,15 @@ local function make_move(board: Board, move: number): UndoRecord
 	undo_halfmove[idx] = board.halfmove_clock
 	undo_fullmove[idx] = board.fullmove_number
 
-	-- Resolve captured piece via pieceTable (O(1)) and remove it from board
-	-- Avoids both the old 6-bitboard scan AND the split_pair+repack round-trip:
-	-- pieceTable stores (type<<6|color), and our packing is (sq | type<<6 | color<<9),
-	-- so we extract the two fields with rshift/band and build the packed int directly.
+	local pieces_lo = board.pieces_lo
+	local pieces_hi = board.pieces_hi
+	local occ_lo    = board.occupied_lo
+	local occ_hi    = board.occupied_hi
+
 	local captured_piece = CAPTURED_SENTINEL
 	if captured then
 		if en_passant then
-			local cap_sq   = if color == WHITE then to - 8 else to + 8
+			local cap_sq = if color == WHITE then to - 8 else to + 8
 			local cap_info = board.pieceTable[cap_sq]
 			if cap_info then
 				local ct = bit32.rshift(cap_info, 6)
@@ -100,10 +112,11 @@ local function make_move(board: Board, move: number): UndoRecord
 					bit32.lshift(bit32.band(ct, 0x7), CAPTURED_TYPE_SHIFT),
 					bit32.lshift(bit32.band(cc, 0x1), CAPTURED_COLOR_SHIFT)
 				)
-				board.pieces[opponent][PAWN] = clear_bit(board.pieces[opponent][PAWN], cap_sq)
-				board.pieceTable[cap_sq]     = nil
-				board.occupied.all           = clear_bit(board.occupied.all, cap_sq)
-				board.occupied[opponent]     = clear_bit(board.occupied[opponent], cap_sq)
+				clr_lo(pieces_lo[opponent], PAWN, cap_sq)
+				clr_hi(pieces_hi[opponent], PAWN, cap_sq)
+				board.pieceTable[cap_sq] = nil
+				clr_lo(occ_lo, "all", cap_sq); clr_hi(occ_hi, "all", cap_sq)
+				clr_lo(occ_lo, opponent, cap_sq); clr_hi(occ_hi, opponent, cap_sq)
 			end
 		else
 			local cap_info = board.pieceTable[to]
@@ -115,30 +128,27 @@ local function make_move(board: Board, move: number): UndoRecord
 					bit32.lshift(bit32.band(ct, 0x7), CAPTURED_TYPE_SHIFT),
 					bit32.lshift(bit32.band(cc, 0x1), CAPTURED_COLOR_SHIFT)
 				)
-				board.pieces[cc][ct]     = clear_bit(board.pieces[cc][ct], to)
-				board.occupied.all       = clear_bit(board.occupied.all, to)
-				board.occupied[opponent] = clear_bit(board.occupied[opponent], to)
+				clr_lo(pieces_lo[cc], ct, to); clr_hi(pieces_hi[cc], ct, to)
+				clr_lo(occ_lo, "all", to);     clr_hi(occ_hi, "all", to)
+				clr_lo(occ_lo, opponent, to);  clr_hi(occ_hi, opponent, to)
 			end
 		end
 	end
 
-	-- Move the piece on bitboards and pieceTable
-	local pieces_color     = board.pieces[color]
 	local final_piece_type = promotion or piece_type
-	pieces_color[piece_type]       = clear_bit(pieces_color[piece_type], from)
-	board.pieceTable[from]         = nil
-	pieces_color[final_piece_type] = set_bit(pieces_color[final_piece_type], to)
-	board.pieceTable[to]           = make_pair(final_piece_type, color)
+	clr_lo(pieces_lo[color], piece_type, from); clr_hi(pieces_hi[color], piece_type, from)
+	board.pieceTable[from] = nil
+	set_lo(pieces_lo[color], final_piece_type, to); set_hi(pieces_hi[color], final_piece_type, to)
+	board.pieceTable[to] = make_pair(final_piece_type, color)
 
-	-- Update occupied for the moving piece (capture already cleared `to` above if needed)
-	local occ  = board.occupied
-	occ.all    = set_bit(clear_bit(occ.all, from), to)
-	occ[color] = set_bit(clear_bit(occ[color], from), to)
+	-- occupied: clear from, set to
+	clr_lo(occ_lo, "all", from); clr_hi(occ_hi, "all", from)
+	set_lo(occ_lo, "all", to);   set_hi(occ_hi, "all", to)
+	clr_lo(occ_lo, color, from); clr_hi(occ_hi, color, from)
+	set_lo(occ_lo, color, to);   set_hi(occ_hi, color, to)
 
-	-- Halfmove clock
 	board.halfmove_clock = if (captured or piece_type == PAWN) then 0 else board.halfmove_clock + 1
 
-	-- En passant square: use signed delta instead of math.abs — avoids function call
 	board.en_passant_square = nil
 	if piece_type == PAWN then
 		if color == WHITE then
@@ -148,8 +158,6 @@ local function make_move(board: Board, move: number): UndoRecord
 		end
 	end
 
-	-- Update castling rights (inlined — avoids out-of-line call and boolean param passing)
-	-- Clear both king rights at once with a single band; rook moves clear one at a time
 	local new_castling = old_castling
 	if piece_type == KING then
 		new_castling = if color == WHITE
@@ -172,10 +180,10 @@ local function make_move(board: Board, move: number): UndoRecord
 	end
 	board.castling_rights = new_castling
 
-	-- Castling rook move
 	local rook_pair_packed = ROOK_PAIR_SENTINEL
 	if castling then
-		local rook_from, rook_to
+		local rook_from: number
+		local rook_to: number
 		if kingside then
 			rook_from = if color == WHITE then 7  else 63
 			rook_to   = if color == WHITE then 5  else 61
@@ -183,15 +191,18 @@ local function make_move(board: Board, move: number): UndoRecord
 			rook_from = if color == WHITE then 0  else 56
 			rook_to   = if color == WHITE then 3  else 59
 		end
-		pieces_color[ROOK]          = set_bit(clear_bit(pieces_color[ROOK], rook_from), rook_to)
+		clr_lo(pieces_lo[color], ROOK, rook_from); clr_hi(pieces_hi[color], ROOK, rook_from)
+		set_lo(pieces_lo[color], ROOK, rook_to);   set_hi(pieces_hi[color], ROOK, rook_to)
 		board.pieceTable[rook_from] = nil
 		board.pieceTable[rook_to]   = make_pair(ROOK, color)
-		occ.all    = set_bit(clear_bit(occ.all, rook_from), rook_to)
-		occ[color] = set_bit(clear_bit(occ[color], rook_from), rook_to)
+		clr_lo(occ_lo, "all", rook_from); clr_hi(occ_hi, "all", rook_from)
+		set_lo(occ_lo, "all", rook_to);   set_hi(occ_hi, "all", rook_to)
+		clr_lo(occ_lo, color, rook_from); clr_hi(occ_hi, color, rook_from)
+		set_lo(occ_lo, color, rook_to);   set_hi(occ_hi, color, rook_to)
 		rook_pair_packed = make_pair(rook_from, rook_to)
 	end
 
-	-- Incremental hash update
+	-- Hash update
 	hash = toggle_piece(hash, color, piece_type, from)
 	hash = toggle_piece(hash, color, final_piece_type, to)
 	if captured_piece ~= CAPTURED_SENTINEL then
@@ -204,12 +215,11 @@ local function make_move(board: Board, move: number): UndoRecord
 		hash = toggle_piece(hash, color, ROOK, rook_to)
 	end
 	if old_ep then
-		hash = toggle_en_passant(hash, bit32.band(old_ep, 7))  -- file = sq & 7, avoids % 8
+		hash = toggle_en_passant(hash, bit32.band(old_ep, 7))
 	end
 	if board.en_passant_square then
 		hash = toggle_en_passant(hash, bit32.band(board.en_passant_square, 7))
 	end
-	-- Single XOR diff to find changed castling bits — avoids 8 get_bit32 calls
 	local castling_diff = bit32.bxor(old_castling, new_castling)
 	if bit32.band(castling_diff, WK_MASK) ~= 0 then hash = toggle_castling(hash, 1) end
 	if bit32.band(castling_diff, WQ_MASK) ~= 0 then hash = toggle_castling(hash, 2) end
@@ -218,7 +228,7 @@ local function make_move(board: Board, move: number): UndoRecord
 	hash = toggle_side(hash)
 	board.hash = hash
 
-	-- Incremental eval update (inlined — avoids out-of-line call, nil checks, re-unpack)
+	-- Eval update
 	local pst_color = pstForColor[color]
 	local delta = pst_color[final_piece_type][to] - pst_color[piece_type][from]
 	if captured_piece ~= CAPTURED_SENTINEL then
@@ -244,7 +254,6 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	local idx = record or undo_top
 	if idx <= 0 then return end
 
-	-- Decode move fields inline — same pattern as make_move
 	local from         = bit32.band(move, 0x3F)
 	local to           = bit32.band(bit32.rshift(move, 6), 0x3F)
 	local piece_type   = bit32.band(bit32.rshift(move, 12), 0x7)
@@ -268,13 +277,11 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	local ep_raw            = undo_ep[idx]
 	local en_passant_square = if ep_raw >= 0 then ep_raw else nil
 
-	-- Restore saved state
 	board.castling_rights   = castling_rights
 	board.en_passant_square = en_passant_square
 	board.halfmove_clock    = undo_halfmove[idx]
 	board.fullmove_number   = undo_fullmove[idx]
 
-	-- Unpack captured and rook once — values reused for hash, eval, and board restoration
 	local cap_type: number, cap_color: number, cap_sq: number
 	if has_capture then
 		cap_type, cap_color, cap_sq = unpack_captured_piece(packed_captured)
@@ -286,7 +293,7 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 
 	local final_piece_type = promotion or piece_type
 
-	-- Hash: undo EP, castling, and piece toggles
+	-- Hash undo
 	if current_ep then
 		hash = toggle_en_passant(hash, bit32.band(current_ep, 7))
 	end
@@ -310,7 +317,7 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	hash = toggle_side(hash)
 	board.hash = hash
 
-	-- Incremental eval (inlined — avoids out-of-line call and redundant unpack)
+	-- Eval undo
 	if board.eval == nil then board.eval = Eval.evaluate(board) end
 	local pst_color = pstForColor[color]
 	local delta = pst_color[final_piece_type][to] - pst_color[piece_type][from]
@@ -322,30 +329,37 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	end
 	board.eval = (board.eval :: number) - delta
 
-	-- Restore board structures
-	local pieces_color = board.pieces[color]
-	local occ          = board.occupied
+	-- Restore board
+	local pieces_lo = board.pieces_lo
+	local pieces_hi = board.pieces_hi
+	local occ_lo    = board.occupied_lo
+	local occ_hi    = board.occupied_hi
 
-	pieces_color[final_piece_type] = clear_bit(pieces_color[final_piece_type], to)
-	board.pieceTable[to]           = nil
-	pieces_color[piece_type]       = set_bit(pieces_color[piece_type], from)
-	board.pieceTable[from]         = make_pair(piece_type, color)
-	occ.all    = set_bit(clear_bit(occ.all, to), from)
-	occ[color] = set_bit(clear_bit(occ[color], to), from)
+	clr_lo(pieces_lo[color], final_piece_type, to); clr_hi(pieces_hi[color], final_piece_type, to)
+	board.pieceTable[to] = nil
+	set_lo(pieces_lo[color], piece_type, from); set_hi(pieces_hi[color], piece_type, from)
+	board.pieceTable[from] = make_pair(piece_type, color)
+	clr_lo(occ_lo, "all", to);   clr_hi(occ_hi, "all", to)
+	set_lo(occ_lo, "all", from); set_hi(occ_hi, "all", from)
+	clr_lo(occ_lo, color, to);   clr_hi(occ_hi, color, to)
+	set_lo(occ_lo, color, from); set_hi(occ_hi, color, from)
 
 	if has_capture then
-		board.pieces[cap_color][cap_type] = set_bit(board.pieces[cap_color][cap_type], cap_sq)
-		board.pieceTable[cap_sq]          = make_pair(cap_type, cap_color)
-		occ.all        = set_bit(occ.all, cap_sq)
-		occ[cap_color] = set_bit(occ[cap_color], cap_sq)
+		set_lo(pieces_lo[cap_color], cap_type, cap_sq); set_hi(pieces_hi[cap_color], cap_type, cap_sq)
+		board.pieceTable[cap_sq] = make_pair(cap_type, cap_color)
+		set_lo(occ_lo, "all", cap_sq);      set_hi(occ_hi, "all", cap_sq)
+		set_lo(occ_lo, cap_color, cap_sq);  set_hi(occ_hi, cap_color, cap_sq)
 	end
 
 	if has_rook then
-		pieces_color[ROOK]          = set_bit(clear_bit(pieces_color[ROOK], rook_to), rook_from)
+		clr_lo(pieces_lo[color], ROOK, rook_to); clr_hi(pieces_hi[color], ROOK, rook_to)
+		set_lo(pieces_lo[color], ROOK, rook_from); set_hi(pieces_hi[color], ROOK, rook_from)
 		board.pieceTable[rook_to]   = nil
 		board.pieceTable[rook_from] = make_pair(ROOK, color)
-		occ.all    = set_bit(clear_bit(occ.all, rook_to), rook_from)
-		occ[color] = set_bit(clear_bit(occ[color], rook_to), rook_from)
+		clr_lo(occ_lo, "all", rook_to);   clr_hi(occ_hi, "all", rook_to)
+		set_lo(occ_lo, "all", rook_from); set_hi(occ_hi, "all", rook_from)
+		clr_lo(occ_lo, color, rook_to);   clr_hi(occ_hi, color, rook_to)
+		set_lo(occ_lo, color, rook_from); set_hi(occ_hi, color, rook_from)
 	end
 
 	undo_top = idx - 1

@@ -1,139 +1,119 @@
 --!optimize 2
 --!native
-local u64 = require("./int64")
 local Utils = require("./utils")
 
 local WHITE, BLACK, PAWN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KING
 local split_pair, make_pair = Utils.split_pair, Utils.make_pair
 
--- unlike older versions this is designed to be **rapid**, not efficent.
 local Encoding = {}
-local EN_PASSANT_NONE = 67 -- for the love of the game
+local EN_PASSANT_NONE = 67
 local U8_MAX = 255
 
-function Encoding.to_buffer(self)
-    local buf = buffer.create(306)
-    local off = 0
+-- 12 piece bitboards  (WHITE 0-5, BLACK 0-5)
+-- 64 piece-table bytes
+-- 14 attacked bitboards (WHITE 0-5 + all, BLACK 0-5 + all)
+--  3 occupied bitboards (WHITE, BLACK, all)
+-- side_to_move (u8), castling (u8), ep (u8), halfmove (u16), fullmove (u16)
 
-    -- Helper for writing a u64
-    local function writeU64(value)
-        u64.write_to_buffer(buf, value, off)
-        off += 8
-    end
-
-    -- Pieces
-    for color = WHITE, BLACK do
-        for piece = PAWN, KING do
-            writeU64(self.pieces[color][piece])
-        end
-    end
-
-    -- Piece Table
-    for square = 0, 63 do
-        local val = self.pieceTable[square]
-        if val then
-            local a, b = split_pair(val)
-            buffer.writeu8(buf, off, bit32.bor(bit32.lshift(a, 4), b))
-        else
-            buffer.writeu8(buf, off, U8_MAX)
-        end
-        off += 1
-    end
-
-    -- Attacks
-    for color = WHITE, BLACK do
-        for piece = PAWN, KING do
-            writeU64(self.attacked[color][piece])
-        end
-        writeU64(self.attacked[color].all)
-    end
-
-    -- Occupancy
-    writeU64(self.occupied[WHITE])
-    writeU64(self.occupied[BLACK])
-    writeU64(self.occupied.all)
-
-    -- Side to move
-    buffer.writeu8(buf, off, self.side_to_move)
-    off += 1
-
-    -- Castling
-    buffer.writeu8(buf, off, self.castling_rights);
-    off += 1
-
-    -- En-passant
-    local ep = self.en_passant_square or EN_PASSANT_NONE
-    buffer.writeu8(buf, off, ep)
-    off += 1
-
-    -- Clocks
-    buffer.writeu16(buf, off, self.halfmove_clock);  off += 2
-    buffer.writeu16(buf, off, self.fullmove_number); off += 2
-
-    return buf
+local function writeBB(buf, off, lo, hi)
+	buffer.writeu32(buf, off,     lo)
+	buffer.writeu32(buf, off + 4, hi)
+	return off + 8
 end
+
+local function readBB(buf, off)
+	local lo = buffer.readu32(buf, off)
+	local hi = buffer.readu32(buf, off + 4)
+	return lo, hi, off + 8
+end
+
+function Encoding.to_buffer(self)
+	local buf = buffer.create(306)
+	local off = 0
+
+	for color = WHITE, BLACK do
+		for piece = PAWN, KING do
+			off = writeBB(buf, off, self.pieces_lo[color][piece], self.pieces_hi[color][piece])
+		end
+	end
+
+	for square = 0, 63 do
+		local val = self.pieceTable[square]
+		if val then
+			local a, b = split_pair(val)
+			buffer.writeu8(buf, off, bit32.bor(bit32.lshift(a, 4), b))
+		else
+			buffer.writeu8(buf, off, U8_MAX)
+		end
+		off += 1
+	end
+
+	for color = WHITE, BLACK do
+		for piece = PAWN, KING do
+			off = writeBB(buf, off, self.attacked_lo[color][piece], self.attacked_hi[color][piece])
+		end
+		off = writeBB(buf, off, self.attacked_lo[color].all, self.attacked_hi[color].all)
+	end
+
+	off = writeBB(buf, off, self.occupied_lo[WHITE], self.occupied_hi[WHITE])
+	off = writeBB(buf, off, self.occupied_lo[BLACK], self.occupied_hi[BLACK])
+	off = writeBB(buf, off, self.occupied_lo.all,    self.occupied_hi.all)
+
+	buffer.writeu8(buf, off, self.side_to_move);  off += 1
+	buffer.writeu8(buf, off, self.castling_rights); off += 1
+	buffer.writeu8(buf, off, self.en_passant_square or EN_PASSANT_NONE); off += 1
+	buffer.writeu16(buf, off, self.halfmove_clock);  off += 2
+	buffer.writeu16(buf, off, self.fullmove_number); off += 2
+
+	return buf
+end
+
 function Encoding.from_buffer(self, buf)
-    local off = 0
+	local off = 0
+	local lo, hi
 
-    -- Helper for reading a u64
-    local function readU64()
-        local val = u64.from_buffer(buf, off)
-        off += 8
-        return val
-    end
+	for color = WHITE, BLACK do
+		for piece = PAWN, KING do
+			lo, hi, off = readBB(buf, off)
+			self.pieces_lo[color][piece] = lo
+			self.pieces_hi[color][piece] = hi
+		end
+	end
 
-    -- Pieces
-    for color = WHITE, BLACK do
-        for piece = PAWN, KING do
-            self.pieces[color][piece] = readU64()
-        end
-    end
+	for square = 0, 63 do
+		local val = buffer.readu8(buf, off); off += 1
+		if val == U8_MAX then
+			self.pieceTable[square] = nil
+		else
+			local b = bit32.band(val, 0xF)
+			local a = bit32.rshift(val, 4)
+			self.pieceTable[square] = make_pair(a, b)
+		end
+	end
 
-    -- Piece Table
-    for square = 0, 63 do
-        local val = buffer.readu8(buf, off)
-        off += 1
-        if val == U8_MAX then
-            self.pieceTable[square] =  nil
-        else
-            local b = bit32.band(val, bit32.lshift(1, 4) - 1)
-            local a = bit32.rshift(val, 4)
-            self.pieceTable[square] = make_pair(a, b)
-        end
-    end
+	for color = WHITE, BLACK do
+		for piece = PAWN, KING do
+			lo, hi, off = readBB(buf, off)
+			self.attacked_lo[color][piece] = lo
+			self.attacked_hi[color][piece] = hi
+		end
+		lo, hi, off = readBB(buf, off)
+		self.attacked_lo[color].all = lo
+		self.attacked_hi[color].all = hi
+	end
 
-    -- Attacks
-    for color = WHITE, BLACK do
-        for piece = PAWN, KING do
-            self.attacked[color][piece] = readU64()
-        end
-        self.attacked[color].all = readU64()
-    end
+	lo, hi, off = readBB(buf, off); self.occupied_lo[WHITE] = lo; self.occupied_hi[WHITE] = hi
+	lo, hi, off = readBB(buf, off); self.occupied_lo[BLACK] = lo; self.occupied_hi[BLACK] = hi
+	lo, hi, off = readBB(buf, off); self.occupied_lo.all    = lo; self.occupied_hi.all    = hi
 
-    -- Occupancy
-    self.occupied[WHITE] = readU64()
-    self.occupied[BLACK] = readU64()
-    self.occupied.all   = readU64()
+	self.side_to_move    = buffer.readu8(buf, off);  off += 1
+	self.castling_rights = buffer.readu8(buf, off);  off += 1
+	local ep = buffer.readu8(buf, off); off += 1
+	self.en_passant_square = if ep == EN_PASSANT_NONE then nil else ep
+	self.halfmove_clock  = buffer.readu16(buf, off); off += 2
+	self.fullmove_number = buffer.readu16(buf, off); off += 2
 
-    -- Side to move
-    self.side_to_move = buffer.readu8(buf, off)
-    off += 1
-
-    -- Castling rights
-    self.castling_rights  = buffer.readu8(buf, off);
-    off += 1
-
-    -- En-passant
-    local ep = buffer.readu8(buf, off)
-    off += 1
-    self.en_passant_square = if (ep == EN_PASSANT_NONE) then nil else ep
-
-    -- Clocks
-    self.halfmove_clock  = buffer.readu16(buf, off); off += 2
-    self.fullmove_number = buffer.readu16(buf, off); off += 2
-
-
-    return self
+	return self
 end
 
 return Encoding
