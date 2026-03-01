@@ -1,8 +1,8 @@
 --!native
 --!optimize 2
 --!strict
-
 local Utils   = require("./utils")
+local Move    = require("./move").Move
 local Eval    = require("./eval")
 local Zobrist = require("./zobrist")
 local toggle_piece      = Zobrist.toggle_piece
@@ -19,7 +19,6 @@ local BIT_HI  = Utils.BIT_HI
 local NBIT_LO = Utils.NBIT_LO
 local NBIT_HI = Utils.NBIT_HI
 
--- Flat PST access
 local PST          = Eval.PST
 local COLOR_STRIDE = Eval.COLOR_STRIDE
 local PIECE_STRIDE = Eval.PIECE_STRIDE
@@ -57,6 +56,8 @@ local undo_ep:        {number} = table.create(MAX_UNDO)
 local undo_halfmove:  {number} = table.create(MAX_UNDO)
 local undo_fullmove:  {number} = table.create(MAX_UNDO)
 local undo_rook_pair: {number} = table.create(MAX_UNDO)
+local undo_eval:      {number} = table.create(MAX_UNDO)
+local undo_hash:      {number} = table.create(MAX_UNDO)
 
 local function set_lo(tbl, key, sq: number)
 	tbl[key] = bit32.bor(tbl[key], BIT_LO[sq])
@@ -98,6 +99,8 @@ local function make_move(board: Board, move: number): UndoRecord
 	undo_ep[idx]       = old_ep or -1
 	undo_halfmove[idx] = board.halfmove_clock
 	undo_fullmove[idx] = board.fullmove_number
+	undo_eval[idx]     = board.eval :: number
+	undo_hash[idx]     = hash
 
 	local pieces_lo = board.pieces_lo
 	local pieces_hi = board.pieces_hi
@@ -232,6 +235,7 @@ local function make_move(board: Board, move: number): UndoRecord
 	hash = toggle_side(hash)
 	board.hash = hash
 
+	-- Eval update
 	local color_base = color * COLOR_STRIDE
 	local delta = PST[color_base + final_piece_type * PIECE_STRIDE + to]
 	            - PST[color_base + piece_type       * PIECE_STRIDE + from]
@@ -273,17 +277,11 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 	local has_capture      = packed_captured ~= CAPTURED_SENTINEL
 	local has_rook         = packed_rook_pair ~= ROOK_PAIR_SENTINEL
 
-	local current_castling = board.castling_rights
-	local current_ep       = board.en_passant_square
-	if board.hash == nil then board.hash = Zobrist.hash(board) end
-	local hash = board.hash :: number
-
-	local castling_rights   = undo_castling[idx]
+	board.eval           = undo_eval[idx]
+	board.hash           = undo_hash[idx]
+	board.castling_rights   = undo_castling[idx]
 	local ep_raw            = undo_ep[idx]
-	local en_passant_square = if ep_raw >= 0 then ep_raw else nil
-
-	board.castling_rights   = castling_rights
-	board.en_passant_square = en_passant_square
+	board.en_passant_square = if ep_raw >= 0 then ep_raw else nil
 	board.halfmove_clock    = undo_halfmove[idx]
 	board.fullmove_number   = undo_fullmove[idx]
 
@@ -298,45 +296,6 @@ local function undo_move(board: Board, move: number, record: UndoRecord?)
 
 	local final_piece_type = promotion or piece_type
 
-	-- Hash undo
-	if current_ep then
-		hash = toggle_en_passant(hash, bit32.band(current_ep, 7))
-	end
-	if en_passant_square then
-		hash = toggle_en_passant(hash, bit32.band(en_passant_square, 7))
-	end
-	local castling_diff = bit32.bxor(current_castling, castling_rights)
-	if bit32.band(castling_diff, WK_MASK) ~= 0 then hash = toggle_castling(hash, 1) end
-	if bit32.band(castling_diff, WQ_MASK) ~= 0 then hash = toggle_castling(hash, 2) end
-	if bit32.band(castling_diff, BK_MASK) ~= 0 then hash = toggle_castling(hash, 3) end
-	if bit32.band(castling_diff, BQ_MASK) ~= 0 then hash = toggle_castling(hash, 4) end
-	hash = toggle_piece(hash, color, final_piece_type, to)
-	hash = toggle_piece(hash, color, piece_type, from)
-	if has_capture then
-		hash = toggle_piece(hash, cap_color, cap_type, cap_sq)
-	end
-	if has_rook then
-		hash = toggle_piece(hash, color, ROOK, rook_to)
-		hash = toggle_piece(hash, color, ROOK, rook_from)
-	end
-	hash = toggle_side(hash)
-	board.hash = hash
-
-	-- Eval undo: mirror of make_move delta, subtracted
-	if board.eval == nil then board.eval = Eval.evaluate(board) end
-	local color_base = color * COLOR_STRIDE
-	local delta = PST[color_base + final_piece_type * PIECE_STRIDE + to]
-	            - PST[color_base + piece_type       * PIECE_STRIDE + from]
-	if has_capture then
-		delta -= PST[cap_color * COLOR_STRIDE + cap_type * PIECE_STRIDE + cap_sq]
-	end
-	if has_rook then
-		delta += PST[color_base + ROOK * PIECE_STRIDE + rook_to]
-		       - PST[color_base + ROOK * PIECE_STRIDE + rook_from]
-	end
-	board.eval = (board.eval :: number) - delta
-
-	-- Restore board state
 	local pieces_lo = board.pieces_lo
 	local pieces_hi = board.pieces_hi
 	local occ_lo    = board.occupied_lo
