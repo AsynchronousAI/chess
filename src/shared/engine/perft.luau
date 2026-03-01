@@ -1,6 +1,4 @@
-local bitboard = require("./engine/bitboard").BitBoard
-
-local DEPTH = 5
+local bitboard = require("./bitboard").BitBoard
 
 local function perft(board, depth)
     if depth == 0 then
@@ -22,16 +20,4 @@ local function perft(board, depth)
     return nodes
 end
 
-local function run_perft(depth)
-    local board = bitboard.create()
-
-    local startTime = os.clock()
-    local nodes = perft(board, depth)
-    local elapsed = os.clock() - startTime
-
-    print(string.format("Perft depth: %d, nodes: %d, time: %.4fs. %.2f nodes/sec", depth, nodes, elapsed, nodes / elapsed))
-end
-
-for depth = 1, DEPTH do
-    run_perft(depth)
-end
+return perft

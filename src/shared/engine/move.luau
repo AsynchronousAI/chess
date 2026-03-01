@@ -133,5 +133,18 @@ function Move.toString(move: number)
 
 	return move_str
 end
+function Move.toSimpleString(move: number)
+    local details = Move.toTable(move)
+
+    local files = "abcdefgh"
+    local ranks = "12345678"
+
+    local from_file = files:sub((details.from % 8) + 1, (details.from % 8) + 1)
+    local from_rank = ranks:sub(math.floor(details.from / 8) + 1, math.floor(details.from / 8) + 1)
+    local to_file = files:sub((details.to % 8) + 1, (details.to % 8) + 1)
+    local to_rank = ranks:sub(math.floor(details.to / 8) + 1, math.floor(details.to / 8) + 1)
+
+    return from_file .. from_rank .. to_file .. to_rank
+end
 
 return { Move = Move }

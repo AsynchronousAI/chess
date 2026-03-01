@@ -5,3 +5,4 @@
 
 [tools]
 rojo = "rojo-rbx/rojo@7.6.0"
+lute = "luau-lang/lute@0.1.0-nightly.20260228"
