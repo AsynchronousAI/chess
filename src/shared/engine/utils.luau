@@ -103,8 +103,8 @@ export type Board = {
 	en_passant_square: number?,
 	halfmove_clock: number,
 	fullmove_number: number,
-	eval: number?,
-	hash: number?,
+	eval: number,
+	hash: number,
 }
 
 -- Precomputed single-bit masks

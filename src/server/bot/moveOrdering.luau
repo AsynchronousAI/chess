@@ -25,6 +25,9 @@ local PieceValues = {
 
 local TT = game and game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
 
+local promoTypes  = {1,  2,  3,  4}
+local promoValues = {18, 17, 19, 20}
+
 return function(board, moves)
     local color = board.side_to_move
     local ttEntry = TT and TT[bitboard.hash(board)]
@@ -34,9 +37,6 @@ return function(board, moves)
         tt_to = moveLib.getTo(ttEntry.bestMove)
         tt_promo = moveLib.getPromotion(ttEntry.bestMove)
     end
-
-    local promoTypes  = {1,  2,  3,  4}
-    local promoValues = {18, 17, 19, 20}
 
     local n = #moves
     for i, move in moves do

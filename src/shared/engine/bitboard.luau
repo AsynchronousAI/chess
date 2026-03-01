@@ -62,6 +62,9 @@ function Board.create(blank: boolean?): Board
 		en_passant_square = nil,
 		halfmove_clock  = 0,
 		fullmove_number = 1,
+		
+		eval = 0,
+		hash = 0,
 	}
 
 	if not blank then Board.set_start_position(board) end

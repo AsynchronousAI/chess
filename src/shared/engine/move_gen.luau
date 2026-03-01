@@ -365,8 +365,8 @@ local function scan_sliders_for_pins_and_checks(
 		local line_hi = LINE_HI[slider_sq][king_square]
 		if line_lo ~= 0 or line_hi ~= 0 then
 			-- between = line & ~(1<<slider_sq) & ~(1<<king_square)
-			local btwn_lo = bit32.band(line_lo, bit32.band(NBIT_LO[slider_sq], NBIT_LO[king_square]))
-			local btwn_hi = bit32.band(line_hi, bit32.band(NBIT_HI[slider_sq], NBIT_HI[king_square]))
+			local btwn_lo = bit32.band(line_lo or 0, bit32.band(NBIT_LO[slider_sq], NBIT_LO[king_square]))
+			local btwn_hi = bit32.band(line_hi or 0, bit32.band(NBIT_HI[slider_sq], NBIT_HI[king_square]))
 			local bo_lo = bit32.band(occ_lo, btwn_lo)
 			local bo_hi = bit32.band(occ_hi, btwn_hi)
 			if bo_lo == 0 and bo_hi == 0 then
