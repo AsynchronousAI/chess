@@ -1,7 +1,3 @@
-// This uses code ported from "./src/shared/engine" to train magic numbers,
-// I tried a fully Luau trainer, but that took almost an hour compared to C++ taking
-// a couple of seconds.
-
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -15,42 +11,26 @@ using u64 = uint64_t;
 static inline u32 bit_lo(int sq) { return sq < 32 ? (1u << sq)        : 0u; }
 static inline u32 bit_hi(int sq) { return sq >= 32 ? (1u << (sq - 32)) : 0u; }
 
-static inline void mul64_hi64(u32 a_hi, u32 a_lo,
-                               u32 b_hi, u32 b_lo,
-                               u32& out_hi, u32& out_lo)
+static inline int rook_magic_index(u32 occ_hi, u32 occ_lo,
+                                    u32 magic_hi, u32 magic_lo,
+                                    int bits)
 {
-    u32 a = a_hi >> 16, b = a_hi & 0xFFFF;
-    u32 c = a_lo >> 16, d = a_lo & 0xFFFF;
-    u32 e = b_hi >> 16, f = b_hi & 0xFFFF;
-    u32 g = b_lo >> 16, h = b_lo & 0xFFFF;
-
-    u32 p4 = d * h;
-    u32 p3 = (p4 >> 16) + c * h;
-    u32 p2 = p3 >> 16;
-    p3 = (p3 & 0xFFFF) + d * g;
-    p2 += (p3 >> 16) + b * h;
-    u32 p1 = p2 >> 16;
-    p2 = (p2 & 0xFFFF) + c * g;
-    p1 += p2 >> 16;
-    p2 = (p2 & 0xFFFF) + d * f;
-    p1 += (p2 >> 16) + a*h + b*g + c*f + d*e;
-
-    out_hi = ((p1 & 0xFFFF) << 16) | (p2 & 0xFFFF);
-    out_lo = ((p3 & 0xFFFF) << 16) | (p4 & 0xFFFF);
+    u32 lo = occ_lo * magic_lo;
+    u32 hi = occ_hi * magic_hi;
+    return (int)((lo ^ hi) >> (32 - bits));
 }
 
-static inline int magic_index(u32 occ_hi, u32 occ_lo,
-                               u32 magic_hi, u32 magic_lo,
-                               int bits)
+static inline int bishop_magic_index(u32 occ_hi, u32 occ_lo,
+                                      u32 magic_hi, u32 magic_lo,
+                                      int bits)
 {
-    u32 rhi, rlo;
-    mul64_hi64(occ_hi, occ_lo, magic_hi, magic_lo, rhi, rlo);
-
-    int shift = 64 - bits;
-    if (shift >= 32)
-        return (int)(rhi >> (shift - 32));
-    else
-        return (int)((rhi << (32 - shift)) | (rlo >> shift));
+    if (bits >= 5) { // this condition is not in the original algorithm, but we fallback to rook-style magic indexs to avoid collisions
+        u32 lo = occ_lo * magic_lo;
+        u32 hi = occ_hi * magic_hi;
+        return (int)((lo ^ hi) >> (32 - bits));
+    }
+    u32 folded = (occ_lo ^ occ_hi) * magic_lo;
+    return (int)(folded >> (32 - bits));
 }
 
 static u32 RAY_N_LO[64],  RAY_N_HI[64];
@@ -100,7 +80,6 @@ static inline void apply_ray(u32 rlo, u32 rhi,
     }
 
     u32 bsq_lo = bit_lo(bsq), bsq_hi = bit_hi(bsq);
-    // bsq_bit - 1 (64-bit)
     u32 s_lo, s_hi;
     if (bsq_lo) { s_lo = bsq_lo - 1; s_hi = bsq_hi; }
     else         { s_lo = 0xFFFFFFFFu; s_hi = bsq_hi - 1; }
@@ -178,7 +157,6 @@ static int score_magic(int sq, int bits,
 {
     int table_size = 1 << bits;
 
-    // Thread-local generation-stamped scratch tables
     static thread_local std::vector<u32> seen_hi, seen_lo, seen_gen;
     static thread_local u32 cur_gen = 0;
 
@@ -195,7 +173,9 @@ static int score_magic(int sq, int bits,
     SubsetIter it(mask_hi, mask_lo);
     u32 olo, ohi;
     while (it.next(olo, ohi)) {
-        int idx = magic_index(ohi, olo, magic_hi, magic_lo, bits);
+        int idx = is_rook
+            ? rook_magic_index(ohi, olo, magic_hi, magic_lo, bits)
+            : bishop_magic_index(ohi, olo, magic_hi, magic_lo, bits);
 
         u32 ahi, alo;
         if (is_rook) classical_rook_attacks(sq, ohi, olo, ahi, alo);
@@ -248,45 +228,18 @@ static const int BISHOP_BITS[64] = {
     6,5,5,5,5,5,5,6,
 };
 
+// Seed magics — trainer will replace these if they produce collisions
 static u32 ROOK_MAGIC_HI[64] = {
-    0x00800010,0x00400010,0x00800810,0x00800408,0x00800204,0x00800102,0x00800080,0x00800020,
-    0x00008000,0x00004000,0x00008010,0x00008008,0x00008004,0x00008002,0x00008001,0x00008004,
-    0x00002080,0x00004040,0x00008080,0x00008080,0x00008080,0x00008080,0x00000101,0x00000200,
-    0x00002080,0x00002000,0x00001000,0x00000800,0x00000400,0x00000200,0x00000100,0x00008000,
-    0x00002040,0x00002000,0x00001000,0x00000800,0x00000400,0x00000200,0x00000200,0x00008000,
-    0x00002040,0x00002000,0x00001000,0x00000800,0x00000400,0x00000200,0x00000100,0x00000040,
-    0x00002040,0x00002000,0x00001000,0x00000800,0x00000400,0x00000200,0x00008001,0x00008004,
-    0x00001020,0x00001020,0x00000810,0x00000408,0x00010002,0x00010002,0x00010000,0x00000020,
+    0x00800010,0x00400010,0x00800810,0x00800408,0x00800204,0x00800102,0x00800080,0x00800020,0x00008000,0x00004000,0x00008010,0x00008008,0x00008004,0x00008002,0x00008001,0x00008004,0x00002080,0x00004040,0x00008080,0x00008080,0x00008080,0x00008080,0x00000101,0x00000200,0x00002080,0x00002000,0x00001000,0x00000800,0x00010011,0x04420002,0x00000100,0x00008000,0x00002040,0x0D004000,0x00200100,0x60084900,0x10000800,0x00340400,0x00000200,0x00008000,0x00002040,0x80902010,0x80181000,0x29030222,0x88080138,0x10140003,0x00080210,0x00000040,0x00002040,0x24300020,0x00008220,0x0213002C,0x04200800,0x80020004,0x00008001,0x00008004,0x00001020,0x00001020,0x00000810,0x00000408,0x00010002,0x00010002,0x00010000,0x00000020
 };
 static u32 ROOK_MAGIC_LO[64] = {
-    0x20400080,0x00200040,0x00200080,0x00100080,0x00080080,0x00040080,0x01000200,0x40800100,
-    0x20400080,0x20005000,0x00200080,0x00100080,0x00080080,0x00040080,0x00020080,0x40800100,
-    0x00400080,0x00201000,0x10002000,0x08001000,0x04000800,0x02000400,0x00020004,0x00408104,
-    0x80004000,0x40005000,0x80200080,0x80100080,0x40008080,0x20004080,0x80800200,0x80004100,
-    0x00800080,0x00404010,0x00808020,0x00808010,0x00808008,0x00808004,0x01010004,0x40800100,
-    0x00808000,0x00400080,0x00200080,0x00100080,0x00080080,0x00040080,0x00020080,0x08102004,
-    0x00800080,0x00400080,0x00200080,0x00100080,0x00080080,0x00040080,0x00020080,0x41000080,
-    0x40800101,0x40008101,0x20004101,0x10002101,0x04080011,0x04000801,0x82000401,0x40810402,
+    0x20400080,0x00200040,0x00200080,0x00100080,0x00080080,0x00040080,0x01000200,0x40800100,0x20400080,0x20005000,0x00200080,0x00100080,0x00080080,0x00040080,0x00020080,0x40800100,0x00400080,0x00201000,0x10002000,0x08001000,0x04000800,0x02000400,0x00020004,0x00408104,0x80004000,0x40005000,0x80200080,0x80100080,0x00080024,0x001008D4,0x80800200,0x80004100,0x00800080,0x80802000,0xC3002014,0x61003000,0x05001100,0x80802200,0x01010004,0x40800100,0x00808000,0x02C04000,0x20008080,0x10010018,0x91010004,0x001B0009,0x01140008,0x84220003,0x00800080,0x00C00040,0x00100080,0x1000A100,0x800C0080,0x10880200,0x00020080,0x41000080,0x40800101,0x40008101,0x20004101,0x10002101,0x04080011,0x04000801,0x82000401,0x40810402
 };
 static u32 BISHOP_MAGIC_HI[64] = {
-    0x00000202,0x00000202,0x00000401,0x00000404,0x00000110,0x00000082,0x00000041,0x00000010,
-    0x00000004,0x00000002,0x00000004,0x00000004,0x00000001,0x00000000,0x00000000,0x00000020,
-    0x00040008,0x00020004,0x00010002,0x00008008,0x00008004,0x00002001,0x00004000,0x00002000,
-    0x00020800,0x00010400,0x00002080,0x00004040,0x00008400,0x00004040,0x00008080,0x00004040,
-    0x00010410,0x00008208,0x00001044,0x00000200,0x00004040,0x00008081,0x00010101,0x00008080,
-    0x00008208,0x00004104,0x00000820,0x00000020,0x00000801,0x00010101,0x00020202,0x00010101,
-    0x00004104,0x00002082,0x00000020,0x00000000,0x00000010,0x00000404,0x00040404,0x00020202,
-    0x00001041,0x00000020,0x00000000,0x00000000,0x00000001,0x00000004,0x00000404,0x00020202,
+    0x06041438,0x00208C02,0x04108302,0x14240402,0x110410A8,0x00170402,0x00008401,0x00001042,0x00200811,0x44200C10,0x21000800,0x0400541C,0x01108C24,0x00410A28,0x40011942,0x01002901,0x00040008,0x00020004,0x11080401,0x40202002,0x20010008,0x00002001,0x00004000,0x00002000,0x00020800,0x00010400,0x00002080,0x00004040,0x23010100,0x00004040,0x00008080,0x00004040,0x00010410,0x00008208,0x00001044,0x00022018,0x10130202,0x00008081,0x00010101,0x00142082,0x00008208,0x00004104,0x03001108,0x00000020,0x00000801,0x00010101,0x00020202,0x00010101,0x00004104,0x00002082,0x02200822,0x00000000,0x00000010,0x60000420,0x00040404,0x00020202,0x00001041,0xD0260222,0x00000000,0x00000000,0x00000001,0x00000004,0x00000404,0x00020202
 };
 static u32 BISHOP_MAGIC_LO[64] = {
-    0x02020200,0x02020200,0x02020000,0x00400800,0x00004000,0x10400000,0x04104000,0x04104100,
-    0x04040400,0x02020200,0x01020200,0x00400800,0x40400000,0x21040000,0x04104100,0x08208200,
-    0x08080800,0x04040400,0x01010400,0x01010000,0x00080000,0x00884000,0x82082000,0x41041000,
-    0x10101000,0x08080800,0x04010400,0x04010200,0x00080200,0x02011000,0x01041000,0x00820800,
-    0x00202000,0x00101000,0x00080800,0x00008080,0x04040100,0x00020100,0x00020800,0x00010400,
-    0x20004000,0x10002000,0x08801000,0x11000800,0x00400400,0x01000200,0x02000400,0x01000200,
-    0x10400000,0x08208200,0x08410000,0x20880000,0x02020000,0x04080200,0x04040400,0x02020200,
-    0x04104100,0x08208200,0x20841000,0x00208800,0x10020200,0x04080200,0x04040400,0x02020200,
+    0x88020483,0x82004000,0x01200018,0x84206140,0x08000081,0x40000008,0x20102220,0x10042000,0x3002004A,0x10810500,0x810E0008,0x10800020,0x20822050,0x24401108,0x08044000,0x08421200,0x08080800,0x04040400,0x80840080,0x12004008,0x20080024,0x00884000,0x82082000,0x41041000,0x10101000,0x08080800,0x04010400,0x04010200,0x09104000,0x02011000,0x01041000,0x00820800,0x00202000,0x00101000,0x00080800,0x00810114,0x082C0100,0x00020100,0x00020800,0x00348040,0x20004000,0x10002000,0x08000900,0x11000800,0x00400400,0x01000200,0x02000400,0x01000200,0x10400000,0x08208200,0x01500801,0x20880000,0x02020000,0x24010840,0x04040400,0x02020200,0x04104100,0x02100401,0x20841000,0x00208800,0x10020200,0x04080200,0x04040400,0x02020200
 };
 
 struct Entry {
@@ -297,6 +250,7 @@ struct Entry {
     u32  magic_hi, magic_lo;
     int  collisions;
 };
+
 static const char* SQ_NAMES[64] = {
     "a1","b1","c1","d1","e1","f1","g1","h1",
     "a2","b2","c2","d2","e2","f2","g2","h2",
@@ -333,7 +287,7 @@ static void print_magics(const std::vector<Entry>& state)
     printf("\n=== Trained magic numbers ===\n");
     for (int pass = 0; pass < 2; ++pass) {
         bool rook = (pass == 0);
-        printf("\n-- %s\nhi = {", rook ? "rook" : "bishop");
+        printf("\n-- %s\nhi = {\n\t", rook ? "rook" : "bishop");
         bool sep = false;
         for (auto& e : state) {
             if (e.is_rook != rook) continue;
@@ -341,7 +295,7 @@ static void print_magics(const std::vector<Entry>& state)
             sep = true;
             printf("0x%08X", e.magic_hi);
         }
-        printf("\n},\nlo = {");
+        printf("\n},\nlo = {\n\t");
         sep = false;
         for (auto& e : state) {
             if (e.is_rook != rook) continue;
@@ -363,9 +317,9 @@ int main()
     long long grand_collisions = 0;
 
     auto add_entries = [&](bool is_rook) {
-        const int* bits_arr    = is_rook ? ROOK_BITS    : BISHOP_BITS;
-        u32*       magic_hi_arr = is_rook ? ROOK_MAGIC_HI : BISHOP_MAGIC_HI;
-        u32*       magic_lo_arr = is_rook ? ROOK_MAGIC_LO : BISHOP_MAGIC_LO;
+        const int* bits_arr     = is_rook ? ROOK_BITS       : BISHOP_BITS;
+        u32*       magic_hi_arr = is_rook ? ROOK_MAGIC_HI   : BISHOP_MAGIC_HI;
+        u32*       magic_lo_arr = is_rook ? ROOK_MAGIC_LO   : BISHOP_MAGIC_LO;
 
         for (int sq = 0; sq < 64; ++sq) {
             Entry e;
@@ -387,7 +341,6 @@ int main()
     add_entries(true);   // rooks
     add_entries(false);  // bishops
 
-    // Dirty list: indices into state[] that still have collisions
     std::vector<int> dirty_list;
     for (int i = 0; i < (int)state.size(); ++i)
         if (state[i].collisions > 0)
@@ -410,7 +363,6 @@ int main()
     while (grand_collisions > 0) {
         ++iteration;
 
-        // Pick a random dirty entry
         int pick_idx = rng.randint(0, (int)dirty_list.size() - 1);
         int si       = dirty_list[pick_idx];
         Entry& e     = state[si];
@@ -427,7 +379,6 @@ int main()
             e.collisions = new_col;
 
             if (new_col == 0) {
-                // O(1) swap-remove from dirty_list
                 dirty_list[pick_idx] = dirty_list.back();
                 dirty_list.pop_back();
             }

@@ -9,44 +9,21 @@ local bb_sub_hi     = Utils.bb_sub_hi
 local BIT_LO        = Utils.BIT_LO
 local BIT_HI        = Utils.BIT_HI
 
--- Magic index
-local function mul64_hi64(a_hi: number, a_lo: number, b_hi: number, b_lo: number): (number, number)
-    local a, b = bit32.rshift(a_hi, 16), bit32.band(a_hi, 0xFFFF)
-    local c, d = bit32.rshift(a_lo, 16), bit32.band(a_lo, 0xFFFF)
-    local e, f = bit32.rshift(b_hi, 16), bit32.band(b_hi, 0xFFFF)
-    local g, h = bit32.rshift(b_lo, 16), bit32.band(b_lo, 0xFFFF)
-
-    local product_4 = d * h
-    local product_3 = bit32.rshift(product_4, 16) + c * h
-    local product_2 = bit32.rshift(product_3, 16)
-    product_3 = bit32.band(product_3, 0xFFFF) + d * g
-    product_2 += bit32.rshift(product_3, 16) + b * h
-    local product_1 = bit32.rshift(product_2, 16)
-    product_2 = bit32.band(product_2, 0xFFFF) + c * g
-    product_1 += bit32.rshift(product_2, 16)
-    product_2 = bit32.band(product_2, 0xFFFF) + d * f
-    product_1 += bit32.rshift(product_2, 16) + a * h + b * g + c * f + d * e
-
-    local hi = bit32.band(bit32.replace(product_2, product_1, 16, 16), 0xFFFFFFFF)
-    local lo = bit32.band(bit32.replace(product_4, product_3, 16, 16), 0xFFFFFFFF)
-    return hi, lo
+-- Magic index (Uses Grant Osborne optimization: https://www.chessprogramming.org/Magic_Bitboards#32-bit_Magics)
+local function rook_magic_index(occ_hi: number, occ_lo: number, magic_hi: number, magic_lo: number, shift: number): number
+    local lo = occ_lo * magic_lo
+    local hi = occ_hi * magic_hi
+    return bit32.rshift(bit32.bxor(lo, hi), shift)
 end
-local function magic_index(occ_hi: number, occ_lo: number, magic_hi: number, magic_lo: number, bits: number): number
-    local result_hi, result_lo = mul64_hi64(occ_hi, occ_lo, magic_hi, magic_lo)
-
-    local shift = 64 - bits
-    if shift >= 32 then
-        return bit32.rshift(result_hi, shift - 32)
-    else
-        return bit32.bor(
-            bit32.lshift(result_hi, 32 - shift),
-            bit32.rshift(result_lo, shift)
-        )
+local function bishop_magic_index(occ_hi: number, occ_lo: number, magic_hi: number, magic_lo: number, bits: number): number
+    if bits >= 5 then -- this condition is not in the original algorithm, but we fallback to rook-style magic indexs to avoid collisions
+        local lo = occ_lo * magic_lo
+        local hi = occ_hi * magic_hi
+        return bit32.rshift(bit32.bxor(lo, hi), 32 - bits)
     end
+    local folded = bit32.bxor(occ_lo, occ_hi) * magic_lo
+    return bit32.rshift(folded, 32 - bits)
 end
-
-local rook_magic_index = magic_index
-local bishop_magic_index = magic_index
 
 -- Slow, classical attacks
 local function apply_ray(ray_lo, ray_hi, occ_lo, occ_hi, positive, result_lo, result_hi)
