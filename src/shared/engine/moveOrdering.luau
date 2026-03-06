@@ -1,17 +1,10 @@
 --!optimize 2
 --!native
 
-local bitboard, moveLib, Utils
-if game then
-    local libs = require(script.Parent.import)
-    bitboard = libs.BitBoard
-    moveLib = libs.Move
-    Utils = libs.Utils
-else
-    bitboard = require("../../shared/engine/bitboard").BitBoard
-    moveLib = require("../../shared/engine/move").Move
-    Utils = require("../../shared/engine/utils")
-end
+local bitboard = require("./bitboard").BitBoard
+local moveLib = require("./move").Move
+local Utils = require("./utils")
+
 
 local PieceValues = {
   [Utils.NONE]   = 0,
@@ -23,7 +16,7 @@ local PieceValues = {
   [Utils.KING]   = 20000,
 };
 
-local TT = game and game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
+local TT = if game then game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions") else {}
 
 local promoTypes  = {1,  2,  3,  4}
 local promoValues = {18, 17, 19, 20}

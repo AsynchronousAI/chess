@@ -1,8 +1,6 @@
 --!native
 --!optimize 2
 local libs = require(script.import)
-local eval = require(script.eval)
-local moveOrdering = require(script.moveOrdering)
 
 local DEPTH = if game:GetService("RunService"):IsStudio() then 5 else 3
 
@@ -14,23 +12,22 @@ local LegalMovesTransposition = game:GetService("SharedTableRegistry"):GetShared
 --[[ Minimax host ]]
 local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     if depth >= maxDepth then
-        return eval(board), depth, nil
+        return libs.Eval(board), depth, nil
     end
 
     local maxDepthReached = depth
     local bestScore = isMaximizing and -math.huge or math.huge
 
     local allLegalMoves = libs.BitBoard.generate_legal_moves(board, false, board.side_to_move)
-    local moves = moveOrdering(board, allLegalMoves)
-    local bestMove = moves[1] -- at times, bot doesnt want to move (zugzwang). in that case we do first legal move
+    local bestMove = allLegalMoves[1] -- at times, bot doesnt want to move (zugzwang). in that case we do first legal move
     local threads = {}
 
     -- Deploy threads
-    for index, move in moves do
+    for index, move in allLegalMoves do
         local branch = libs.BitBoard.clone(board)
         libs.BitBoard.make_move(branch, move)
 
-        local thread = callback(branch, not isMaximizing, maxDepth, depth + 1)
+        local thread = callback(branch, not isMaximizing, maxDepth, depth)
         threads[index] = thread;
     end
 
@@ -53,7 +50,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     for index, thread in threads do
         local currentScore = thread.score;
         local childDepth = thread.depth;
-        local move = moves[index];
+        local move = allLegalMoves[index];
 
         if if isMaximizing then currentScore > bestScore else currentScore < bestScore then
             bestScore = currentScore
@@ -71,7 +68,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
         bestSequence = `{bestSequence}{libs.Move.toString(v)} `
     end
 
-    return {score = bestScore, depth = maxDepthReached, bestMove = bestMove, sequence = bestSequence, legalMoves = #moves, nodes = nodes}
+    return {score = bestScore, depth = maxDepthReached, bestMove = bestMove, sequence = bestSequence, legalMoves = #allLegalMoves, nodes = nodes}
 end
 
 --[[ Actor Pool ]]

@@ -1,157 +1,28 @@
 --!native
 --!optimize 2
+
 local actor = script:GetActor()
 local name = actor.Name
 if name == "ActorTemplate" then return end
 
-local TT = game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
-
 local libs = require(script.Parent.Parent.Parent.import)
-local eval = require(script.Parent.Parent.Parent.eval)
-local moveOrdering = require(script.Parent.Parent.Parent.moveOrdering)
+local minimax = libs.Minimax
 
-local move = libs.Move;
-
-local SEQUENCE  = true
-
-local EXACT = 0
-local LOWERBOUND = 1
-local UPPERBOUND = 2
-
-local nodes = 0;
-local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta)
-    local hash = libs.BitBoard.hash(board)
-
-    -- TT lookup
-    local entry = TT and TT[hash]
-    if entry then
-        -- entry: {depth, score, flag, alpha, beta, bestMove}
-        if entry.depth >= maxDepth - depth then
-            if entry.flag == EXACT then
-                return entry.score, depth, entry.sequence
-            elseif entry.flag == LOWERBOUND and entry.score > alpha then
-                alpha = entry.score
-            elseif entry.flag == UPPERBOUND and entry.score < beta then
-                beta = entry.score
-            end
-
-            if alpha >= beta then
-                return entry.score, depth, entry.sequence
-            end
-        end
-    end
-
-
-    if depth >= maxDepth then
-        return eval(board), depth, if SEQUENCE then {} else nil
-    end
-
-    local maxDepthReached = depth
-    local bestScore = if isMaximizing then -math.huge else math.huge
-    local bestMove = nil
-    local bestSequence = nil
-    local alphaOrig = alpha
-    local betaOrig = beta
-
-    local allLegalMoves = libs.BitBoard.generate_legal_moves(board, false, board.side_to_move)
-    moveOrdering(board, allLegalMoves)
-
-    local n = #allLegalMoves
-
-    for i = 1, n do
-        local bestIndex = i
-        local bestMoveLocal = allLegalMoves[i]
-        local bestValue = move.getValue(bestMoveLocal)
-
-        for j = i + 1, n do
-            local m = allLegalMoves[j]
-            local v = move.getValue(m)
-            if v > bestValue then
-                bestValue = v
-                bestIndex = j
-                bestMoveLocal = m
-            end
-        end
-
-        -- swap
-        allLegalMoves[i], allLegalMoves[bestIndex] =
-            allLegalMoves[bestIndex], allLegalMoves[i]
-
-        local move = allLegalMoves[i]
-
-        local record = libs.BitBoard.make_move(board, move)
-
-        nodes += 1
-
-        local currentScore, childDepth, subSequence =
-            minimax(board, not isMaximizing, maxDepth, depth + 1, alpha, beta)
-
-        libs.BitBoard.undo_move(board, move, record)
-
-        if isMaximizing then
-            if currentScore > bestScore then
-                bestScore = currentScore
-                bestMove = move
-                bestSequence = subSequence
-            end
-            alpha = math.max(alpha, bestScore)
-        else
-            if currentScore < bestScore then
-                bestScore = currentScore
-                bestMove = move
-                bestSequence = subSequence
-            end
-            beta = math.min(beta, bestScore)
-        end
-
-        maxDepthReached = math.max(maxDepthReached, childDepth)
-
-        -- Alpha-beta pruning cutoff
-        if beta <= alpha then
-            break
-        end
-    end
-
-    -- Move sequence
-    local branchedSequence
-    if bestSequence then
-        branchedSequence = {bestMove}
-        for _, move in bestSequence do
-            table.insert(branchedSequence, move)
-        end
-    end
-
-    -- Transpositions
-    local flag
-    if bestScore <= alphaOrig then
-        flag = UPPERBOUND
-    elseif bestScore >= betaOrig then
-        flag = LOWERBOUND
-    else
-        flag = EXACT
-    end
-
-    TT[hash] = SharedTable.new({
-        depth = maxDepth - depth,
-        score = bestScore,
-        flag = flag,
-        sequence = branchedSequence,
-        bestMove = bestMove,
-    })
-
-
-    return bestScore, maxDepthReached, branchedSequence
-end
-
+-- In actor script
 actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
-    nodes = 1;
+    local board = libs.BitBoard.create()
+    libs.BitBoard.from_buffer(board, buffer.fromstring(tbl.board))
+    local score, bestMove, nodeCount, sequence = minimax(
+        board,
+        tbl.isMaximizing,
+        tbl.maxDepth,
+        tbl.depth,
+        -math.huge,
+        math.huge
+    )
 
-    local board = libs.BitBoard.create();
-    libs.BitBoard.from_buffer(board, buffer.fromstring(tbl.board));
-
-    local score, depthReached, moveSequence = minimax(board, tbl.isMaximizing, tbl.maxDepth, tbl.depth, -math.huge, math.huge);
-    tbl.score = score;
-    tbl.depth = depthReached;
-    tbl.moveSequence = SharedTable.new(if moveSequence then moveSequence else {});
-    tbl.nodes = nodes;
+    tbl.score = score
+    tbl.bestMove = bestMove or 0
+    tbl.nodes = nodeCount
+    tbl.moveSequence = sequence or SharedTable.new()
 end)

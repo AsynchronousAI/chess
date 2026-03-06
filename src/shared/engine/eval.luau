@@ -3,6 +3,10 @@
 --!strict
 
 local Utils = require("./utils")
+local zobrist = require("./zobrist")
+local transposition = if game then game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition") else {}
+
+
 
 local COLOR_STRIDE  = 6 * 64  -- 384
 local PIECE_STRIDE  = 64
@@ -99,5 +103,25 @@ return {
 	PST         = PST,
 	COLOR_STRIDE = COLOR_STRIDE,
 	PIECE_STRIDE = PIECE_STRIDE,
-	evaluate    = evaluate,
+	evaluate    = evaluate, -- while this fully evaluates.
+	eval = function(board) -- this incorporates hashing
+		if board.eval ~= nil then
+			return board.eval
+		end
+
+		local hash = --[[board.hash or]] zobrist.hash(board)
+		if transposition and hash then
+			local cached = transposition[hash]
+			if cached ~= nil then
+				board.eval = cached
+				return cached
+			end
+		end
+
+		board.eval = evaluate(board)
+		if transposition and hash then
+			transposition[hash] = board.eval
+		end
+		return board.eval
+	end
 }

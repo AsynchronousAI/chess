@@ -1,5 +1,5 @@
 {
-  "name": "Roblox-TS-Template",
+  "name": "chess",
   "globIgnorePaths": ["**/package.json", "**/tsconfig.json"],
   "tree": {
     "$className": "DataModel",
