@@ -14,9 +14,9 @@ Zobrist.en_passant   = table.create(8, 0)
 Zobrist.side_to_move = 0
 
 do
-    math.randomseed(12345678)  -- fixed seed, same across all actors
+    math.randomseed(2124644030)
     local function random()
-        return math.random(0, 0xFFFFFFFF)  -- full 32-bit
+        return math.random(0, 0xFFFFFFFF)
     end
 
 	for color = Utils.WHITE, Utils.BLACK do
