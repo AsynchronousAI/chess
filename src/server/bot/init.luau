@@ -106,7 +106,7 @@ return {
         end)
 
         print(`\n\
-depth: {minimaxResults.depth}\
+depth: {DEPTH}\
 eval: {minimaxResults.score}\
 time: {math.ceil((os.clock()-start)*1000)}ms\
 moves: {minimaxResults.sequence}\
