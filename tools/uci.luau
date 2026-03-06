@@ -1,12 +1,11 @@
 -- Run with Lute
-local io = require("@std/io")
+local io = require("@lute/io")
 
 local bitboard = require("../src/shared/engine/bitboard").BitBoard
 local Move = require("../src/shared/engine/move").Move
 local minimax = require("../src/shared/engine/minimax")
 
 local DEPTH = 5
-local running = true
 local board = bitboard.create()
 
 local FILES = {"a", "b", "c", "d", "e", "f", "g", "h"}
@@ -29,10 +28,6 @@ function parseSquare(square)
         error("Invalid square: " .. square)
     end
     return bitboard.get_square_index(fileIndex, rankIndex - 1)
-end
-function encodeSquare(square)
-    local fileIndex, rankIndex = unpack(bitboard.separate_square_index(square))
-    return FILES[fileIndex + 1] .. tostring(rankIndex + 1)
 end
 local function handlePosition(line)
     board = bitboard.create()
@@ -78,21 +73,26 @@ local function handleGo(line)
     local score, best, nodes, moveSeq = minimax(board, board.side_to_move == 1, depth, 0, -math.huge, math.huge)
     local timeTaken = math.floor((os.clock()-start)*1000)/1000;
 
-    for i = 1, #moveSeq do
-        moveSeq[i] = Move.toSimpleString(moveSeq[i])
+    local stringified = {}
+    for move in moveSeq do
+        table.insert(stringified, Move.toSimpleString(move))
     end
 
-    print(`info nodes {nodes} nps {math.ceil(nodes/timeTaken)} time {timeTaken}s depth {depth} eval {score}: {table.concat(moveSeq, " ")}`)
+    print(`info nodes {nodes} nps {math.ceil(nodes/timeTaken)} time {timeTaken}s depth {depth} eval {score}: {table.concat(stringified, " ")}`)
     print(`bestmove {Move.toSimpleString(best)}`)
 end
 
+local running = true
 while running do
-    local line = io.input():gsub("\n", "")
+    local line = io.read():gsub("[\r\n]+$", "")
+    if not line then break end
     if line and line ~= "" then
         if line == "uci" then
             print("id name roblox-chess-engine")
             print("id author AsynchronousAI")
             print("uciok")
+        elseif line == "ucinewgame" then
+            board = bitboard.create()
         elseif line == "isready" then
             print("readyok")
         elseif line:match("^position") then
