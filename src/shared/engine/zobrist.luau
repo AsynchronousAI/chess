@@ -14,11 +14,10 @@ Zobrist.en_passant   = table.create(8, 0)
 Zobrist.side_to_move = 0
 
 do
-	local seed = math.floor(os.clock() / 60)
-	math.randomseed(seed)
-	local function random()
-		return math.random(0, 0xFFFFFFF)
-	end
+    math.randomseed(12345678)  -- fixed seed, same across all actors
+    local function random()
+        return math.random(0, 0xFFFFFFFF)  -- full 32-bit
+    end
 
 	for color = Utils.WHITE, Utils.BLACK do
 		local color_base = color * COLOR_STRIDE
