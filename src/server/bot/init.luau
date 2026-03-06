@@ -27,7 +27,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
         local branch = libs.BitBoard.clone(board)
         libs.BitBoard.make_move(branch, move)
 
-        local thread = callback(branch, not isMaximizing, maxDepth, depth)
+        local thread = callback(branch, not isMaximizing, maxDepth, depth + 1)
         threads[index] = thread;
     end
 
