@@ -18,11 +18,7 @@ local PieceValues = {
 
 local TT = if game then game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions") else {}
 
-local promoTypes  = {1,  2,  3,  4}
-local promoValues = {18, 17, 19, 20}
-
 return function(board, moves)
-    local color = board.side_to_move
     local ttEntry = TT and TT[bitboard.hash(board)]
     local tt_from, tt_to, tt_promo
     if ttEntry and ttEntry.bestMove then
@@ -31,7 +27,6 @@ return function(board, moves)
         tt_promo = moveLib.getPromotion(ttEntry.bestMove)
     end
 
-    local n = #moves
     for i, move in moves do
         local from = moveLib.getFrom(move)
         local to = moveLib.getTo(move)
@@ -51,13 +46,5 @@ return function(board, moves)
 
         -- Normal move
         moves[i] = moveLib.setValue(move, value)
-
-        -- Promotions
-        if not promotion and piece==0 and ((color==0 and to>55) or (color==1 and to<8)) then
-            for i, p in promoTypes do
-                n += 1;
-                moves[n] = moveLib.setValue(moveLib.setPromotion(move, p), value + promoValues[i])
-            end
-        end
     end
 end
