@@ -20,7 +20,7 @@ local function readBB(buf, off)
 end
 
 function Encoding.to_buffer(self)
-	local buf = buffer.create(306)
+	local buf = buffer.create(402)
 	local off = 0
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
@@ -51,6 +51,8 @@ function Encoding.to_buffer(self)
 	buffer.writeu8(buf, off, self.en_passant_square or EN_PASSANT_NONE); off += 1
 	buffer.writeu16(buf, off, self.halfmove_clock);  off += 2
 	buffer.writeu16(buf, off, self.fullmove_number); off += 2
+	buffer.writef64(buf, off, self.eval);            off += 8
+	buffer.writei32(buf, off, self.hash);            off += 4
 	return buf
 end
 
@@ -93,6 +95,8 @@ function Encoding.from_buffer(self, buf)
 	self.en_passant_square = if ep == EN_PASSANT_NONE then nil else ep
 	self.halfmove_clock  = buffer.readu16(buf, off); off += 2
 	self.fullmove_number = buffer.readu16(buf, off); off += 2
+	self.eval            = buffer.readf64(buf, off); off += 8
+	self.hash            = buffer.readi32(buf, off); off += 4
 	return self
 end
 
