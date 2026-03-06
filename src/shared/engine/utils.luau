@@ -202,6 +202,21 @@ end
 local function split_pair(pair: number): (number, number)
 	return bit32.rshift(pair, 6), bit32.band(pair, 63)
 end
+local function print_matrix(hi: number, lo: number)
+    local cols = {}
+    for r = 0, 7 do
+        local row = {}
+        for c = 0, 7 do
+            local i = 63 - (r * 8 + c)
+            local v = (i >= 32)
+                and bit32.band(bit32.rshift(hi, i - 32), 1)
+                or  bit32.band(bit32.rshift(lo, i), 1)
+            row[#row+1] = v
+        end
+        table.insert(cols, table.concat(row, " "))
+    end
+    print(table.concat(cols, "\n"))
+end
 
 local ATTACKED_ALL = 6
 return {
@@ -260,6 +275,7 @@ return {
 	unit_board    = unit_board,
 	unit_board_lo = unit_board_lo,
 	unit_board_hi = unit_board_hi,
+	print_matrix = print_matrix,
 
 	-- 32-bit helpers
 	set_bit32   = set_bit32,

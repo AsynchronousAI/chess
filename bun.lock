@@ -7,7 +7,6 @@
         "@flamework/components": "latest",
         "@flamework/core": "latest",
         "@flamework/networking": "latest",
-        "@rbxts/better-react-components": "latest",
         "@rbxts/charm": "latest",
         "@rbxts/compiler-types": "latest",
         "@rbxts/flamework-binary-serializer": "^0.7.0",
@@ -82,8 +81,6 @@
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
     "@pkgr/core": ["@pkgr/core@0.2.9", "", {}, "sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA=="],
-
-    "@rbxts/better-react-components": ["@rbxts/better-react-components@2.9.1", "", { "dependencies": { "@rbxts/object-utils": "^1.0.4", "@rbxts/pretty-react-hooks": "^0.6.0", "@rbxts/react": "^17.2.1", "@rbxts/react-roblox": "^17.2.1", "@rbxts/ripple": "^0.9.1", "@rbxts/services": "^1.5.5" } }, "sha512-O3mXDtpctUEwqpo+X7iK3MPk0xDHmZpAL4PvMA6sYjOT86mJGV/MPFmNvZfNZa0rqjMs8rsNqYQVSaVIArevPg=="],
 
     "@rbxts/charm": ["@rbxts/charm@0.10.0", "", {}, "sha512-pcGpNyqNOcJ7r9UbAjFaUqU0F9Q+wCr4/2kUs8L0hh4dVhUN7t6ur4P7zAMzNuMJQG8YP47a9rq0l0/LlhLuow=="],
 

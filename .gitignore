@@ -7,3 +7,4 @@ flamework.build
 profile.out
 profile*.svg
 chess.luau
+tools/magicNumbers

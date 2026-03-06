@@ -9,124 +9,133 @@ local bb_sub_hi     = Utils.bb_sub_hi
 local BIT_LO        = Utils.BIT_LO
 local BIT_HI        = Utils.BIT_HI
 
-local SHIFT32 = 2 ^ 32
+-- Magic index
+local function mul64_hi64(a_hi: number, a_lo: number, b_hi: number, b_lo: number): (number, number)
+    local a, b = bit32.rshift(a_hi, 16), bit32.band(a_hi, 0xFFFF)
+    local c, d = bit32.rshift(a_lo, 16), bit32.band(a_lo, 0xFFFF)
+    local e, f = bit32.rshift(b_hi, 16), bit32.band(b_hi, 0xFFFF)
+    local g, h = bit32.rshift(b_lo, 16), bit32.band(b_lo, 0xFFFF)
 
-local function rook_magic_index(occ_hi: number, occ_lo: number, magic_hi: number, magic_lo: number, bits: number): number
-	local hi32 = (occ_hi * magic_hi) // SHIFT32 + (occ_lo * magic_lo) // SHIFT32
-	return bit32.rshift(bit32.band(hi32, 0xFFFFFFFF), 32 - bits)
+    local product_4 = d * h
+    local product_3 = bit32.rshift(product_4, 16) + c * h
+    local product_2 = bit32.rshift(product_3, 16)
+    product_3 = bit32.band(product_3, 0xFFFF) + d * g
+    product_2 += bit32.rshift(product_3, 16) + b * h
+    local product_1 = bit32.rshift(product_2, 16)
+    product_2 = bit32.band(product_2, 0xFFFF) + c * g
+    product_1 += bit32.rshift(product_2, 16)
+    product_2 = bit32.band(product_2, 0xFFFF) + d * f
+    product_1 += bit32.rshift(product_2, 16) + a * h + b * g + c * f + d * e
+
+    local hi = bit32.band(bit32.replace(product_2, product_1, 16, 16), 0xFFFFFFFF)
+    local lo = bit32.band(bit32.replace(product_4, product_3, 16, 16), 0xFFFFFFFF)
+    return hi, lo
+end
+local function magic_index(occ_hi: number, occ_lo: number, magic_hi: number, magic_lo: number, bits: number): number
+    local result_hi, result_lo = mul64_hi64(occ_hi, occ_lo, magic_hi, magic_lo)
+
+    local shift = 64 - bits
+    if shift >= 32 then
+        return bit32.rshift(result_hi, shift - 32)
+    else
+        return bit32.bor(
+            bit32.lshift(result_hi, 32 - shift),
+            bit32.rshift(result_lo, shift)
+        )
+    end
 end
 
-local function bishop_magic_index(occ_hi: number, occ_lo: number, magic_lo: number, bits: number): number
-	local folded = bit32.bxor(occ_lo, occ_hi)
-	local hi32   = (folded * magic_lo) // SHIFT32
-	return bit32.rshift(bit32.band(hi32, 0xFFFFFFFF), 32 - bits)
+local rook_magic_index = magic_index
+local bishop_magic_index = magic_index
+
+-- Slow, classical attacks
+local function apply_ray(ray_lo, ray_hi, occ_lo, occ_hi, positive, result_lo, result_hi)
+	local blk_lo = bit32.band(ray_lo, occ_lo)
+	local blk_hi = bit32.band(ray_hi, occ_hi)
+
+	if blk_lo == 0 and blk_hi == 0 then
+		result_lo = bit32.bor(result_lo, ray_lo)
+		result_hi = bit32.bor(result_hi, ray_hi)
+		return result_lo, result_hi
+	end
+
+	local blocker_sq
+	if positive then
+		blocker_sq = bb_countrz(blk_hi, blk_lo)
+	else
+		blocker_sq = 63 - bb_countlz(blk_hi, blk_lo)
+	end
+
+	local blo = BIT_LO[blocker_sq]
+	local bhi = BIT_HI[blocker_sq]
+
+	local s_lo = bb_sub_lo(blo, 1)
+	local s_hi = bb_sub_hi(bhi, 0, blo, 1)
+
+	local m_lo, m_hi
+	if positive then
+		m_lo = bit32.bor(blo, s_lo)
+		m_hi = bit32.bor(bhi, s_hi)
+	else
+		m_lo = bit32.bnot(s_lo)
+		m_hi = bit32.bnot(s_hi)
+	end
+
+	result_lo = bit32.bor(result_lo, bit32.band(ray_lo, m_lo))
+	result_hi = bit32.bor(result_hi, bit32.band(ray_hi, m_hi))
+
+	return result_lo, result_hi
+end
+local function classical_rook_attacks(square, occ_hi, occ_lo, rays)
+	local result_lo = 0
+	local result_hi = 0
+
+	result_lo, result_hi = apply_ray(rays.NORTH_LO[square], rays.NORTH_HI[square], occ_lo, occ_hi, true,  result_lo, result_hi)
+	result_lo, result_hi = apply_ray(rays.EAST_LO[square],  rays.EAST_HI[square],  occ_lo, occ_hi, true,  result_lo, result_hi)
+	result_lo, result_hi = apply_ray(rays.SOUTH_LO[square], rays.SOUTH_HI[square], occ_lo, occ_hi, false, result_lo, result_hi)
+	result_lo, result_hi = apply_ray(rays.WEST_LO[square],  rays.WEST_HI[square],  occ_lo, occ_hi, false, result_lo, result_hi)
+
+	return result_hi, result_lo
+end
+local function classical_bishop_attacks(square, occ_hi, occ_lo, rays)
+	local result_lo = 0
+	local result_hi = 0
+
+	result_lo, result_hi = apply_ray(rays.NE_LO[square], rays.NE_HI[square], occ_lo, occ_hi, true,  result_lo, result_hi)
+	result_lo, result_hi = apply_ray(rays.NW_LO[square], rays.NW_HI[square], occ_lo, occ_hi, true,  result_lo, result_hi)
+	result_lo, result_hi = apply_ray(rays.SE_LO[square], rays.SE_HI[square], occ_lo, occ_hi, false, result_lo, result_hi)
+	result_lo, result_hi = apply_ray(rays.SW_LO[square], rays.SW_HI[square], occ_lo, occ_hi, false, result_lo, result_hi)
+
+	return result_hi, result_lo
 end
 
-local function enumerate_subsets(mask_hi: number, mask_lo: number): ({number}, {number})
-	local los = {}
-	local his = {}
+-- Subset enumerator
+local function enumerate_subsets(mask_hi, mask_lo)
 	local sub_lo = 0
 	local sub_hi = 0
-	repeat
-		table.insert(los, sub_lo)
-		table.insert(his, sub_hi)
-		-- subset = (subset - mask) & mask
+	local first = true
+
+	return function()
+		if not first and sub_lo == 0 and sub_hi == 0 then
+			return nil
+		end
+
+		first = false
+
+		local ret_lo = sub_lo
+		local ret_hi = sub_hi
+
 		local new_lo = bb_sub_lo(sub_lo, mask_lo)
 		local new_hi = bb_sub_hi(sub_hi, mask_hi, sub_lo, mask_lo)
+
 		sub_lo = bit32.band(new_lo, mask_lo)
 		sub_hi = bit32.band(new_hi, mask_hi)
-	until sub_lo == 0 and sub_hi == 0
-	return los, his
-end
 
-local function classical_rook_attacks(square: number, occ_hi: number, occ_lo: number, rays): (number, number)
-	local result_lo = 0
-	local result_hi = 0
-
-	local function ray(ray_lo: number, ray_hi: number, positive: boolean)
-		local blk_lo = bit32.band(ray_lo, occ_lo)
-		local blk_hi = bit32.band(ray_hi, occ_hi)
-		if blk_lo == 0 and blk_hi == 0 then
-			result_lo = bit32.bor(result_lo, ray_lo)
-			result_hi = bit32.bor(result_hi, ray_hi)
-			return
-		end
-		local blocker_sq
-		if positive then
-			blocker_sq = bb_countrz(blk_hi, blk_lo)
-		else
-			blocker_sq = 63 - bb_countlz(blk_hi, blk_lo)
-		end
-		local blo = BIT_LO[blocker_sq]
-		local bhi = BIT_HI[blocker_sq]
-
-		local m_hi: number
-		if positive then
-			local s_lo = bb_sub_lo(blo, 1)
-			local s_hi = bb_sub_hi(bhi, 0, blo, 1)
-			m_lo = bit32.bor(blo, s_lo)
-			m_hi = bit32.bor(bhi, s_hi)
-		else
-			local s_lo = bb_sub_lo(blo, 1)
-			local s_hi = bb_sub_hi(bhi, 0, blo, 1)
-			m_lo = bit32.bnot(s_lo)
-			m_hi = bit32.bnot(s_hi)
-		end
-		result_lo = bit32.bor(result_lo, bit32.band(ray_lo, m_lo))
-		result_hi = bit32.bor(result_hi, bit32.band(ray_hi, m_hi))
+		return ret_lo, ret_hi
 	end
-
-	ray(rays.NORTH_LO[square], rays.NORTH_HI[square], true)
-	ray(rays.EAST_LO[square],  rays.EAST_HI[square],  true)
-	ray(rays.SOUTH_LO[square], rays.SOUTH_HI[square], false)
-	ray(rays.WEST_LO[square],  rays.WEST_HI[square],  false)
-	return result_hi, result_lo
 end
 
-local function classical_bishop_attacks(square: number, occ_hi: number, occ_lo: number, rays): (number, number)
-	local result_lo = 0
-	local result_hi = 0
-
-	local function ray(ray_lo: number, ray_hi: number, positive: boolean)
-		local blk_lo = bit32.band(ray_lo, occ_lo)
-		local blk_hi = bit32.band(ray_hi, occ_hi)
-		if blk_lo == 0 and blk_hi == 0 then
-			result_lo = bit32.bor(result_lo, ray_lo)
-			result_hi = bit32.bor(result_hi, ray_hi)
-			return
-		end
-		local blocker_sq
-		if positive then
-			blocker_sq = bb_countrz(blk_hi, blk_lo)
-		else
-			blocker_sq = 63 - bb_countlz(blk_hi, blk_lo)
-		end
-		local blo = BIT_LO[blocker_sq]
-		local bhi = BIT_HI[blocker_sq]
-		local m_lo: number
-		local m_hi: number
-		if positive then
-			local s_lo = bb_sub_lo(blo, 1)
-			local s_hi = bb_sub_hi(bhi, 0, blo, 1)
-			m_lo = bit32.bor(blo, s_lo)
-			m_hi = bit32.bor(bhi, s_hi)
-		else
-			local s_lo = bb_sub_lo(blo, 1)
-			local s_hi = bb_sub_hi(bhi, 0, blo, 1)
-			m_lo = bit32.bnot(s_lo)
-			m_hi = bit32.bnot(s_hi)
-		end
-		result_lo = bit32.bor(result_lo, bit32.band(ray_lo, m_lo))
-		result_hi = bit32.bor(result_hi, bit32.band(ray_hi, m_hi))
-	end
-
-	ray(rays.NE_LO[square], rays.NE_HI[square], true)
-	ray(rays.NW_LO[square], rays.NW_HI[square], true)
-	ray(rays.SE_LO[square], rays.SE_HI[square], false)
-	ray(rays.SW_LO[square], rays.SW_HI[square], false)
-	return result_hi, result_lo
-end
-
+-- Rook & Bishop masks
 local function make_rook_mask(square: number): (number, number)
 	local rank = math.floor(square / 8)
 	local file  = square % 8
@@ -154,7 +163,6 @@ local function make_rook_mask(square: number): (number, number)
 	end
 	return hi, lo
 end
-
 local function make_bishop_mask(square: number): (number, number)
 	local rank = math.floor(square / 8)
 	local file  = square % 8
@@ -168,63 +176,86 @@ local function make_bishop_mask(square: number): (number, number)
 	return hi, lo
 end
 
-return function(
-	ROOK_BITS, BISHOP_BITS,
-	ROOK_MAGICS_HI, ROOK_MAGICS_LO, BISHOP_MAGICS_LO,
-	rays
-)
-	local ROOK_MASK_LO   = table.create(64)
-	local ROOK_MASK_HI   = table.create(64)
-	local BISHOP_MASK_LO = table.create(64)
-	local BISHOP_MASK_HI = table.create(64)
+-- Initializer
+return {
+    rook_magic_index = rook_magic_index,
+    bishop_magic_index = bishop_magic_index,
+    apply_ray = apply_ray,
+    classical_rook_attacks = classical_rook_attacks,
+    classical_bishop_attacks = classical_bishop_attacks,
+    enumerate_subsets = enumerate_subsets,
+    make_rook_mask = make_rook_mask,
+    make_bishop_mask = make_bishop_mask,
 
-	local ROOK_TABLE_LO:   {{number}} = table.create(64)
-	local ROOK_TABLE_HI:   {{number}} = table.create(64)
-	local BISHOP_TABLE_LO: {{number}} = table.create(64)
-	local BISHOP_TABLE_HI: {{number}} = table.create(64)
+    iniitialize = function(
+    	ROOK_BITS, BISHOP_BITS,
+    	ROOK_MAGICS_HI, ROOK_MAGICS_LO, BISHOP_MAGICS_HI, BISHOP_MAGICS_LO,
+    	rays
+    )
+    	local ROOK_MASK_LO   = table.create(64)
+    	local ROOK_MASK_HI   = table.create(64)
+    	local BISHOP_MASK_LO = table.create(64)
+    	local BISHOP_MASK_HI = table.create(64)
 
-	for square = 0, 63 do
-		local rmask_hi, rmask_lo = make_rook_mask(square)
-		ROOK_MASK_LO[square] = rmask_lo
-		ROOK_MASK_HI[square] = rmask_hi
+    	local ROOK_TABLE_LO:   {{number}} = table.create(64)
+    	local ROOK_TABLE_HI:   {{number}} = table.create(64)
+    	local BISHOP_TABLE_LO: {{number}} = table.create(64)
+    	local BISHOP_TABLE_HI: {{number}} = table.create(64)
 
-		local rbits  = ROOK_BITS[square + 1]
-		local rtable_lo = table.create(bit32.lshift(1, rbits))
-		local rtable_hi = table.create(bit32.lshift(1, rbits))
-		ROOK_TABLE_LO[square] = rtable_lo
-		ROOK_TABLE_HI[square] = rtable_hi
+    	for square = 0, 63 do
+    	    -- Rook masks
+    		local rmask_hi, rmask_lo = make_rook_mask(square)
+    		ROOK_MASK_LO[square] = rmask_lo
+    		ROOK_MASK_HI[square] = rmask_hi
 
-		local occ_los, occ_his = enumerate_subsets(rmask_hi, rmask_lo)
-		for i = 1, #occ_los do
-			local occ_lo = occ_los[i]
-			local occ_hi = occ_his[i]
-			local idx = rook_magic_index(occ_hi, occ_lo, ROOK_MAGICS_HI[square + 1], ROOK_MAGICS_LO[square + 1], rbits)
-			local att_hi, att_lo = classical_rook_attacks(square, occ_hi, occ_lo, rays)
-			rtable_lo[idx] = att_lo
-			rtable_hi[idx] = att_hi
-		end
+    		-- Rook attacks
+    		local rbits  = ROOK_BITS[square + 1]
+    		local rtable_lo = table.create(bit32.lshift(1, rbits))
+    		local rtable_hi = table.create(bit32.lshift(1, rbits))
+    		for occ_lo, occ_hi in enumerate_subsets(rmask_hi, rmask_lo) do
+    			local idx = rook_magic_index(
+    				occ_hi, occ_lo,
+    				ROOK_MAGICS_HI[square + 1],
+    				ROOK_MAGICS_LO[square + 1],
+    				rbits
+    			)
 
-		local bmask_hi, bmask_lo = make_bishop_mask(square)
-		BISHOP_MASK_LO[square] = bmask_lo
-		BISHOP_MASK_HI[square] = bmask_hi
+    			local att_hi, att_lo = classical_rook_attacks(square, occ_hi, occ_lo, rays)
 
-		local bbits  = BISHOP_BITS[square + 1]
-		local btable_lo = table.create(bit32.lshift(1, bbits))
-		local btable_hi = table.create(bit32.lshift(1, bbits))
-		BISHOP_TABLE_LO[square] = btable_lo
-		BISHOP_TABLE_HI[square] = btable_hi
+    			rtable_lo[idx] = att_lo
+    			rtable_hi[idx] = att_hi
+    		end
+    		ROOK_TABLE_LO[square] = rtable_lo
+    		ROOK_TABLE_HI[square] = rtable_hi
 
-		local bocc_los, bocc_his = enumerate_subsets(bmask_hi, bmask_lo)
-		for i = 1, #bocc_los do
-			local occ_lo = bocc_los[i]
-			local occ_hi = bocc_his[i]
-			local idx = bishop_magic_index(occ_hi, occ_lo, BISHOP_MAGICS_LO[square + 1], bbits)
-			local att_hi, att_lo = classical_bishop_attacks(square, occ_hi, occ_lo, rays)
-			btable_lo[idx] = att_lo
-			btable_hi[idx] = att_hi
-		end
-	end
+    		-- Bishop masks
+    		local bmask_hi, bmask_lo = make_bishop_mask(square)
+    		BISHOP_MASK_LO[square] = bmask_lo
+    		BISHOP_MASK_HI[square] = bmask_hi
 
-	return ROOK_MASK_LO, ROOK_MASK_HI, BISHOP_MASK_LO, BISHOP_MASK_HI,
-	       ROOK_TABLE_LO, ROOK_TABLE_HI, BISHOP_TABLE_LO, BISHOP_TABLE_HI
-end
+    		-- Bishop attacks
+    		local bbits  = BISHOP_BITS[square + 1]
+    		local btable_lo = table.create(bit32.lshift(1, bbits))
+    		local btable_hi = table.create(bit32.lshift(1, bbits))
+    		for occ_lo, occ_hi in enumerate_subsets(bmask_hi, bmask_lo) do
+    			local idx = bishop_magic_index(
+    				occ_hi,
+    				occ_lo,
+    				BISHOP_MAGICS_HI[square + 1],
+    				BISHOP_MAGICS_LO[square + 1],
+    				bbits
+    			)
+
+    			local att_hi, att_lo = classical_bishop_attacks(square, occ_hi, occ_lo, rays)
+
+    			btable_lo[idx] = att_lo
+    			btable_hi[idx] = att_hi
+    		end
+    		BISHOP_TABLE_LO[square] = btable_lo
+    		BISHOP_TABLE_HI[square] = btable_hi
+    	end
+
+    	return ROOK_MASK_LO, ROOK_MASK_HI, BISHOP_MASK_LO, BISHOP_MASK_HI,
+    	       ROOK_TABLE_LO, ROOK_TABLE_HI, BISHOP_TABLE_LO, BISHOP_TABLE_HI
+    end
+}

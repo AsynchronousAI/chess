@@ -2,52 +2,37 @@
 --!optimize 2
 local Magics = require("./magics")
 local Utils  = require("./utils")
+local attacks_init = require("./attacks_init")
 
-local bb_lshift_lo  = Utils.bb_lshift_lo
-local bb_lshift_hi  = Utils.bb_lshift_hi
-local bb_rshift_lo  = Utils.bb_rshift_lo
-local bb_rshift_hi  = Utils.bb_rshift_hi
-local bb_countrz    = Utils.bb_countrz
-local bb_sub_lo     = Utils.bb_sub_lo
-local bb_sub_hi     = Utils.bb_sub_hi
-local BIT_LO        = Utils.BIT_LO
-local BIT_HI        = Utils.BIT_HI
-local unit_board_lo = Utils.unit_board_lo
-local unit_board_hi = Utils.unit_board_hi
-local get_bit       = Utils.get_bit
-local set_bit_lo    = Utils.set_bit_lo
-local set_bit_hi    = Utils.set_bit_hi
+local bb_lshift_lo, bb_lshift_hi = Utils.bb_lshift_lo, Utils.bb_lshift_hi
+local bb_rshift_lo, bb_rshift_hi = Utils.bb_rshift_lo, Utils.bb_rshift_hi
+local bb_countrz = Utils.bb_countrz
+local bb_sub_lo, bb_sub_hi = Utils.bb_sub_lo, Utils.bb_sub_hi
+local BIT_LO, BIT_HI, WHITE = Utils.BIT_LO, Utils.BIT_HI, Utils.WHITE
+local get_bit = Utils.get_bit
+local set_bit_lo, set_bit_hi = Utils.set_bit_lo, Utils.set_bit_hi
 
-local WHITE = Utils.WHITE
 local NOT_FILE_A_LO,  NOT_FILE_A_HI  = Utils.NOT_FILE_A_LO,  Utils.NOT_FILE_A_HI
 local NOT_FILE_H_LO,  NOT_FILE_H_HI  = Utils.NOT_FILE_H_LO,  Utils.NOT_FILE_H_HI
 local NOT_FILE_AB_LO, NOT_FILE_AB_HI = Utils.NOT_FILE_AB_LO, Utils.NOT_FILE_AB_HI
 local NOT_FILE_GH_LO, NOT_FILE_GH_HI = Utils.NOT_FILE_GH_LO, Utils.NOT_FILE_GH_HI
 
+local KNIGHT_MOVES_LO, KNIGHT_MOVES_HI = table.create(64), table.create(64)
+local KING_MOVES_LO, KING_MOVES_HI     = table.create(64), table.create(64)
+
+local RAY_NORTH_LO, RAY_NORTH_HI = table.create(64), table.create(64)
+local RAY_SOUTH_LO, RAY_SOUTH_HI = table.create(64), table.create(64)
+local RAY_EAST_LO,  RAY_EAST_HI  = table.create(64), table.create(64)
+local RAY_WEST_LO,  RAY_WEST_HI  = table.create(64), table.create(64)
+local RAY_NE_LO,    RAY_NE_HI    = table.create(64), table.create(64)
+local RAY_NW_LO,    RAY_NW_HI    = table.create(64), table.create(64)
+local RAY_SE_LO,    RAY_SE_HI    = table.create(64), table.create(64)
+local RAY_SW_LO,    RAY_SW_HI    = table.create(64), table.create(64)
+
 local Attacks = {}
 
-local KNIGHT_MOVES_LO = table.create(64)
-local KNIGHT_MOVES_HI = table.create(64)
-local KING_MOVES_LO   = table.create(64)
-local KING_MOVES_HI   = table.create(64)
 
-local RAY_NORTH_LO = table.create(64)
-local RAY_NORTH_HI = table.create(64)
-local RAY_SOUTH_LO = table.create(64)
-local RAY_SOUTH_HI = table.create(64)
-local RAY_EAST_LO  = table.create(64)
-local RAY_EAST_HI  = table.create(64)
-local RAY_WEST_LO  = table.create(64)
-local RAY_WEST_HI  = table.create(64)
-local RAY_NE_LO    = table.create(64)
-local RAY_NE_HI    = table.create(64)
-local RAY_NW_LO    = table.create(64)
-local RAY_NW_HI    = table.create(64)
-local RAY_SE_LO    = table.create(64)
-local RAY_SE_HI    = table.create(64)
-local RAY_SW_LO    = table.create(64)
-local RAY_SW_HI    = table.create(64)
-
+-- Pawn Attacks
 function Attacks.bulk_pawn_attacks_lo(bb_hi: number, bb_lo: number, color: number): number
 	if color == WHITE then
 		return bit32.bor(
@@ -75,6 +60,7 @@ function Attacks.bulk_pawn_attacks_hi(bb_hi: number, bb_lo: number, color: numbe
 	end
 end
 
+-- Knight attacks
 function Attacks.bulk_knight_attacks_lo(bb_hi: number, bb_lo: number): number
 	return bit32.bor(
 		bit32.band(bb_lshift_lo(bb_lo, 17), NOT_FILE_A_LO),
@@ -100,6 +86,7 @@ function Attacks.bulk_knight_attacks_hi(bb_hi: number, bb_lo: number): number
 	)
 end
 
+-- King attacks
 function Attacks.bulk_king_attacks_lo(bb_hi: number, bb_lo: number): number
 	return bit32.bor(
 		bit32.band(bb_lshift_lo(bb_lo, 1), NOT_FILE_A_LO),
@@ -125,12 +112,7 @@ function Attacks.bulk_king_attacks_hi(bb_hi: number, bb_lo: number): number
 	)
 end
 
-local ROOK_BITS        = Magics.rook.bits
-local ROOK_MAGICS_HI   = Magics.rook.hi
-local ROOK_MAGICS_LO   = Magics.rook.lo
-local BISHOP_BITS      = Magics.bishop.bits
-local BISHOP_MAGICS_LO = Magics.bishop.lo
-
+-- Generate rays, and precompute individual piece attacks
 do
 	for square = 0, 63 do
 		local blo = BIT_LO[square]
@@ -182,123 +164,72 @@ do
 	end
 end
 
-local ROOK_MASK_LO, ROOK_MASK_HI, BISHOP_MASK_LO, BISHOP_MASK_HI,
-      ROOK_TABLE_LO, ROOK_TABLE_HI, BISHOP_TABLE_LO, BISHOP_TABLE_HI =
-	require("./attacks_init")(
-		ROOK_BITS, BISHOP_BITS,
-		ROOK_MAGICS_HI, ROOK_MAGICS_LO, BISHOP_MAGICS_LO,
-		{
-			NORTH_LO = RAY_NORTH_LO, NORTH_HI = RAY_NORTH_HI,
-			SOUTH_LO = RAY_SOUTH_LO, SOUTH_HI = RAY_SOUTH_HI,
-			EAST_LO  = RAY_EAST_LO,  EAST_HI  = RAY_EAST_HI,
-			WEST_LO  = RAY_WEST_LO,  WEST_HI  = RAY_WEST_HI,
-			NE_LO    = RAY_NE_LO,    NE_HI    = RAY_NE_HI,
-			NW_LO    = RAY_NW_LO,    NW_HI    = RAY_NW_HI,
-			SE_LO    = RAY_SE_LO,    SE_HI    = RAY_SE_HI,
-			SW_LO    = RAY_SW_LO,    SW_HI    = RAY_SW_HI,
-		}
-	)
-
-local SHIFT32 = 2 ^ 32
-
-local function rook_magic_index(occ_hi: number, occ_lo: number, magic_hi: number, magic_lo: number, bits: number): number
-	local hi32 = (occ_hi * magic_hi) // SHIFT32 + (occ_lo * magic_lo) // SHIFT32
-	return bit32.rshift(bit32.band(hi32, 0xFFFFFFFF), 32 - bits)
-end
-local function bishop_magic_index(occ_hi: number, occ_lo: number, magic_lo: number, bits: number): number
-	local folded = bit32.bxor(occ_lo, occ_hi)
-	local hi32   = (folded * magic_lo) // SHIFT32
-	return bit32.rshift(bit32.band(hi32, 0xFFFFFFFF), 32 - bits)
-end
-
+-- Individual piece attack getters
 function Attacks.knight_attacks_lo(square: number): number return KNIGHT_MOVES_LO[square] end
 function Attacks.knight_attacks_hi(square: number): number return KNIGHT_MOVES_HI[square] end
 function Attacks.king_attacks_lo(square: number):   number return KING_MOVES_LO[square]   end
 function Attacks.king_attacks_hi(square: number):   number return KING_MOVES_HI[square]   end
 
-local function rook_attacks_occ(square: number, occ_hi: number, occ_lo: number, my_hi: number, my_lo: number): (number, number)
-	local s1 = square + 1
-	local mask_lo = bit32.band(occ_lo, ROOK_MASK_LO[square])
-	local mask_hi = bit32.band(occ_hi, ROOK_MASK_HI[square])
-	local idx = rook_magic_index(mask_hi, mask_lo, ROOK_MAGICS_HI[s1], ROOK_MAGICS_LO[s1], ROOK_BITS[s1])
-	local t_lo = ROOK_TABLE_LO[square][idx]
-	local t_hi = ROOK_TABLE_HI[square][idx]
-	return bit32.band(t_hi, bit32.bnot(my_hi)), bit32.band(t_lo, bit32.bnot(my_lo))
-end
+-- Load precomputed masks & tables
+local ROOK_BITS, ROOK_MAGICS_HI, ROOK_MAGICS_LO = Magics.rook.bits, Magics.rook.hi, Magics.rook.lo
+local BISHOP_BITS, BISHOP_MAGICS_LO, BISHOP_MAGICS_HI = Magics.bishop.bits, Magics.bishop.lo, Magics.bishop.hi
 
-local function bishop_attacks_occ(square: number, occ_hi: number, occ_lo: number, my_hi: number, my_lo: number): (number, number)
-	local s1 = square + 1
-	local mask_lo = bit32.band(occ_lo, BISHOP_MASK_LO[square])
-	local mask_hi = bit32.band(occ_hi, BISHOP_MASK_HI[square])
-	local idx = bishop_magic_index(mask_hi, mask_lo, BISHOP_MAGICS_LO[s1], BISHOP_BITS[s1])
-	local t_lo = BISHOP_TABLE_LO[square][idx]
-	local t_hi = BISHOP_TABLE_HI[square][idx]
-	return bit32.band(t_hi, bit32.bnot(my_hi)), bit32.band(t_lo, bit32.bnot(my_lo))
-end
+local ROOK_MASK_LO, ROOK_MASK_HI, BISHOP_MASK_LO, BISHOP_MASK_HI, ROOK_TABLE_LO, ROOK_TABLE_HI, BISHOP_TABLE_LO, BISHOP_TABLE_HI = attacks_init.iniitialize(
+	ROOK_BITS, BISHOP_BITS,
+	ROOK_MAGICS_HI, ROOK_MAGICS_LO, BISHOP_MAGICS_HI, BISHOP_MAGICS_LO,
+	{
+		NORTH_LO = RAY_NORTH_LO, NORTH_HI = RAY_NORTH_HI,
+		SOUTH_LO = RAY_SOUTH_LO, SOUTH_HI = RAY_SOUTH_HI,
+		EAST_LO  = RAY_EAST_LO,  EAST_HI  = RAY_EAST_HI,
+		WEST_LO  = RAY_WEST_LO,  WEST_HI  = RAY_WEST_HI,
+		NE_LO    = RAY_NE_LO,    NE_HI    = RAY_NE_HI,
+		NW_LO    = RAY_NW_LO,    NW_HI    = RAY_NW_HI,
+		SE_LO    = RAY_SE_LO,    SE_HI    = RAY_SE_HI,
+		SW_LO    = RAY_SW_LO,    SW_HI    = RAY_SW_HI,
+	}
+)
+local rook_magic_index, bishop_magic_index = attacks_init.rook_magic_index, attacks_init.bishop_magic_index
 
-function Attacks.rook_attacks_hi(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): number
-	local occ_lo = bit32.bor(my_lo, other_lo)
-	local occ_hi = bit32.bor(my_hi, other_hi)
-	local hi, _ = rook_attacks_occ(square, occ_hi, occ_lo, my_hi, my_lo)
-	return hi
-end
-function Attacks.rook_attacks_lo(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): number
-	local occ_lo = bit32.bor(my_lo, other_lo)
-	local occ_hi = bit32.bor(my_hi, other_hi)
-	local _, lo = rook_attacks_occ(square, occ_hi, occ_lo, my_hi, my_lo)
-	return lo
-end
-
-function Attacks.bishop_attacks_hi(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): number
-	local occ_lo = bit32.bor(my_lo, other_lo)
-	local occ_hi = bit32.bor(my_hi, other_hi)
-	local hi, _ = bishop_attacks_occ(square, occ_hi, occ_lo, my_hi, my_lo)
-	return hi
-end
-function Attacks.bishop_attacks_lo(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): number
-	local occ_lo = bit32.bor(my_lo, other_lo)
-	local occ_hi = bit32.bor(my_hi, other_hi)
-	local _, lo = bishop_attacks_occ(square, occ_hi, occ_lo, my_hi, my_lo)
-	return lo
-end
-
--- Combined hi+lo versions (returned as two values) for callers that need both
+-- Get precomputed attacks
 function Attacks.rook_attacks(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): (number, number)
-	local occ_lo = bit32.bor(my_lo, other_lo)
 	local occ_hi = bit32.bor(my_hi, other_hi)
-	return rook_attacks_occ(square, occ_hi, occ_lo, my_hi, my_lo)
+	local occ_lo = bit32.bor(my_lo, other_lo)
+	local s1 = square + 1
+
+	local idx = rook_magic_index(
+		bit32.band(occ_hi, ROOK_MASK_HI[square]),
+		bit32.band(occ_lo, ROOK_MASK_LO[square]),
+		ROOK_MAGICS_HI[s1],
+		ROOK_MAGICS_LO[s1],
+		ROOK_BITS[s1]
+	)
+
+	return bit32.band(ROOK_TABLE_HI[square][idx], bit32.bnot(my_hi)),
+	       bit32.band(ROOK_TABLE_LO[square][idx], bit32.bnot(my_lo))
 end
 function Attacks.bishop_attacks(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): (number, number)
-	local occ_lo = bit32.bor(my_lo, other_lo)
 	local occ_hi = bit32.bor(my_hi, other_hi)
-	return bishop_attacks_occ(square, occ_hi, occ_lo, my_hi, my_lo)
-end
-function Attacks.queen_attacks(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): (number, number)
 	local occ_lo = bit32.bor(my_lo, other_lo)
-	local occ_hi = bit32.bor(my_hi, other_hi)
-	local not_my_lo = bit32.bnot(my_lo)
-	local not_my_hi = bit32.bnot(my_hi)
 	local s1 = square + 1
 
-	local rm_lo = bit32.band(occ_lo, ROOK_MASK_LO[square])
-	local rm_hi = bit32.band(occ_hi, ROOK_MASK_HI[square])
-	local ridx  = rook_magic_index(rm_hi, rm_lo, ROOK_MAGICS_HI[s1], ROOK_MAGICS_LO[s1], ROOK_BITS[s1])
-
-	local bm_lo = bit32.band(occ_lo, BISHOP_MASK_LO[square])
-	local bm_hi = bit32.band(occ_hi, BISHOP_MASK_HI[square])
-	local bidx  = bishop_magic_index(bm_hi, bm_lo, BISHOP_MAGICS_LO[s1], BISHOP_BITS[s1])
-
-	local res_hi = bit32.bor(
-		bit32.band(ROOK_TABLE_HI[square][ridx],   not_my_hi),
-		bit32.band(BISHOP_TABLE_HI[square][bidx], not_my_hi)
+	local idx = bishop_magic_index(
+		bit32.band(occ_hi, BISHOP_MASK_HI[square]),
+		bit32.band(occ_lo, BISHOP_MASK_LO[square]),
+		BISHOP_MAGICS_HI[s1],
+		BISHOP_MAGICS_LO[s1],
+		BISHOP_BITS[s1]
 	)
-	local res_lo = bit32.bor(
-		bit32.band(ROOK_TABLE_LO[square][ridx],   not_my_lo),
-		bit32.band(BISHOP_TABLE_LO[square][bidx], not_my_lo)
-	)
-	return res_hi, res_lo
+
+	return bit32.band(BISHOP_TABLE_HI[square][idx], bit32.bnot(my_hi)),
+	       bit32.band(BISHOP_TABLE_LO[square][idx], bit32.bnot(my_lo))
+end
+function Attacks.queen_attacks(square: number, my_hi: number, my_lo: number, other_hi: number, other_lo: number): (number, number)
+	local rh, rl = Attacks.rook_attacks(square, my_hi, my_lo, other_hi, other_lo)
+	local bh, bl = Attacks.bishop_attacks(square, my_hi, my_lo, other_hi, other_lo)
+	return bit32.bor(rh, bh), bit32.bor(rl, bl)
 end
 
+-- Use rays to see if two pieces are colinear
 function Attacks.between_squares_rook(a: number, b: number): (number, number)
 	if get_bit(RAY_NORTH_HI[a], RAY_NORTH_LO[a], b) then
 		return bit32.band(RAY_NORTH_HI[a], RAY_SOUTH_HI[b]), bit32.band(RAY_NORTH_LO[a], RAY_SOUTH_LO[b])
@@ -330,6 +261,7 @@ function Attacks.between_squares_bishop(a: number, b: number): (number, number)
 	return 0, 0
 end
 
+-- Line precomputation to get a ray from LINE[start][end]
 local LINE_LO = table.create(64)
 local LINE_HI = table.create(64)
 for a = 0, 63 do
@@ -373,6 +305,7 @@ do
 	end
 end
 
+-- Exports
 Attacks.LINE_LO = LINE_LO
 Attacks.LINE_HI = LINE_HI
 
