@@ -2,7 +2,8 @@ local bitboard = require("../src/shared/engine/bitboard").BitBoard
 local Move = require("../src/shared/engine/move").Move
 local minimax = require("../src/shared/engine/minimax")
 
-local DEPTH = 5
+local DEPTH = 10
+local TIME_LIMIT_MS = 500
 local MAX_MOVES = math.huge
 
 local nodes = 0
@@ -52,7 +53,7 @@ while moveCount < MAX_MOVES do
     end
 
     local isWhite = board.side_to_move == 1
-    local score, move, n = minimax(board, isWhite, DEPTH, 0, -math.huge, math.huge)
+    local score, move, n, _, depthReached, maxPlyReached = minimax(board, isWhite, DEPTH, 0, -math.huge, math.huge, TIME_LIMIT_MS)
     nodes += n
     if not move then
         print("Could not find move")
@@ -71,11 +72,14 @@ while moveCount < MAX_MOVES do
 
     printBoard(board)
     print(string.format(
-        "Move %d: %s\n %s | eval: %.2f | time: %dms | nodes: %d | %d nodes/sec",
+        "Move %d: %s\n %s | eval: %.2f | maxDepth: %d | depth: %d | maxPly: %d | time: %dms | nodes: %d | %d nodes/sec",
         moveCount,
         bitboard.to_fen(board),
         Move.toString(move),
         score,
+        DEPTH,
+        depthReached,
+        maxPlyReached,
         math.ceil(time * 1000),
         nodes,
         nps

@@ -12,17 +12,20 @@ local minimax = libs.Minimax
 actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
     local board = libs.BitBoard.create()
     libs.BitBoard.from_buffer(board, buffer.fromstring(tbl.board))
-    local score, bestMove, nodeCount, sequence = minimax(
+    local score, bestMove, nodeCount, sequence, depthReached, maxPly = minimax(
         board,
         tbl.isMaximizing,
         tbl.maxDepth,
         tbl.depth,
         -math.huge,
-        math.huge
+        math.huge,
+        tbl.timeLimitMs
     )
 
     tbl.score = score
     tbl.bestMove = bestMove or 0
     tbl.nodes = nodeCount
     tbl.moveSequence = sequence or SharedTable.new()
+    tbl.depthReached = depthReached or 0
+    tbl.maxPly = maxPly or 0
 end)

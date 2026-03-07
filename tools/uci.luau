@@ -68,9 +68,10 @@ local function handlePosition(line)
 end
 local function handleGo(line)
     local depth = tonumber(line:match("depth (%d+)") or DEPTH)
+    local movetimeMs = tonumber(line:match("movetime (%d+)"))
 
     local start = os.clock()
-    local score, best, nodes, moveSeq = minimax(board, board.side_to_move == 1, depth, 0, -math.huge, math.huge)
+    local score, best, nodes, moveSeq = minimax(board, board.side_to_move == 1, depth, 0, -math.huge, math.huge, movetimeMs)
     local timeTaken = math.floor((os.clock()-start)*1000)/1000;
 
     local stringified = {}

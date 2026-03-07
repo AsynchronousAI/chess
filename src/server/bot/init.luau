@@ -3,6 +3,7 @@
 local libs = require(script.import)
 
 local DEPTH = if game:GetService("RunService"):IsStudio() then 5 else 3
+local TIME_LIMIT_MS = 350
 
 local MinimaxTranspositions = game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
 local EvaluationTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
@@ -16,6 +17,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     end
 
     local maxDepthReached = depth
+    local maxPlyReached = 0
     local bestScore = isMaximizing and -math.huge or math.huge
 
     local allLegalMoves = libs.BitBoard.generate_legal_moves(board, false, board.side_to_move)
@@ -49,7 +51,8 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
     local sequence = {}
     for index, thread in threads do
         local currentScore = thread.score;
-        local childDepth = thread.depth;
+        local childDepthReached = thread.depthReached or thread.depth;
+        local childMaxPly = thread.maxPly or 0;
         local move = allLegalMoves[index];
 
         if if isMaximizing then currentScore > bestScore else currentScore < bestScore then
@@ -59,7 +62,8 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
         end
 
         nodes += thread.nodes
-        maxDepthReached = math.max(maxDepthReached, childDepth)
+        maxDepthReached = math.max(maxDepthReached, childDepthReached)
+        maxPlyReached = math.max(maxPlyReached, childMaxPly)
     end
 
     -- Convert to sequence string
@@ -68,7 +72,7 @@ local function minimaxHost(board, isMaximizing, maxDepth, depth, callback)
         bestSequence = `{bestSequence}{libs.Move.toString(v)} `
     end
 
-    return {score = bestScore, depth = maxDepthReached, bestMove = bestMove, sequence = bestSequence, legalMoves = #allLegalMoves, nodes = nodes}
+    return {score = bestScore, depth = maxDepthReached, depthReached = maxDepthReached, maxPly = maxPlyReached, bestMove = bestMove, sequence = bestSequence, legalMoves = #allLegalMoves, nodes = nodes}
 end
 
 --[[ Actor Pool ]]
@@ -100,6 +104,7 @@ return {
             tbl.isMaximizing = isMaximizing;
             tbl.maxDepth = maxDepth;
             tbl.depth = depth;
+            tbl.timeLimitMs = TIME_LIMIT_MS;
 
             actors[index]:SendMessage("Minimax", tbl)
             return tbl
@@ -107,11 +112,14 @@ return {
 
         print(`\n\
 depth: {DEPTH}\
+depthReached: {minimaxResults.depthReached}\
+maxPly: {minimaxResults.maxPly}\
 eval: {minimaxResults.score}\
 time: {math.ceil((os.clock()-start)*1000)}ms\
 moves: {minimaxResults.sequence}\
 heads: {minimaxResults.legalMoves}\
-nodes: {minimaxResults.nodes}\n\
+nodes: {minimaxResults.nodes}\
+\n\
 minimaxTable: {SharedTable.size(MinimaxTranspositions)}\
 evaluationTable: {SharedTable.size(EvaluationTransposition)}\
 legalMoves: {SharedTable.size(LegalMovesTransposition)}`)
