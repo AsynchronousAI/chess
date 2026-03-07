@@ -16,6 +16,12 @@ local UPPERBOUND = 2
 
 local NULL_MOVE_REDUCTION = 2
 local QUIESCENCE_MAX_DEPTH = 6
+local FUTILITY_DEPTH = 2
+local FUTILITY_MARGIN = 150
+local ASPIRATION_WINDOW = 100
+local LMR_DEPTH = 3
+local LMR_MOVE_THRESHOLD = 3
+local LMR_REDUCTION = 1
 
 local nodes = 0
 local startTime = 0
@@ -216,6 +222,19 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
     end
 
     local inCheck = isInCheck(board, board.side_to_move)
+    if depthRemaining <= FUTILITY_DEPTH and not inCheck then
+        local standPat = eval(board)
+        if isMaximizing then
+            if standPat + FUTILITY_MARGIN <= alpha then
+                return standPat, nil
+            end
+        else
+            if standPat - FUTILITY_MARGIN >= beta then
+                return standPat, nil
+            end
+        end
+    end
+
     if allowNull and depthRemaining >= 3 and not inCheck then
         local old = doNullMove(board)
         local score = alphaBeta(board, not isMaximizing, depthRemaining - 1 - NULL_MOVE_REDUCTION, alpha, beta, false)
@@ -263,10 +282,33 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
         allLegalMoves[i], allLegalMoves[bestIndex] = allLegalMoves[bestIndex], allLegalMoves[i]
 
         local move = allLegalMoves[i]
+        local isCapture = Move.getCaptured(move) or Move.getEnPassant(move)
+        local isPromotion = Move.getPromotion(move) ~= nil
+        local reduction = 0
+        if depthRemaining >= LMR_DEPTH and i > LMR_MOVE_THRESHOLD and not inCheck and not isCapture and not isPromotion then
+            reduction = LMR_REDUCTION
+        end
+
         local record = bitboard.make_move(board, move)
         nodes += 1
 
-        local score = alphaBeta(board, not isMaximizing, depthRemaining - 1, alpha, beta, true)
+        local score
+        if reduction > 0 then
+            score = alphaBeta(board, not isMaximizing, depthRemaining - 1 - reduction, alpha, beta, true)
+            if not stopSearch then
+                if isMaximizing then
+                    if score > alpha then
+                        score = alphaBeta(board, not isMaximizing, depthRemaining - 1, alpha, beta, true)
+                    end
+                else
+                    if score < beta then
+                        score = alphaBeta(board, not isMaximizing, depthRemaining - 1, alpha, beta, true)
+                    end
+                end
+            end
+        else
+            score = alphaBeta(board, not isMaximizing, depthRemaining - 1, alpha, beta, true)
+        end
 
         bitboard.undo_move(board, move, record)
 
@@ -345,10 +387,23 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta, timeLi
 
     local bestScore
     local bestMove
+    local alphaRoot = alpha
+    local betaRoot = beta
 
     for d = 1, targetDepth do
         currentRootDepth = d
-        local score, move = alphaBeta(board, isMaximizing, d, alpha, beta, true)
+        local searchAlpha = alphaRoot
+        local searchBeta = betaRoot
+
+        if bestScore ~= nil then
+            searchAlpha = bestScore - ASPIRATION_WINDOW
+            searchBeta = bestScore + ASPIRATION_WINDOW
+        end
+
+        local score, move = alphaBeta(board, isMaximizing, d, searchAlpha, searchBeta, true)
+        if not stopSearch and bestScore ~= nil and (score <= searchAlpha or score >= searchBeta) then
+            score, move = alphaBeta(board, isMaximizing, d, alphaRoot, betaRoot, true)
+        end
         if stopSearch then
             break
         end
