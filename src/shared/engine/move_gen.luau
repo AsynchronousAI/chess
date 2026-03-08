@@ -268,12 +268,22 @@ local function generate_pawn_moves(board: Board, moves: {number}, n: number, col
 		end
 
 		if bit32.bor(bit32.band(pawns_lo, el_lo), bit32.band(pawns_hi, el_hi)) ~= 0 then
-			n += 1
-			moves[n] = Move.create(ep - (if color == WHITE then 7 else -7), ep, PAWN, true, nil, true)
+			local from = ep - (if color == WHITE then 7 else -7)
+			local from_rank = bit32.rshift(from, 3)
+			local valid_rank = if color == WHITE then 4 else 3
+			if from_rank == valid_rank then
+				n += 1
+				moves[n] = Move.create(from, ep, PAWN, true, nil, true)
+			end
 		end
 		if bit32.bor(bit32.band(pawns_lo, er_lo), bit32.band(pawns_hi, er_hi)) ~= 0 then
-			n += 1
-			moves[n] = Move.create(ep - (if color == WHITE then 9 else -9), ep, PAWN, true, nil, true)
+			local from = ep - (if color == WHITE then 9 else -9)
+			local from_rank = bit32.rshift(from, 3)
+			local valid_rank = if color == WHITE then 4 else 3
+			if from_rank == valid_rank then
+				n += 1
+				moves[n] = Move.create(from, ep, PAWN, true, nil, true)
+			end
 		end
 	end
 	return n
@@ -783,11 +793,19 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 			if bit32.bor(bit32.band(pawns_lo, el_lo), bit32.band(pawns_hi, el_hi)) ~= 0 then
 				local from = ep - (if color == WHITE then 7 else -7)
-				n = try_ep_helper(board, moves, n, from, pin_lo, pin_hi, num_checkers, checker_type, checker_sq, color, king_square)
+				local from_rank = bit32.rshift(from, 3)
+				local valid_rank = if color == WHITE then 4 else 3
+				if from_rank == valid_rank then
+					n = try_ep_helper(board, moves, n, from, pin_lo, pin_hi, num_checkers, checker_type, checker_sq, color, king_square)
+				end
 			end
 			if bit32.bor(bit32.band(pawns_lo, er_lo), bit32.band(pawns_hi, er_hi)) ~= 0 then
 				local from = ep - (if color == WHITE then 9 else -9)
-				n = try_ep_helper(board, moves, n, from, pin_lo, pin_hi, num_checkers, checker_type, checker_sq, color, king_square)
+				local from_rank = bit32.rshift(from, 3)
+				local valid_rank = if color == WHITE then 4 else 3
+				if from_rank == valid_rank then
+					n = try_ep_helper(board, moves, n, from, pin_lo, pin_hi, num_checkers, checker_type, checker_sq, color, king_square)
+				end
 			end
 		end
 
