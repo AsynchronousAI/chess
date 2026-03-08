@@ -276,8 +276,8 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
         allLegalMoves[i], allLegalMoves[bestIndex] = allLegalMoves[bestIndex], allLegalMoves[i]
 
         local move = allLegalMoves[i]
-        local isCapture = Move.getCaptured(move) or Move.getEnPassant(move)
-        local isPromotion = Move.getPromotion(move) ~= nil
+        local isCapture = (bit32.band(bit32.rshift(move, 15), 0x1) == 1) or (bit32.band(bit32.rshift(move, 19), 0x1) == 1) -- inline: Move.getCaptured(move) or Move.getEnPassant(move)
+        local isPromotion = bit32.band(bit32.rshift(move, 16), 0x7) ~= 5 -- inline: Move.getPromotion(move) ~= nil
         local reduction = 0
         if depthRemaining >= LMR_DEPTH and i > LMR_MOVE_THRESHOLD and not inCheck and not isCapture and not isPromotion then
             reduction = LMR_REDUCTION

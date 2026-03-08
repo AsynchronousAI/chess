@@ -49,10 +49,15 @@ local function handlePosition(line)
             local moveMade = false
 
             for _, possibleMove in allMoves do
-                if Move.getTo(possibleMove) == endSq then
+                local toSq = bit32.band(bit32.rshift(possibleMove, 6), 0x3F) -- inline: Move.getTo(possibleMove)
+                if toSq == endSq then
                     if #moveStr == 5 then
                         local promoChar = moveStr:sub(5,5)
-                        Move.setPromotion(possibleMove, promoChar:lower())
+                        local promo = promoChar:lower()
+                        possibleMove = bit32.bor(
+                            bit32.band(possibleMove, bit32.bnot(bit32.lshift(0x7, 16))),
+                            bit32.lshift(bit32.band(promo, 0x7), 16)
+                        ) -- inline: Move.setPromotion(possibleMove, promo)
                     end
                     bitboard.make_move(board, possibleMove)
                     moveMade = true

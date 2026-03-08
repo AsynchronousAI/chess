@@ -1005,7 +1005,7 @@ function MoveGen.generate_legal_moves_from(board: Board, from: number, filePseud
 	local moves = {}
 	local n = 0
 	for _, move in allMoves do
-		if Move.getFrom(move) == from then
+		if bit32.band(bit32.rshift(move, 0), 0x3F) == from then -- inline: Move.getFrom(move)
 			n += 1
 			moves[n] = move
 		end
