@@ -18,6 +18,8 @@ local RANK_7_LO, RANK_7_HI = Utils.RANK_7_LO, Utils.RANK_7_HI
 local RANK_8_LO, RANK_8_HI = Utils.RANK_8_LO, Utils.RANK_8_HI
 local NOT_FILE_A_LO, NOT_FILE_A_HI = Utils.NOT_FILE_A_LO, Utils.NOT_FILE_A_HI
 local NOT_FILE_H_LO, NOT_FILE_H_HI = Utils.NOT_FILE_H_LO, Utils.NOT_FILE_H_HI
+local NOT_FILE_AB_LO, NOT_FILE_AB_HI = Utils.NOT_FILE_AB_LO, Utils.NOT_FILE_AB_HI
+local NOT_FILE_GH_LO, NOT_FILE_GH_HI = Utils.NOT_FILE_GH_LO, Utils.NOT_FILE_GH_HI
 
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
 
@@ -43,66 +45,11 @@ export type Board = Utils.Board
 
 local MoveGen = {}
 
-function MoveGen.regenerate_piece_attacked(board: Board, by_color: number, piece: number)
-	local atk_lo = 0
-	local atk_hi = 0
-
-	local bb_lo = board.pieces_lo[by_color][piece]
-	local bb_hi = board.pieces_hi[by_color][piece]
-
-	if piece == KNIGHT then
-		atk_lo = Attacks.bulk_knight_attacks_lo(bb_hi, bb_lo)
-		atk_hi = Attacks.bulk_knight_attacks_hi(bb_hi, bb_lo)
-	elseif piece == KING then
-		atk_lo = Attacks.bulk_king_attacks_lo(bb_hi, bb_lo)
-		atk_hi = Attacks.bulk_king_attacks_hi(bb_hi, bb_lo)
-	elseif piece == PAWN then
-		atk_lo = Attacks.bulk_pawn_attacks_lo(bb_hi, bb_lo, by_color)
-		atk_hi = Attacks.bulk_pawn_attacks_hi(bb_hi, bb_lo, by_color)
-	else
-		local my_lo  = board.occupied_lo[by_color]
-		local my_hi  = board.occupied_hi[by_color]
-		local opp_lo = board.occupied_lo[1 - by_color]
-		local opp_hi = board.occupied_hi[1 - by_color]
-
-		local cur_lo = bb_lo
-		local cur_hi = bb_hi
-		while cur_lo ~= 0 or cur_hi ~= 0 do
-			local s = bb_countrz(cur_hi, cur_lo)
-			local nlo = bb_sub_lo(cur_lo, 1)
-			local nhi = bb_sub_hi(cur_hi, 0, cur_lo, 1)
-			cur_lo = bit32.band(cur_lo, nlo)
-			cur_hi = bit32.band(cur_hi, nhi)
-
-			local a_hi, a_lo
-			if piece == QUEEN then
-				a_hi, a_lo = Attacks.queen_attacks(s, my_hi, my_lo, opp_hi, opp_lo)
-			elseif piece == ROOK then
-				a_hi, a_lo = Attacks.rook_attacks(s, my_hi, my_lo, opp_hi, opp_lo)
-			else
-				a_hi, a_lo = Attacks.bishop_attacks(s, my_hi, my_lo, opp_hi, opp_lo)
-			end
-			atk_lo = bit32.bor(atk_lo, a_lo)
-			atk_hi = bit32.bor(atk_hi, a_hi)
-		end
-	end
-
-	board.attacked_lo[by_color][piece] = atk_lo
-	board.attacked_hi[by_color][piece] = atk_hi
-end
-
 function MoveGen.attacked_occupancy(board: Board, by_color: number)
 	local atk  = board.attacked_lo[by_color]
 	local atkh = board.attacked_hi[by_color]
 	board.attacked_lo[by_color][ATTACKED_ALL] = bit32.bor(atk[ROOK], atk[BISHOP], atk[QUEEN], atk[KNIGHT], atk[KING], atk[PAWN])
 	board.attacked_hi[by_color][ATTACKED_ALL] = bit32.bor(atkh[ROOK], atkh[BISHOP], atkh[QUEEN], atkh[KNIGHT], atkh[KING], atkh[PAWN])
-end
-
-function MoveGen.regenerate_all_attacked(board: Board, by_color: number)
-	MoveGen.regenerate_piece_attacked(board, by_color, KNIGHT)
-	MoveGen.regenerate_piece_attacked(board, by_color, KING)
-	MoveGen.regenerate_piece_attacked(board, by_color, PAWN)
-	MoveGen.attacked_occupancy(board, by_color)
 end
 
 local function pawn_attackers_to_square(square: number, enemy_color: number): (number, number)
@@ -139,17 +86,75 @@ local function compute_non_slider_attacks(board: Board, by_color: number): (numb
 	local pw_lo = board.pieces_lo[by_color][PAWN]
 	local pw_hi = board.pieces_hi[by_color][PAWN]
 
-	local atk_lo = bit32.bor(
-		Attacks.bulk_knight_attacks_lo(kn_hi, kn_lo),
-		Attacks.bulk_king_attacks_lo(kg_hi, kg_lo),
-		Attacks.bulk_pawn_attacks_lo(pw_hi, pw_lo, by_color)
+	-- bulk_knight_attacks_lo / _hi inlined, with bb_lshift_lo/hi and bb_rshift_lo/hi inlined
+	local kn_atk_lo = bit32.bor(
+		bit32.band(bit32.lshift(kn_lo, 17),                                              NOT_FILE_A_LO),
+		bit32.band(bit32.lshift(kn_lo, 15),                                              NOT_FILE_H_LO),
+		bit32.band(bit32.lshift(kn_lo, 10),                                              NOT_FILE_AB_LO),
+		bit32.band(bit32.lshift(kn_lo, 6),                                               NOT_FILE_GH_LO),
+		bit32.band(bit32.bor(bit32.rshift(kn_lo, 17), bit32.lshift(kn_hi, 32 - 17)),    NOT_FILE_H_LO),
+		bit32.band(bit32.bor(bit32.rshift(kn_lo, 15), bit32.lshift(kn_hi, 32 - 15)),    NOT_FILE_A_LO),
+		bit32.band(bit32.bor(bit32.rshift(kn_lo, 10), bit32.lshift(kn_hi, 32 - 10)),    NOT_FILE_GH_LO),
+		bit32.band(bit32.bor(bit32.rshift(kn_lo, 6),  bit32.lshift(kn_hi, 32 - 6)),     NOT_FILE_AB_LO)
 	)
-	local atk_hi = bit32.bor(
-		Attacks.bulk_knight_attacks_hi(kn_hi, kn_lo),
-		Attacks.bulk_king_attacks_hi(kg_hi, kg_lo),
-		Attacks.bulk_pawn_attacks_hi(pw_hi, pw_lo, by_color)
+	local kn_atk_hi = bit32.bor(
+		bit32.band(bit32.bor(bit32.lshift(kn_hi, 17), bit32.rshift(kn_lo, 32 - 17)),    NOT_FILE_A_HI),
+		bit32.band(bit32.bor(bit32.lshift(kn_hi, 15), bit32.rshift(kn_lo, 32 - 15)),    NOT_FILE_H_HI),
+		bit32.band(bit32.bor(bit32.lshift(kn_hi, 10), bit32.rshift(kn_lo, 32 - 10)),    NOT_FILE_AB_HI),
+		bit32.band(bit32.bor(bit32.lshift(kn_hi, 6),  bit32.rshift(kn_lo, 32 - 6)),     NOT_FILE_GH_HI),
+		bit32.band(bit32.rshift(kn_hi, 17),                                              NOT_FILE_H_HI),
+		bit32.band(bit32.rshift(kn_hi, 15),                                              NOT_FILE_A_HI),
+		bit32.band(bit32.rshift(kn_hi, 10),                                              NOT_FILE_GH_HI),
+		bit32.band(bit32.rshift(kn_hi, 6),                                               NOT_FILE_AB_HI)
 	)
-	return atk_hi, atk_lo
+
+	-- bulk_king_attacks_lo / _hi inlined
+	local kg_atk_lo = bit32.bor(
+		bit32.band(bit32.lshift(kg_lo, 1),                                               NOT_FILE_A_LO),
+		bit32.band(bit32.bor(bit32.rshift(kg_lo, 1), bit32.lshift(kg_hi, 32 - 1)),      NOT_FILE_H_LO),
+		bit32.lshift(kg_lo, 8),
+		bit32.bor(bit32.rshift(kg_lo, 8), bit32.lshift(kg_hi, 32 - 8)),
+		bit32.band(bit32.lshift(kg_lo, 9),                                               NOT_FILE_A_LO),
+		bit32.band(bit32.lshift(kg_lo, 7),                                               NOT_FILE_H_LO),
+		bit32.band(bit32.bor(bit32.rshift(kg_lo, 9), bit32.lshift(kg_hi, 32 - 9)),      NOT_FILE_H_LO),
+		bit32.band(bit32.bor(bit32.rshift(kg_lo, 7), bit32.lshift(kg_hi, 32 - 7)),      NOT_FILE_A_LO)
+	)
+	local kg_atk_hi = bit32.bor(
+		bit32.band(bit32.bor(bit32.lshift(kg_hi, 1), bit32.rshift(kg_lo, 32 - 1)),      NOT_FILE_A_HI),
+		bit32.band(bit32.rshift(kg_hi, 1),                                               NOT_FILE_H_HI),
+		bit32.bor(bit32.lshift(kg_hi, 8), bit32.rshift(kg_lo, 32 - 8)),
+		bit32.rshift(kg_hi, 8),
+		bit32.band(bit32.bor(bit32.lshift(kg_hi, 9), bit32.rshift(kg_lo, 32 - 9)),      NOT_FILE_A_HI),
+		bit32.band(bit32.bor(bit32.lshift(kg_hi, 7), bit32.rshift(kg_lo, 32 - 7)),      NOT_FILE_H_HI),
+		bit32.band(bit32.rshift(kg_hi, 9),                                               NOT_FILE_H_HI),
+		bit32.band(bit32.rshift(kg_hi, 7),                                               NOT_FILE_A_HI)
+	)
+
+	-- bulk_pawn_attacks_lo / _hi inlined
+	local pw_atk_lo: number
+	local pw_atk_hi: number
+	if by_color == WHITE then
+		pw_atk_lo = bit32.bor(
+			bit32.band(bit32.lshift(pw_lo, 7),                                           NOT_FILE_H_LO),
+			bit32.band(bit32.lshift(pw_lo, 9),                                           NOT_FILE_A_LO)
+		)
+		pw_atk_hi = bit32.bor(
+			bit32.band(bit32.bor(bit32.lshift(pw_hi, 7), bit32.rshift(pw_lo, 32 - 7)),  NOT_FILE_H_HI),
+			bit32.band(bit32.bor(bit32.lshift(pw_hi, 9), bit32.rshift(pw_lo, 32 - 9)),  NOT_FILE_A_HI)
+		)
+	else
+		pw_atk_lo = bit32.bor(
+			bit32.band(bit32.bor(bit32.rshift(pw_lo, 7), bit32.lshift(pw_hi, 32 - 7)),  NOT_FILE_A_LO),
+			bit32.band(bit32.bor(bit32.rshift(pw_lo, 9), bit32.lshift(pw_hi, 32 - 9)),  NOT_FILE_H_LO)
+		)
+		pw_atk_hi = bit32.bor(
+			bit32.band(bit32.rshift(pw_hi, 7),                                           NOT_FILE_A_HI),
+			bit32.band(bit32.rshift(pw_hi, 9),                                           NOT_FILE_H_HI)
+		)
+	end
+
+	return bit32.bor(kn_atk_hi, kg_atk_hi, pw_atk_hi),
+	       bit32.bor(kn_atk_lo, kg_atk_lo, pw_atk_lo)
 end
 
 function MoveGen.is_square_attacked(board: Board, square: number, by_color: number): boolean
@@ -628,6 +633,45 @@ local function generate_piece_moves(
 	return n
 end
 
+local function emit_sliding_moves(
+	moves: {number}, n: number,
+	from: number, piece_type: number,
+	a_hi: number, a_lo: number,
+	enemy_hi: number, enemy_lo: number
+): number
+	local promo_sentinel = bit32.lshift(5, 16)
+	local base_q = bit32.bor(from, bit32.lshift(piece_type, 12), promo_sentinel)
+	local base_c = bit32.bor(base_q, 0x8000)
+
+	-- Quiet moves (destinations not occupied by enemy)
+	local q_lo = bit32.band(a_lo, bit32.bnot(enemy_lo))
+	local q_hi = bit32.band(a_hi, bit32.bnot(enemy_hi))
+	while q_lo ~= 0 or q_hi ~= 0 do
+		local to = bb_countrz(q_hi, q_lo)
+		local nlo = bb_sub_lo(q_lo, 1)
+		local nhi = bb_sub_hi(q_hi, 0, q_lo, 1)
+		q_lo = bit32.band(q_lo, nlo)
+		q_hi = bit32.band(q_hi, nhi)
+		n += 1
+		moves[n] = bit32.bor(base_q, bit32.lshift(to, 6))
+	end
+
+	-- Captures (destinations occupied by enemy)
+	local c_lo = bit32.band(a_lo, enemy_lo)
+	local c_hi = bit32.band(a_hi, enemy_hi)
+	while c_lo ~= 0 or c_hi ~= 0 do
+		local to = bb_countrz(c_hi, c_lo)
+		local nlo = bb_sub_lo(c_lo, 1)
+		local nhi = bb_sub_hi(c_hi, 0, c_lo, 1)
+		c_lo = bit32.band(c_lo, nlo)
+		c_hi = bit32.band(c_hi, nhi)
+		n += 1
+		moves[n] = bit32.bor(base_c, bit32.lshift(to, 6))
+	end
+
+	return n
+end
+
 local function add_knight_moves(
 	board: Board, moves: {number}, n: number, color: number,
 	own_hi: number, own_lo: number,
@@ -647,30 +691,20 @@ local function add_knight_moves(
 
 		local a_lo = bit32.band(bit32.band(Attacks.knight_attacks_lo(from), bit32.bnot(own_lo)), cm_lo)
 		local a_hi = bit32.band(bit32.band(Attacks.knight_attacks_hi(from), bit32.bnot(own_hi)), cm_hi)
-		while a_lo ~= 0 or a_hi ~= 0 do
-			local to = bb_countrz(a_hi, a_lo)
-			local alo2 = bb_sub_lo(a_lo, 1)
-			local ahi2 = bb_sub_hi(a_hi, 0, a_lo, 1)
-			a_lo = bit32.band(a_lo, alo2)
-			a_hi = bit32.band(a_hi, ahi2)
-			n += 1
-			moves[n] = Move.create(from, to, KNIGHT, get_bit(enemy_hi, enemy_lo, to))
-		end
+		n = emit_sliding_moves(moves, n, from, KNIGHT, a_hi, a_lo, enemy_hi, enemy_lo)
 	end
 	return n
 end
 
-local function add_sliding_moves(
+local function add_bishop_moves(
 	board: Board, moves: {number}, n: number, color: number,
 	own_hi: number, own_lo: number,
 	enemy_hi: number, enemy_lo: number,
 	cm_hi: number, cm_lo: number,
-	pin_lo: {[number]: number}, pin_hi: {[number]: number},
-	piece_type: number,
-	attack_func: (number, number, number, number, number) -> (number, number)
+	pin_lo: {[number]: number}, pin_hi: {[number]: number}
 ): number
-	local bb_lo = board.pieces_lo[color][piece_type]
-	local bb_hi = board.pieces_hi[color][piece_type]
+	local bb_lo = board.pieces_lo[color][BISHOP]
+	local bb_hi = board.pieces_hi[color][BISHOP]
 	while bb_lo ~= 0 or bb_hi ~= 0 do
 		local from = bb_countrz(bb_hi, bb_lo)
 		local nlo = bb_sub_lo(bb_lo, 1)
@@ -678,7 +712,7 @@ local function add_sliding_moves(
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 
-		local a_hi, a_lo = attack_func(from, own_hi, own_lo, enemy_hi, enemy_lo)
+		local a_hi, a_lo = Attacks.bishop_attacks(from, own_hi, own_lo, enemy_hi, enemy_lo)
 		a_lo = bit32.band(a_lo, cm_lo)
 		a_hi = bit32.band(a_hi, cm_hi)
 		local pm_lo = pin_lo[from]
@@ -687,15 +721,68 @@ local function add_sliding_moves(
 			a_hi = bit32.band(a_hi, pin_hi[from])
 		end
 
-		while a_lo ~= 0 or a_hi ~= 0 do
-			local to = bb_countrz(a_hi, a_lo)
-			local alo2 = bb_sub_lo(a_lo, 1)
-			local ahi2 = bb_sub_hi(a_hi, 0, a_lo, 1)
-			a_lo = bit32.band(a_lo, alo2)
-			a_hi = bit32.band(a_hi, ahi2)
-			n += 1
-			moves[n] = Move.create(from, to, piece_type, get_bit(enemy_hi, enemy_lo, to))
+		n = emit_sliding_moves(moves, n, from, BISHOP, a_hi, a_lo, enemy_hi, enemy_lo)
+	end
+	return n
+end
+
+local function add_rook_moves(
+	board: Board, moves: {number}, n: number, color: number,
+	own_hi: number, own_lo: number,
+	enemy_hi: number, enemy_lo: number,
+	cm_hi: number, cm_lo: number,
+	pin_lo: {[number]: number}, pin_hi: {[number]: number}
+): number
+	local bb_lo = board.pieces_lo[color][ROOK]
+	local bb_hi = board.pieces_hi[color][ROOK]
+	while bb_lo ~= 0 or bb_hi ~= 0 do
+		local from = bb_countrz(bb_hi, bb_lo)
+		local nlo = bb_sub_lo(bb_lo, 1)
+		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		bb_lo = bit32.band(bb_lo, nlo)
+		bb_hi = bit32.band(bb_hi, nhi)
+
+		local a_hi, a_lo = Attacks.rook_attacks(from, own_hi, own_lo, enemy_hi, enemy_lo)
+		a_lo = bit32.band(a_lo, cm_lo)
+		a_hi = bit32.band(a_hi, cm_hi)
+		local pm_lo = pin_lo[from]
+		if pm_lo then
+			a_lo = bit32.band(a_lo, pm_lo)
+			a_hi = bit32.band(a_hi, pin_hi[from])
 		end
+
+		n = emit_sliding_moves(moves, n, from, ROOK, a_hi, a_lo, enemy_hi, enemy_lo)
+	end
+	return n
+end
+
+local function add_queen_moves(
+	board: Board, moves: {number}, n: number, color: number,
+	own_hi: number, own_lo: number,
+	enemy_hi: number, enemy_lo: number,
+	cm_hi: number, cm_lo: number,
+	pin_lo: {[number]: number}, pin_hi: {[number]: number}
+): number
+	local bb_lo = board.pieces_lo[color][QUEEN]
+	local bb_hi = board.pieces_hi[color][QUEEN]
+	while bb_lo ~= 0 or bb_hi ~= 0 do
+		local from = bb_countrz(bb_hi, bb_lo)
+		local nlo = bb_sub_lo(bb_lo, 1)
+		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		bb_lo = bit32.band(bb_lo, nlo)
+		bb_hi = bit32.band(bb_hi, nhi)
+
+		local rh, rl = Attacks.rook_attacks(from, own_hi, own_lo, enemy_hi, enemy_lo)
+		local bh, bl = Attacks.bishop_attacks(from, own_hi, own_lo, enemy_hi, enemy_lo)
+		local a_lo = bit32.band(bit32.bor(rl, bl), cm_lo)
+		local a_hi = bit32.band(bit32.bor(rh, bh), cm_hi)
+		local pm_lo = pin_lo[from]
+		if pm_lo then
+			a_lo = bit32.band(a_lo, pm_lo)
+			a_hi = bit32.band(a_hi, pin_hi[from])
+		end
+
+		n = emit_sliding_moves(moves, n, from, QUEEN, a_hi, a_lo, enemy_hi, enemy_lo)
 	end
 	return n
 end
@@ -862,9 +949,9 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		end
 
 		n = add_knight_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
-		n = add_sliding_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi, BISHOP, Attacks.bishop_attacks)
-		n = add_sliding_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi, ROOK,   Attacks.rook_attacks)
-		n = add_sliding_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi, QUEEN,  Attacks.queen_attacks)
+		n = add_bishop_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
+		n = add_rook_moves  (board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
+		n = add_queen_moves (board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
 	end
 
 	-- King moves
