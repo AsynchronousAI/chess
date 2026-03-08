@@ -105,8 +105,86 @@ function MoveGen.regenerate_all_attacked(board: Board, by_color: number)
 	MoveGen.attacked_occupancy(board, by_color)
 end
 
+local function pawn_attackers_to_square(square: number, enemy_color: number): (number, number)
+	local k_lo = BIT_LO[square]
+	local k_hi = BIT_HI[square]
+	if enemy_color == WHITE then
+		local r_lo = bit32.bor(
+			bit32.band(bb_rshift_lo(k_hi, k_lo, 7), NOT_FILE_H_LO),
+			bit32.band(bb_rshift_lo(k_hi, k_lo, 9), NOT_FILE_A_LO)
+		)
+		local r_hi = bit32.bor(
+			bit32.band(bb_rshift_hi(k_hi, 7), NOT_FILE_H_HI),
+			bit32.band(bb_rshift_hi(k_hi, 9), NOT_FILE_A_HI)
+		)
+		return r_hi, r_lo
+	else
+		local r_lo = bit32.bor(
+			bit32.band(bb_lshift_lo(k_lo, 7), NOT_FILE_A_LO),
+			bit32.band(bb_lshift_lo(k_lo, 9), NOT_FILE_H_LO)
+		)
+		local r_hi = bit32.bor(
+			bit32.band(bb_lshift_hi(k_hi, k_lo, 7), NOT_FILE_A_HI),
+			bit32.band(bb_lshift_hi(k_hi, k_lo, 9), NOT_FILE_H_HI)
+		)
+		return r_hi, r_lo
+	end
+end
+
+local function compute_non_slider_attacks(board: Board, by_color: number): (number, number)
+	local kn_lo = board.pieces_lo[by_color][KNIGHT]
+	local kn_hi = board.pieces_hi[by_color][KNIGHT]
+	local kg_lo = board.pieces_lo[by_color][KING]
+	local kg_hi = board.pieces_hi[by_color][KING]
+	local pw_lo = board.pieces_lo[by_color][PAWN]
+	local pw_hi = board.pieces_hi[by_color][PAWN]
+
+	local atk_lo = bit32.bor(
+		Attacks.bulk_knight_attacks_lo(kn_hi, kn_lo),
+		Attacks.bulk_king_attacks_lo(kg_hi, kg_lo),
+		Attacks.bulk_pawn_attacks_lo(pw_hi, pw_lo, by_color)
+	)
+	local atk_hi = bit32.bor(
+		Attacks.bulk_knight_attacks_hi(kn_hi, kn_lo),
+		Attacks.bulk_king_attacks_hi(kg_hi, kg_lo),
+		Attacks.bulk_pawn_attacks_hi(pw_hi, pw_lo, by_color)
+	)
+	return atk_hi, atk_lo
+end
+
 function MoveGen.is_square_attacked(board: Board, square: number, by_color: number): boolean
-	return get_bit(board.attacked_hi[by_color][ATTACKED_ALL], board.attacked_lo[by_color][ATTACKED_ALL], square)
+	-- Check non-slider pieces directly from board data (no stale cache dependency).
+	local pat_hi, pat_lo = pawn_attackers_to_square(square, by_color)
+	if bit32.bor(
+		bit32.band(board.pieces_lo[by_color][PAWN],   pat_lo),
+		bit32.band(board.pieces_hi[by_color][PAWN],   pat_hi)
+	) ~= 0 then return true end
+
+	if bit32.bor(
+		bit32.band(board.pieces_lo[by_color][KNIGHT], Attacks.knight_attacks_lo(square)),
+		bit32.band(board.pieces_hi[by_color][KNIGHT], Attacks.knight_attacks_hi(square))
+	) ~= 0 then return true end
+
+	if bit32.bor(
+		bit32.band(board.pieces_lo[by_color][KING],   Attacks.king_attacks_lo(square)),
+		bit32.band(board.pieces_hi[by_color][KING],   Attacks.king_attacks_hi(square))
+	) ~= 0 then return true end
+
+	-- Check sliders using current occupancy.
+	local occ_lo = board.occupied_lo[ALL]
+	local occ_hi = board.occupied_hi[ALL]
+
+	local ra_hi, ra_lo = Attacks.rook_attacks(square, 0, 0, occ_hi, occ_lo)
+	local rq_lo = bit32.bor(board.pieces_lo[by_color][ROOK], board.pieces_lo[by_color][QUEEN])
+	local rq_hi = bit32.bor(board.pieces_hi[by_color][ROOK], board.pieces_hi[by_color][QUEEN])
+	if bit32.bor(bit32.band(ra_lo, rq_lo), bit32.band(ra_hi, rq_hi)) ~= 0 then return true end
+
+	local ba_hi, ba_lo = Attacks.bishop_attacks(square, 0, 0, occ_hi, occ_lo)
+	local bq_lo = bit32.bor(board.pieces_lo[by_color][BISHOP], board.pieces_lo[by_color][QUEEN])
+	local bq_hi = bit32.bor(board.pieces_hi[by_color][BISHOP], board.pieces_hi[by_color][QUEEN])
+	if bit32.bor(bit32.band(ba_lo, bq_lo), bit32.band(ba_hi, bq_hi)) ~= 0 then return true end
+
+	return false
 end
 
 local CASTLE_MOVE_WK = Move.create(4,  6,  KING, false, nil, false, true, true)
@@ -287,32 +365,6 @@ local function generate_pawn_moves(board: Board, moves: {number}, n: number, col
 		end
 	end
 	return n
-end
-
-local function pawn_attackers_to_square(square: number, enemy_color: number): (number, number)
-	local k_lo = BIT_LO[square]
-	local k_hi = BIT_HI[square]
-	if enemy_color == WHITE then
-		local r_lo = bit32.bor(
-			bit32.band(bb_rshift_lo(k_hi, k_lo, 7), NOT_FILE_H_LO),
-			bit32.band(bb_rshift_lo(k_hi, k_lo, 9), NOT_FILE_A_LO)
-		)
-		local r_hi = bit32.bor(
-			bit32.band(bb_rshift_hi(k_hi, 7), NOT_FILE_H_HI),
-			bit32.band(bb_rshift_hi(k_hi, 9), NOT_FILE_A_HI)
-		)
-		return r_hi, r_lo
-	else
-		local r_lo = bit32.bor(
-			bit32.band(bb_lshift_lo(k_lo, 7), NOT_FILE_A_LO),
-			bit32.band(bb_lshift_lo(k_lo, 9), NOT_FILE_H_LO)
-		)
-		local r_hi = bit32.bor(
-			bit32.band(bb_lshift_hi(k_hi, k_lo, 7), NOT_FILE_A_HI),
-			bit32.band(bb_lshift_hi(k_hi, k_lo, 9), NOT_FILE_H_HI)
-		)
-		return r_hi, r_lo
-	end
 end
 
 local function is_square_attacked_with_occupancy(
@@ -684,7 +736,8 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 	local king_square = 63 - bb_countlz(king_hi, king_lo)
 	if king_square == -1 then return {} end
 
-	MoveGen.regenerate_all_attacked(board, enemy)
+	-- Compute enemy non-slider attacks inline — no board mutation, no stale data.
+	local enemy_atk_hi, enemy_atk_lo = compute_non_slider_attacks(board, enemy)
 
 	if filePseudoLegal then
 		local own_hi   = board.occupied_hi[color]
@@ -703,8 +756,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		n = generate_piece_moves(board, moves, n, color, own_hi, own_lo, other_hi, other_lo, ROOK,   Attacks.rook_attacks)
 		n = generate_piece_moves(board, moves, n, color, own_hi, own_lo, other_hi, other_lo, QUEEN,  Attacks.queen_attacks)
 		n = generate_piece_moves(board, moves, n, color, own_hi, own_lo, other_hi, other_lo, KING,   king_attack_fn)
-		n = generate_castle_moves(board, moves, n, color,
-			board.attacked_hi[enemy][ATTACKED_ALL], board.attacked_lo[enemy][ATTACKED_ALL])
+		n = generate_castle_moves(board, moves, n, color, enemy_atk_hi, enemy_atk_lo)
 		return moves
 	end
 
@@ -845,8 +897,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 	end
 
 	if num_checkers == 0 then
-		n = generate_castle_moves(board, moves, n, color,
-			board.attacked_hi[enemy][ATTACKED_ALL], board.attacked_lo[enemy][ATTACKED_ALL])
+		n = generate_castle_moves(board, moves, n, color, enemy_atk_hi, enemy_atk_lo)
 	end
 
 	return moves

@@ -6,6 +6,8 @@ local Utils = require("./utils")
 local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 
+local ATTACKED_ALL = Utils.ATTACKED_ALL
+
 local BIT_LO  = Utils.BIT_LO
 local BIT_HI  = Utils.BIT_HI
 local get_bit = Utils.get_bit
@@ -54,8 +56,8 @@ function FEN.from_fen(board, fen)
 		board.occupied_lo[color] = 0
 		board.occupied_hi[color] = 0
 	end
-	board.occupied_lo.all = 0
-	board.occupied_hi.all = 0
+	board.occupied_lo[Utils.ALL] = 0
+	board.occupied_hi[Utils.ALL] = 0
 
 	for rank = 1, 8 do
 		local file = 0
@@ -73,8 +75,8 @@ function FEN.from_fen(board, fen)
 					board.pieces_hi[info.color][info.type] = bit32.bor(board.pieces_hi[info.color][info.type], bhi)
 					board.occupied_lo[info.color] = bit32.bor(board.occupied_lo[info.color], blo)
 					board.occupied_hi[info.color] = bit32.bor(board.occupied_hi[info.color], bhi)
-					board.occupied_lo.all = bit32.bor(board.occupied_lo.all, blo)
-					board.occupied_hi.all = bit32.bor(board.occupied_hi.all, bhi)
+					board.occupied_lo[Utils.ALL] = bit32.bor(board.occupied_lo[Utils.ALL], blo)
+					board.occupied_hi[Utils.ALL] = bit32.bor(board.occupied_hi[Utils.ALL], bhi)
 					board.pieceTable[square] = Utils.make_pair(info.type, info.color)
 				end
 				file = file + 1
@@ -90,9 +92,31 @@ function FEN.from_fen(board, fen)
 	if parts[3]:find("k") then board.castling_rights = Utils.set_bit32(board.castling_rights, BK) end
 	if parts[3]:find("q") then board.castling_rights = Utils.set_bit32(board.castling_rights, BQ) end
 
-	board.en_passant_square = (parts[4] ~= "-") and parts[4] or nil
-	board.halfmove_clock    = tonumber(parts[5])
-	board.fullmove_number   = tonumber(parts[6])
+	-- Parse en passant square (convert algebraic e.g. "e3" to square index)
+	if parts[4] ~= "-" then
+		local ep_str = parts[4]
+		local ep_file = string.byte(ep_str, 1) - string.byte("a")
+		local ep_rank = tonumber(ep_str:sub(2, 2)) - 1
+		board.en_passant_square = ep_rank * 8 + ep_file
+	else
+		board.en_passant_square = nil
+	end
+	board.halfmove_clock    = tonumber(parts[5]) or 0
+	board.fullmove_number   = tonumber(parts[6]) or 1
+
+	-- Reset attacked tables (will be regenerated on first generate_legal_moves call)
+	for color = WHITE, BLACK do
+		for piece = PAWN, KING do
+			board.attacked_lo[color][piece] = 0
+			board.attacked_hi[color][piece] = 0
+		end
+		board.attacked_lo[color][Utils.ATTACKED_ALL] = 0
+		board.attacked_hi[color][Utils.ATTACKED_ALL] = 0
+	end
+
+	-- Reset eval and hash (will be recomputed lazily)
+	board.eval = nil
+	board.hash = nil
 end
 
 function FEN.to_fen(self)
