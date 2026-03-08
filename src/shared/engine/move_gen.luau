@@ -248,9 +248,9 @@ local function add_pawn_moves(
 	local bb_lo = bit32.band(tgt_lo, bit32.bnot(promo_lo))
 	local bb_hi = bit32.band(tgt_hi, bit32.bnot(promo_hi))
 	while bb_lo ~= 0 or bb_hi ~= 0 do
-		local to_sq = bb_countrz(bb_hi, bb_lo)
-		local nlo = bb_sub_lo(bb_lo, 1)
-		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		local to_sq = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+		local nlo = bit32.bor(bb_lo - 1, 0)
+		local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 		n += 1
@@ -260,9 +260,9 @@ local function add_pawn_moves(
 	bb_lo = bit32.band(tgt_lo, promo_lo)
 	bb_hi = bit32.band(tgt_hi, promo_hi)
 	while bb_lo ~= 0 or bb_hi ~= 0 do
-		local to_sq = bb_countrz(bb_hi, bb_lo)
-		local nlo = bb_sub_lo(bb_lo, 1)
-		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		local to_sq = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+		local nlo = bit32.bor(bb_lo - 1, 0)
+		local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 		local base = bit32.bor(to_sq - from_offset, bit32.lshift(to_sq, 6), captured_bit)
@@ -294,34 +294,34 @@ local function generate_pawn_moves(board: Board, moves: {number}, n: number, col
 	local push_lo: number
 	local push_hi: number
 	if color == WHITE then
-		push_lo = bit32.band(bb_lshift_lo(pawns_lo, 8), empty_lo)
-		push_hi = bit32.band(bb_lshift_hi(pawns_hi, pawns_lo, 8), empty_hi)
+		push_lo = bit32.band(bit32.lshift(pawns_lo, 8), empty_lo)
+		push_hi = bit32.band(bit32.bor(bit32.lshift(pawns_hi, 8), bit32.rshift(pawns_lo, 24)), empty_hi)
 	else
-		push_lo = bit32.band(bb_rshift_lo(pawns_hi, pawns_lo, 8), empty_lo)
-		push_hi = bit32.band(bb_rshift_hi(pawns_hi, 8), empty_hi)
+		push_lo = bit32.band(bit32.bor(bit32.rshift(pawns_lo, 8), bit32.lshift(pawns_hi, 24)), empty_lo)
+		push_hi = bit32.band(bit32.rshift(pawns_hi, 8), empty_hi)
 	end
 
 	local dbl_lo: number
 	local dbl_hi: number
 	if color == WHITE then
-		dbl_lo = bit32.band(bit32.band(bb_lshift_lo(push_lo, 8), empty_lo), bb_lshift_lo(start_lo, 16))
-		dbl_hi = bit32.band(bit32.band(bb_lshift_hi(push_hi, push_lo, 8), empty_hi), bb_lshift_hi(start_hi, start_lo, 16))
+		dbl_lo = bit32.band(bit32.band(bit32.lshift(push_lo, 8), empty_lo), bit32.lshift(start_lo, 16))
+		dbl_hi = bit32.band(bit32.band(bit32.bor(bit32.lshift(push_hi, 8), bit32.rshift(push_lo, 24)), empty_hi), bit32.bor(bit32.lshift(start_hi, 16), bit32.rshift(start_lo, 16)))
 	else
-		dbl_lo = bit32.band(bit32.band(bb_rshift_lo(push_hi, push_lo, 8), empty_lo), bb_rshift_lo(start_hi, start_lo, 16))
-		dbl_hi = bit32.band(bit32.band(bb_rshift_hi(push_hi, 8), empty_hi), bb_rshift_hi(start_hi, 16))
+		dbl_lo = bit32.band(bit32.band(bit32.bor(bit32.rshift(push_lo, 8), bit32.lshift(push_hi, 24)), empty_lo), bit32.bor(bit32.rshift(start_lo, 16), bit32.lshift(start_hi, 16)))
+		dbl_hi = bit32.band(bit32.band(bit32.rshift(push_hi, 8), empty_hi), bit32.rshift(start_hi, 16))
 	end
 
 	local lc_lo, lc_hi, rc_lo, rc_hi: number
 	if color == WHITE then
-		lc_lo = bit32.band(bit32.band(bb_lshift_lo(pawns_lo, 7), NOT_FILE_H_LO), enemy_lo)
-		lc_hi = bit32.band(bit32.band(bb_lshift_hi(pawns_hi, pawns_lo, 7), NOT_FILE_H_HI), enemy_hi)
-		rc_lo = bit32.band(bit32.band(bb_lshift_lo(pawns_lo, 9), NOT_FILE_A_LO), enemy_lo)
-		rc_hi = bit32.band(bit32.band(bb_lshift_hi(pawns_hi, pawns_lo, 9), NOT_FILE_A_HI), enemy_hi)
+		lc_lo = bit32.band(bit32.band(bit32.lshift(pawns_lo, 7), NOT_FILE_H_LO), enemy_lo)
+		lc_hi = bit32.band(bit32.band(bit32.bor(bit32.lshift(pawns_hi, 7), bit32.rshift(pawns_lo, 25)), NOT_FILE_H_HI), enemy_hi)
+		rc_lo = bit32.band(bit32.band(bit32.lshift(pawns_lo, 9), NOT_FILE_A_LO), enemy_lo)
+		rc_hi = bit32.band(bit32.band(bit32.bor(bit32.lshift(pawns_hi, 9), bit32.rshift(pawns_lo, 23)), NOT_FILE_A_HI), enemy_hi)
 	else
-		lc_lo = bit32.band(bit32.band(bb_rshift_lo(pawns_hi, pawns_lo, 7), NOT_FILE_A_LO), enemy_lo)
-		lc_hi = bit32.band(bit32.band(bb_rshift_hi(pawns_hi, 7), NOT_FILE_A_HI), enemy_hi)
-		rc_lo = bit32.band(bit32.band(bb_rshift_lo(pawns_hi, pawns_lo, 9), NOT_FILE_H_LO), enemy_lo)
-		rc_hi = bit32.band(bit32.band(bb_rshift_hi(pawns_hi, 9), NOT_FILE_H_HI), enemy_hi)
+		lc_lo = bit32.band(bit32.band(bit32.bor(bit32.rshift(pawns_lo, 7), bit32.lshift(pawns_hi, 25)), NOT_FILE_A_LO), enemy_lo)
+		lc_hi = bit32.band(bit32.band(bit32.rshift(pawns_hi, 7), NOT_FILE_A_HI), enemy_hi)
+		rc_lo = bit32.band(bit32.band(bit32.bor(bit32.rshift(pawns_lo, 9), bit32.lshift(pawns_hi, 23)), NOT_FILE_H_LO), enemy_lo)
+		rc_hi = bit32.band(bit32.band(bit32.rshift(pawns_hi, 9), NOT_FILE_H_HI), enemy_hi)
 	end
 
 	n = add_pawn_moves(moves, n, promo_lo, promo_hi, push_lo, push_hi, push_dir, false)
@@ -339,15 +339,15 @@ local function generate_pawn_moves(board: Board, moves: {number}, n: number, col
 		local er_lo: number
 		local er_hi: number
 		if color == WHITE then
-			el_lo = bb_rshift_lo(ep_bhi, ep_blo, 7)
-			el_hi = bb_rshift_hi(ep_bhi, 7)
-			er_lo = bb_rshift_lo(ep_bhi, ep_blo, 9)
-			er_hi = bb_rshift_hi(ep_bhi, 9)
+			el_lo = bit32.bor(bit32.rshift(ep_blo, 7), bit32.lshift(ep_bhi, 25))
+			el_hi = bit32.rshift(ep_bhi, 7)
+			er_lo = bit32.bor(bit32.rshift(ep_blo, 9), bit32.lshift(ep_bhi, 23))
+			er_hi = bit32.rshift(ep_bhi, 9)
 		else
-			el_lo = bb_lshift_lo(ep_blo, 7)
-			el_hi = bb_lshift_hi(ep_bhi, ep_blo, 7)
-			er_lo = bb_lshift_lo(ep_blo, 9)
-			er_hi = bb_lshift_hi(ep_bhi, ep_blo, 9)
+			el_lo = bit32.lshift(ep_blo, 7)
+			el_hi = bit32.bor(bit32.lshift(ep_bhi, 7), bit32.rshift(ep_blo, 25))
+			er_lo = bit32.lshift(ep_blo, 9)
+			er_hi = bit32.bor(bit32.lshift(ep_bhi, 9), bit32.rshift(ep_blo, 23))
 		end
 
 		if bit32.bor(bit32.band(pawns_lo, el_lo), bit32.band(pawns_hi, el_hi)) ~= 0 then
@@ -616,9 +616,9 @@ local function generate_piece_moves(
 	local bb_lo = board.pieces_lo[color][piece_type]
 	local bb_hi = board.pieces_hi[color][piece_type]
 	while bb_lo ~= 0 or bb_hi ~= 0 do
-		local from_sq = bb_countrz(bb_hi, bb_lo)
-		local nlo = bb_sub_lo(bb_lo, 1)
-		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		local from_sq = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+		local nlo = bit32.bor(bb_lo - 1, 0)
+		local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 
@@ -627,9 +627,9 @@ local function generate_piece_moves(
 		a_hi = bit32.band(a_hi, bit32.bnot(own_hi))
 
 		while a_lo ~= 0 or a_hi ~= 0 do
-			local to_sq = bb_countrz(a_hi, a_lo)
-			local alo2 = bb_sub_lo(a_lo, 1)
-			local ahi2 = bb_sub_hi(a_hi, 0, a_lo, 1)
+			local to_sq = if a_lo == 0 then bit32.countrz(a_hi) + 32 else bit32.countrz(a_lo)
+			local alo2 = bit32.bor(a_lo - 1, 0)
+			local ahi2 = bit32.bor(a_hi - (if a_lo == 0 then 1 else 0), 0)
 			a_lo = bit32.band(a_lo, alo2)
 			a_hi = bit32.band(a_hi, ahi2)
 			n += 1
@@ -826,7 +826,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 	local king_lo = board.pieces_lo[color][KING]
 	local king_hi = board.pieces_hi[color][KING]
-	local king_square = 63 - bb_countlz(king_hi, king_lo)
+	local king_square = 63 - (if king_hi == 0 then bit32.countlz(king_lo) + 32 else bit32.countlz(king_hi))
 	if king_square == -1 then return {} end
 
 	-- Compute enemy non-slider attacks inline — no board mutation, no stale data.
@@ -864,7 +864,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 	local empty_lo = bit32.bnot(board.occupied_lo[ALL])
 	local empty_hi = bit32.bnot(board.occupied_hi[ALL])
 
-	local checker_sq   = if num_checkers == 1 then bb_countrz(chk_hi, chk_lo) else -1
+	local checker_sq   = if num_checkers == 1 then (if chk_lo == 0 then bit32.countrz(chk_hi) + 32 else bit32.countrz(chk_lo)) else -1
 	local checker_val  = if checker_sq >= 0 then board.pieceTable[checker_sq] else nil
 	local checker_type = if checker_val then bit32.rshift(checker_val, 6) else nil
 
@@ -880,34 +880,34 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		local push_lo: number
 		local push_hi: number
 		if color == WHITE then
-			push_lo = bit32.band(bit32.band(bb_lshift_lo(pawns_lo, 8), empty_lo), cm_lo)
-			push_hi = bit32.band(bit32.band(bb_lshift_hi(pawns_hi, pawns_lo, 8), empty_hi), cm_hi)
+			push_lo = bit32.band(bit32.band(bit32.lshift(pawns_lo, 8), empty_lo), cm_lo)
+			push_hi = bit32.band(bit32.band(bit32.bor(bit32.lshift(pawns_hi, 8), bit32.rshift(pawns_lo, 24)), empty_hi), cm_hi)
 		else
-			push_lo = bit32.band(bit32.band(bb_rshift_lo(pawns_hi, pawns_lo, 8), empty_lo), cm_lo)
-			push_hi = bit32.band(bit32.band(bb_rshift_hi(pawns_hi, 8), empty_hi), cm_hi)
+			push_lo = bit32.band(bit32.band(bit32.bor(bit32.rshift(pawns_lo, 8), bit32.lshift(pawns_hi, 24)), empty_lo), cm_lo)
+			push_hi = bit32.band(bit32.band(bit32.rshift(pawns_hi, 8), empty_hi), cm_hi)
 		end
 
 		local dbl_lo: number
 		local dbl_hi: number
 		if color == WHITE then
-			dbl_lo = bit32.band(bit32.band(bit32.band(bb_lshift_lo(push_lo, 8), empty_lo), bb_lshift_lo(start_lo, 16)), cm_lo)
-			dbl_hi = bit32.band(bit32.band(bit32.band(bb_lshift_hi(push_hi, push_lo, 8), empty_hi), bb_lshift_hi(start_hi, start_lo, 16)), cm_hi)
+			dbl_lo = bit32.band(bit32.band(bit32.band(bit32.lshift(push_lo, 8), empty_lo), bit32.lshift(start_lo, 16)), cm_lo)
+			dbl_hi = bit32.band(bit32.band(bit32.band(bit32.bor(bit32.lshift(push_hi, 8), bit32.rshift(push_lo, 24)), empty_hi), bit32.bor(bit32.lshift(start_hi, 16), bit32.rshift(start_lo, 16))), cm_hi)
 		else
-			dbl_lo = bit32.band(bit32.band(bit32.band(bb_rshift_lo(push_hi, push_lo, 8), empty_lo), bb_rshift_lo(start_hi, start_lo, 16)), cm_lo)
-			dbl_hi = bit32.band(bit32.band(bit32.band(bb_rshift_hi(push_hi, 8), empty_hi), bb_rshift_hi(start_hi, 16)), cm_hi)
+			dbl_lo = bit32.band(bit32.band(bit32.band(bit32.bor(bit32.rshift(push_lo, 8), bit32.lshift(push_hi, 24)), empty_lo), bit32.bor(bit32.rshift(start_lo, 16), bit32.lshift(start_hi, 16))), cm_lo)
+			dbl_hi = bit32.band(bit32.band(bit32.band(bit32.rshift(push_hi, 8), empty_hi), bit32.rshift(start_hi, 16)), cm_hi)
 		end
 
 		local lc_lo, lc_hi, rc_lo, rc_hi: number
 		if color == WHITE then
-			lc_lo = bit32.band(bit32.band(bit32.band(bb_lshift_lo(pawns_lo, 7), NOT_FILE_H_LO), enemy_lo), cm_lo)
-			lc_hi = bit32.band(bit32.band(bit32.band(bb_lshift_hi(pawns_hi, pawns_lo, 7), NOT_FILE_H_HI), enemy_hi), cm_hi)
-			rc_lo = bit32.band(bit32.band(bit32.band(bb_lshift_lo(pawns_lo, 9), NOT_FILE_A_LO), enemy_lo), cm_lo)
-			rc_hi = bit32.band(bit32.band(bit32.band(bb_lshift_hi(pawns_hi, pawns_lo, 9), NOT_FILE_A_HI), enemy_hi), cm_hi)
+			lc_lo = bit32.band(bit32.band(bit32.band(bit32.lshift(pawns_lo, 7), NOT_FILE_H_LO), enemy_lo), cm_lo)
+			lc_hi = bit32.band(bit32.band(bit32.band(bit32.bor(bit32.lshift(pawns_hi, 7), bit32.rshift(pawns_lo, 25)), NOT_FILE_H_HI), enemy_hi), cm_hi)
+			rc_lo = bit32.band(bit32.band(bit32.band(bit32.lshift(pawns_lo, 9), NOT_FILE_A_LO), enemy_lo), cm_lo)
+			rc_hi = bit32.band(bit32.band(bit32.band(bit32.bor(bit32.lshift(pawns_hi, 9), bit32.rshift(pawns_lo, 23)), NOT_FILE_A_HI), enemy_hi), cm_hi)
 		else
-			lc_lo = bit32.band(bit32.band(bit32.band(bb_rshift_lo(pawns_hi, pawns_lo, 7), NOT_FILE_A_LO), enemy_lo), cm_lo)
-			lc_hi = bit32.band(bit32.band(bit32.band(bb_rshift_hi(pawns_hi, 7), NOT_FILE_A_HI), enemy_hi), cm_hi)
-			rc_lo = bit32.band(bit32.band(bit32.band(bb_rshift_lo(pawns_hi, pawns_lo, 9), NOT_FILE_H_LO), enemy_lo), cm_lo)
-			rc_hi = bit32.band(bit32.band(bit32.band(bb_rshift_hi(pawns_hi, 9), NOT_FILE_H_HI), enemy_hi), cm_hi)
+			lc_lo = bit32.band(bit32.band(bit32.band(bit32.bor(bit32.rshift(pawns_lo, 7), bit32.lshift(pawns_hi, 25)), NOT_FILE_A_LO), enemy_lo), cm_lo)
+			lc_hi = bit32.band(bit32.band(bit32.band(bit32.rshift(pawns_hi, 7), NOT_FILE_A_HI), enemy_hi), cm_hi)
+			rc_lo = bit32.band(bit32.band(bit32.band(bit32.bor(bit32.rshift(pawns_lo, 9), bit32.lshift(pawns_hi, 23)), NOT_FILE_H_LO), enemy_lo), cm_lo)
+			rc_hi = bit32.band(bit32.band(bit32.band(bit32.rshift(pawns_hi, 9), NOT_FILE_H_HI), enemy_hi), cm_hi)
 		end
 
 		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, pin_lo, pin_hi, push_lo, push_hi, push_dir, false)
@@ -925,15 +925,15 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 			local er_lo: number
 			local er_hi: number
 			if color == WHITE then
-				el_lo = bb_rshift_lo(ep_bhi, ep_blo, 7)
-				el_hi = bb_rshift_hi(ep_bhi, 7)
-				er_lo = bb_rshift_lo(ep_bhi, ep_blo, 9)
-				er_hi = bb_rshift_hi(ep_bhi, 9)
+				el_lo = bit32.bor(bit32.rshift(ep_blo, 7), bit32.lshift(ep_bhi, 25))
+				el_hi = bit32.rshift(ep_bhi, 7)
+				er_lo = bit32.bor(bit32.rshift(ep_blo, 9), bit32.lshift(ep_bhi, 23))
+				er_hi = bit32.rshift(ep_bhi, 9)
 			else
-				el_lo = bb_lshift_lo(ep_blo, 7)
-				el_hi = bb_lshift_hi(ep_bhi, ep_blo, 7)
-				er_lo = bb_lshift_lo(ep_blo, 9)
-				er_hi = bb_lshift_hi(ep_bhi, ep_blo, 9)
+				el_lo = bit32.lshift(ep_blo, 7)
+				el_hi = bit32.bor(bit32.lshift(ep_bhi, 7), bit32.rshift(ep_blo, 25))
+				er_lo = bit32.lshift(ep_blo, 9)
+				er_hi = bit32.bor(bit32.lshift(ep_bhi, 9), bit32.rshift(ep_blo, 23))
 			end
 
 			if bit32.bor(bit32.band(pawns_lo, el_lo), bit32.band(pawns_hi, el_hi)) ~= 0 then
@@ -967,9 +967,9 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		local bb_lo = ka_lo
 		local bb_hi = ka_hi
 		while bb_lo ~= 0 or bb_hi ~= 0 do
-			local to = bb_countrz(bb_hi, bb_lo)
-			local nlo = bb_sub_lo(bb_lo, 1)
-			local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+			local to = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+			local nlo = bit32.bor(bb_lo - 1, 0)
+			local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 			bb_lo = bit32.band(bb_lo, nlo)
 			bb_hi = bit32.band(bb_hi, nhi)
 
