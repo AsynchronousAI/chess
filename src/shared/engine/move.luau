@@ -2,8 +2,6 @@
 --!optimize 2
 --!strict
 
--- NOTE: value is used for move ordering.
-
 local Move = {}
 
 function Move.create(from: number, to: number, piece_type: number, captured: boolean?, promotion: number?, en_passant: boolean?, castling: boolean?, kingside: boolean?, value: number?)
@@ -23,25 +21,88 @@ function Move.create(from: number, to: number, piece_type: number, captured: boo
     )
 end
 
+-- Getters
+function Move.getFrom(move: number)
+    return bit32.band(bit32.rshift(move, 0), 0x3F)
+end
+function Move.getTo(move: number)
+    return bit32.band(bit32.rshift(move, 6), 0x3F)
+end
+function Move.getPieceType(move: number)
+    return bit32.band(bit32.rshift(move, 12), 0x7)
+end
+function Move.getCaptured(move: number)
+    return bit32.band(bit32.rshift(move, 15), 0x1) == 1
+end
+function Move.getPromotion(move: number)
+    local p = bit32.band(bit32.rshift(move, 16), 0x7)
+    return if p == 5 then nil else p
+end
+function Move.getEnPassant(move: number)
+    return bit32.band(bit32.rshift(move, 19), 0x1) == 1
+end
+function Move.getCastling(move: number): (boolean, boolean) -- returns castling?, kingside?
+    local code = bit32.band(bit32.rshift(move, 20), 0x3)
+    return code ~= 0, code == 1
+end
+function Move.getValue(move: number)
+    return bit32.band(bit32.rshift(move, 22), 0x7F) -- 7 bits
+end
+
+-- Setters
+function Move.setFrom(move: number, from: number)
+    move = bit32.band(move, bit32.bnot(0x3F))
+    return bit32.bor(move, bit32.lshift(bit32.band(from, 0x3F), 0))
+end
+function Move.setTo(move: number, to: number)
+    move = bit32.band(move, bit32.bnot(bit32.lshift(0x3F, 6)))
+    return bit32.bor(move, bit32.lshift(bit32.band(to, 0x3F), 6))
+end
+function Move.setPieceType(move: number, pieceType: number)
+    move = bit32.band(move, bit32.bnot(bit32.lshift(0x7, 12)))
+    return bit32.bor(move, bit32.lshift(bit32.band(pieceType, 0x7), 12))
+end
+function Move.setCaptured(move: number, captured: boolean)
+    move = bit32.band(move, bit32.bnot(bit32.lshift(0x1, 15)))
+    local val = captured and 1 or 0
+    return bit32.bor(move, bit32.lshift(val, 15))
+end
+function Move.setPromotion(move: number, promo: number)
+    move = bit32.band(move, bit32.bnot(bit32.lshift(0x7, 16)))
+    return bit32.bor(move, bit32.lshift(bit32.band(promo, 0x7), 16))
+end
+function Move.setEnPassant(move: number, ep: boolean)
+    move = bit32.band(move, bit32.bnot(bit32.lshift(0x1, 19)))
+    local val = ep and 1 or 0
+    return bit32.bor(move, bit32.lshift(val, 19))
+end
+function Move.setCastling(move: number, castle: boolean, kingside: boolean)
+    move = bit32.band(move, bit32.bnot(bit32.lshift(0x3, 20)))
+    local code = 0
+    if castle then
+        code = kingside and 1 or 2
+    end
+    return bit32.bor(move, bit32.lshift(code, 20))
+end
+function Move.setValue(move: number, val: number)
+    val = math.clamp(val, 0, 100)
+    move = bit32.band(move, bit32.bnot(bit32.lshift(0x7F, 22)))
+    return bit32.bor(move, bit32.lshift(val, 22))
+end
+
 -- Full getter
 function Move.toTable(move: number)
-    local castling_code = bit32.band(bit32.rshift(move, 20), 0x3) -- inline: Move.getCastling(move)
-    local castling = castling_code ~= 0
-    local kingside = castling_code == 1
-
-    local promotion_raw = bit32.band(bit32.rshift(move, 16), 0x7) -- inline: Move.getPromotion(move)
-    local promotion = if promotion_raw == 5 then nil else promotion_raw
-
+    local castling, kingside = Move.getCastling(move)
     return {
-        from = bit32.band(bit32.rshift(move, 0), 0x3F), -- inline: Move.getFrom(move)
-        to = bit32.band(bit32.rshift(move, 6), 0x3F), -- inline: Move.getTo(move)
-        piece_type = bit32.band(bit32.rshift(move, 12), 0x7), -- inline: Move.getPieceType(move)
-        captured = bit32.band(bit32.rshift(move, 15), 0x1) == 1, -- inline: Move.getCaptured(move)
-        promotion = promotion,
-        en_passant = bit32.band(bit32.rshift(move, 19), 0x1) == 1, -- inline: Move.getEnPassant(move)
+        from = Move.getFrom(move),
+        to = Move.getTo(move),
+        piece_type = Move.getPieceType(move),
+        captured = Move.getCaptured(move),
+        promotion = Move.getPromotion(move),
+        en_passant = Move.getEnPassant(move),
         castling = castling,
         kingside = kingside,
-        value = bit32.band(bit32.rshift(move, 22), 0x7F) -- inline: Move.getValue(move)
+        value = Move.getValue(move)
     }
 end
 
