@@ -57,22 +57,22 @@ local function pawn_attackers_to_square(square: number, enemy_color: number): (n
 	local k_hi = BIT_HI[square]
 	if enemy_color == WHITE then
 		local r_lo = bit32.bor(
-			bit32.band(bb_rshift_lo(k_hi, k_lo, 7), NOT_FILE_H_LO),
-			bit32.band(bb_rshift_lo(k_hi, k_lo, 9), NOT_FILE_A_LO)
+			bit32.band(bit32.bor(bit32.rshift(k_lo, 7), bit32.lshift(k_hi, 25)), NOT_FILE_H_LO),
+			bit32.band(bit32.bor(bit32.rshift(k_lo, 9), bit32.lshift(k_hi, 23)), NOT_FILE_A_LO)
 		)
 		local r_hi = bit32.bor(
-			bit32.band(bb_rshift_hi(k_hi, 7), NOT_FILE_H_HI),
-			bit32.band(bb_rshift_hi(k_hi, 9), NOT_FILE_A_HI)
+			bit32.band(bit32.rshift(k_hi, 7), NOT_FILE_H_HI),
+			bit32.band(bit32.rshift(k_hi, 9), NOT_FILE_A_HI)
 		)
 		return r_hi, r_lo
 	else
 		local r_lo = bit32.bor(
-			bit32.band(bb_lshift_lo(k_lo, 7), NOT_FILE_A_LO),
-			bit32.band(bb_lshift_lo(k_lo, 9), NOT_FILE_H_LO)
+			bit32.band(bit32.lshift(k_lo, 7), NOT_FILE_A_LO),
+			bit32.band(bit32.lshift(k_lo, 9), NOT_FILE_H_LO)
 		)
 		local r_hi = bit32.bor(
-			bit32.band(bb_lshift_hi(k_hi, k_lo, 7), NOT_FILE_A_HI),
-			bit32.band(bb_lshift_hi(k_hi, k_lo, 9), NOT_FILE_H_HI)
+			bit32.band(bit32.bor(bit32.lshift(k_hi, 7), bit32.rshift(k_lo, 25)), NOT_FILE_A_HI),
+			bit32.band(bit32.bor(bit32.lshift(k_hi, 9), bit32.rshift(k_lo, 23)), NOT_FILE_H_HI)
 		)
 		return r_hi, r_lo
 	end
@@ -688,9 +688,9 @@ local function add_knight_moves(
 	local bb_lo = board.pieces_lo[color][KNIGHT]
 	local bb_hi = board.pieces_hi[color][KNIGHT]
 	while bb_lo ~= 0 or bb_hi ~= 0 do
-		local from = bb_countrz(bb_hi, bb_lo)
-		local nlo = bb_sub_lo(bb_lo, 1)
-		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		local from = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+		local nlo = bit32.bor(bb_lo - 1, 0)
+		local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 		if pin_lo[from] then continue end
@@ -712,9 +712,9 @@ local function add_bishop_moves(
 	local bb_lo = board.pieces_lo[color][BISHOP]
 	local bb_hi = board.pieces_hi[color][BISHOP]
 	while bb_lo ~= 0 or bb_hi ~= 0 do
-		local from = bb_countrz(bb_hi, bb_lo)
-		local nlo = bb_sub_lo(bb_lo, 1)
-		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		local from = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+		local nlo = bit32.bor(bb_lo - 1, 0)
+		local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 
@@ -742,9 +742,9 @@ local function add_rook_moves(
 	local bb_lo = board.pieces_lo[color][ROOK]
 	local bb_hi = board.pieces_hi[color][ROOK]
 	while bb_lo ~= 0 or bb_hi ~= 0 do
-		local from = bb_countrz(bb_hi, bb_lo)
-		local nlo = bb_sub_lo(bb_lo, 1)
-		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		local from = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+		local nlo = bit32.bor(bb_lo - 1, 0)
+		local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 
@@ -772,9 +772,9 @@ local function add_queen_moves(
 	local bb_lo = board.pieces_lo[color][QUEEN]
 	local bb_hi = board.pieces_hi[color][QUEEN]
 	while bb_lo ~= 0 or bb_hi ~= 0 do
-		local from = bb_countrz(bb_hi, bb_lo)
-		local nlo = bb_sub_lo(bb_lo, 1)
-		local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+		local from = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+		local nlo = bit32.bor(bb_lo - 1, 0)
+		local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 		bb_lo = bit32.band(bb_lo, nlo)
 		bb_hi = bit32.band(bb_hi, nhi)
 
