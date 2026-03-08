@@ -371,40 +371,44 @@ local function generate_pawn_moves(board: Board, moves: {number}, n: number, col
 	end
 	return n
 end
-
-local function is_square_attacked_with_occupancy(
-	board: Board, square: number, by_color: number,
-	own_hi: number, own_lo: number,
-	enemy_hi: number, enemy_lo: number
-): boolean
+local function is_square_attacked_with_occupancy(board: Board, square: number, by_color: number, own_hi: number, own_lo: number, enemy_hi: number, enemy_lo: number): boolean
+	-- Pawn attacks
 	local pat_hi, pat_lo = pawn_attackers_to_square(square, by_color)
-	if bit32.bor(
-		bit32.band(board.pieces_lo[by_color][PAWN], pat_lo),
-		bit32.band(board.pieces_hi[by_color][PAWN], pat_hi)
-	) ~= 0 then return true end
+	if bit32.band(board.pieces_lo[by_color][PAWN], pat_lo) ~= 0 or bit32.band(board.pieces_hi[by_color][PAWN], pat_hi) ~= 0 then
+		return true
+	end
 
-	if bit32.bor(
-		bit32.band(board.pieces_lo[by_color][KNIGHT], Attacks.knight_attacks_lo(square)),
-		bit32.band(board.pieces_hi[by_color][KNIGHT], Attacks.knight_attacks_hi(square))
-	) ~= 0 then return true end
+	-- Knight attacks
+	if bit32.band(board.pieces_lo[by_color][KNIGHT], Attacks.knight_attacks_lo(square)) ~= 0 or
+	   bit32.band(board.pieces_hi[by_color][KNIGHT], Attacks.knight_attacks_hi(square)) ~= 0 then
+		return true
+	end
 
-	if bit32.bor(
-		bit32.band(board.pieces_lo[by_color][KING], Attacks.king_attacks_lo(square)),
-		bit32.band(board.pieces_hi[by_color][KING], Attacks.king_attacks_hi(square))
-	) ~= 0 then return true end
+	-- King attacks
+	if bit32.band(board.pieces_lo[by_color][KING], Attacks.king_attacks_lo(square)) ~= 0 or
+	   bit32.band(board.pieces_hi[by_color][KING], Attacks.king_attacks_hi(square)) ~= 0 then
+		return true
+	end
 
+	-- Combined occupancy
 	local occ_lo = bit32.bor(own_lo, enemy_lo)
 	local occ_hi = bit32.bor(own_hi, enemy_hi)
 
-	local ra_hi, ra_lo = Attacks.rook_attacks(square, 0, 0, occ_hi, occ_lo)
+	-- Rook + Queen attacks
+	local ra_lo, ra_hi = Attacks.rook_attacks(square, 0, 0, occ_hi, occ_lo)
 	local rq_lo = bit32.bor(board.pieces_lo[by_color][ROOK], board.pieces_lo[by_color][QUEEN])
 	local rq_hi = bit32.bor(board.pieces_hi[by_color][ROOK], board.pieces_hi[by_color][QUEEN])
-	if bit32.bor(bit32.band(ra_lo, rq_lo), bit32.band(ra_hi, rq_hi)) ~= 0 then return true end
+	if bit32.band(ra_lo, rq_lo) ~= 0 or bit32.band(ra_hi, rq_hi) ~= 0 then
+		return true
+	end
 
-	local ba_hi, ba_lo = Attacks.bishop_attacks(square, 0, 0, occ_hi, occ_lo)
+	-- Bishop + Queen attacks
+	local ba_lo, ba_hi = Attacks.bishop_attacks(square, 0, 0, occ_hi, occ_lo)
 	local bq_lo = bit32.bor(board.pieces_lo[by_color][BISHOP], board.pieces_lo[by_color][QUEEN])
 	local bq_hi = bit32.bor(board.pieces_hi[by_color][BISHOP], board.pieces_hi[by_color][QUEEN])
-	if bit32.bor(bit32.band(ba_lo, bq_lo), bit32.band(ba_hi, bq_hi)) ~= 0 then return true end
+	if bit32.band(ba_lo, bq_lo) ~= 0 or bit32.band(ba_hi, bq_hi) ~= 0 then
+		return true
+	end
 
 	return false
 end

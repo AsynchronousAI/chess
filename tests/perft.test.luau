@@ -1,7 +1,7 @@
 local bitboard = require("../src/shared/engine/bitboard").BitBoard
 local perft = require("../src/shared/engine/perft")
 
-local DEPTH = 5
+local DEPTH = 6
 local function run_perft(depth)
     local board = bitboard.create()
 

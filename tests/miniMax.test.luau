@@ -3,7 +3,7 @@ local Move = require("../src/shared/engine/move").Move
 local minimax = require("../src/shared/engine/minimax")
 
 local DEPTH = 10
-local TIME_LIMIT_MS = 500
+local TIME_LIMIT_MS = 50
 local MAX_MOVES = math.huge
 
 local nodes = 0

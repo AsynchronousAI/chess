@@ -132,17 +132,16 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
     moveOrdering(board, allLegalMoves)
 
     local n = #allLegalMoves
-    local getValue = Move.getValue
 
     for i = 1, n do
         -- Selection sort for move ordering
         local bestIndex = i
         local bestMoveLocal = allLegalMoves[i]
-        local bestValue = getValue(bestMoveLocal)
+        local bestValue = bit32.band(bit32.rshift(bestMoveLocal, 22), 0x7F)  -- inline: getValue(bestMoveLocal)
 
         for j = i + 1, n do
             local m = allLegalMoves[j]
-            local v = getValue(m)
+            local v = bit32.band(bit32.rshift(m, 22), 0x7F)  -- inline: getValue(m)
             if v > bestValue then
                 bestValue = v
                 bestIndex = j
@@ -153,8 +152,8 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
         allLegalMoves[i], allLegalMoves[bestIndex] = allLegalMoves[bestIndex], allLegalMoves[i]
 
         local move = allLegalMoves[i]
-        local isCapture = Move.getCaptured(move) or Move.getEnPassant(move)
-        local isPromotion = Move.getPromotion(move) ~= nil
+        local isCapture = (bit32.band(bit32.rshift(move, 20), 0x3) ~= 0) or (bit32.band(bit32.rshift(move, 19), 0x1) == 1) -- inline: Move.getCaptured(move) or Move.getEnPassant(move)
+        local isPromotion = bit32.band(bit32.rshift(move, 16), 0x7) ~= 5 -- inline: Move.getPromotion(move) ~= nil
         if not isCapture and not isPromotion then
             continue
         end
@@ -167,14 +166,10 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
         bitboard.undo_move(board, move, record)
 
         if isMaximizing then
-            if score > standPat then
-                standPat = score
-            end
+            standPat = math.max(standPat, score)
             alpha = math.max(alpha, standPat)
         else
-            if score < standPat then
-                standPat = score
-            end
+            standPat = math.min(standPat, score)
             beta = math.min(beta, standPat)
         end
 
@@ -260,18 +255,17 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
     end
 
     local n = #allLegalMoves
-    local getValue = Move.getValue
     local bestMove = allLegalMoves[1]
 
     for i = 1, n do
         -- Selection sort for move ordering
         local bestIndex = i
         local bestMoveLocal = allLegalMoves[i]
-        local bestValue = getValue(bestMoveLocal)
+        local bestValue = bit32.band(bit32.rshift(bestMoveLocal, 22), 0x7F) -- inline: getValue(bestMoveLocal)
 
         for j = i + 1, n do
             local m = allLegalMoves[j]
-            local v = getValue(m)
+            local v = bit32.band(bit32.rshift(m, 22), 0x7F) -- inline: getValue(m)
             if v > bestValue then
                 bestValue = v
                 bestIndex = j
@@ -415,6 +409,7 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta, timeLi
     if bestScore == nil then
         bestScore = eval(board)
     end
+    bestMove = bestMove or bitboard.generate_legal_moves(board)[1]
 
     return bestScore, bestMove, nodes, nil, lastCompletedDepth, maxPlyReached
 end
