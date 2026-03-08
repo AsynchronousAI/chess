@@ -423,9 +423,9 @@ local function scan_sliders_for_pins_and_checks(
 	local sl_hi = board.pieces_hi[enemy][pieceType]
 
 	while sl_lo ~= 0 or sl_hi ~= 0 do
-		local slider_sq = bb_countrz(sl_hi, sl_lo)
-		local nlo = bb_sub_lo(sl_lo, 1)
-		local nhi = bb_sub_hi(sl_hi, 0, sl_lo, 1)
+		local slider_sq = if sl_lo == 0 then bit32.countrz(sl_hi) + 32 else bit32.countrz(sl_lo)
+		local nlo = bit32.bor(sl_lo - 1, 0)
+		local nhi = bit32.bor(sl_hi - (if sl_lo == 0 then 1 else 0), 0)
 		sl_lo = bit32.band(sl_lo, nlo)
 		sl_hi = bit32.band(sl_hi, nhi)
 
@@ -441,7 +441,7 @@ local function scan_sliders_for_pins_and_checks(
 				chk_hi = bit32.bor(chk_hi, BIT_HI[slider_sq])
 			elseif popcount(bo_hi, bo_lo) == 1
 				and bit32.bor(bit32.band(bo_lo, own_lo), bit32.band(bo_hi, own_hi)) ~= 0 then
-				local pinned_sq = bb_countrz(bo_hi, bo_lo)
+				local pinned_sq = if bo_lo == 0 then bit32.countrz(bo_hi) + 32 else bit32.countrz(bo_lo)
 				pin_masks_lo[pinned_sq] = line_lo
 				pin_masks_hi[pinned_sq] = line_hi
 			end
@@ -653,9 +653,9 @@ local function emit_sliding_moves(
 	local q_lo = bit32.band(a_lo, bit32.bnot(enemy_lo))
 	local q_hi = bit32.band(a_hi, bit32.bnot(enemy_hi))
 	while q_lo ~= 0 or q_hi ~= 0 do
-		local to = bb_countrz(q_hi, q_lo)
-		local nlo = bb_sub_lo(q_lo, 1)
-		local nhi = bb_sub_hi(q_hi, 0, q_lo, 1)
+		local to = if q_lo == 0 then bit32.countrz(q_hi) + 32 else bit32.countrz(q_lo)
+		local nlo = bit32.bor(q_lo - 1, 0)
+		local nhi = bit32.bor(q_hi - (if q_lo == 0 then 1 else 0), 0)
 		q_lo = bit32.band(q_lo, nlo)
 		q_hi = bit32.band(q_hi, nhi)
 		n += 1
@@ -666,9 +666,9 @@ local function emit_sliding_moves(
 	local c_lo = bit32.band(a_lo, enemy_lo)
 	local c_hi = bit32.band(a_hi, enemy_hi)
 	while c_lo ~= 0 or c_hi ~= 0 do
-		local to = bb_countrz(c_hi, c_lo)
-		local nlo = bb_sub_lo(c_lo, 1)
-		local nhi = bb_sub_hi(c_hi, 0, c_lo, 1)
+		local to = if c_lo == 0 then bit32.countrz(c_hi) + 32 else bit32.countrz(c_lo)
+		local nlo = bit32.bor(c_lo - 1, 0)
+		local nhi = bit32.bor(c_hi - (if c_lo == 0 then 1 else 0), 0)
 		c_lo = bit32.band(c_lo, nlo)
 		c_hi = bit32.band(c_hi, nhi)
 		n += 1
