@@ -2,8 +2,7 @@
 --!optimize 2
 local libs = require(script.import)
 
-local DEPTH = if game:GetService("RunService"):IsStudio() then 5 else 3
-local TIME_LIMIT_MS = 350
+local DEPTH = 6
 
 local MinimaxTranspositions = game:GetService("SharedTableRegistry"):GetSharedTable("MinimaxTranspositions")
 local EvaluationTransposition = game:GetService("SharedTableRegistry"):GetSharedTable("EvaluationTransposition")
@@ -104,7 +103,6 @@ return {
             tbl.isMaximizing = isMaximizing;
             tbl.maxDepth = maxDepth;
             tbl.depth = depth;
-            tbl.timeLimitMs = TIME_LIMIT_MS;
 
             actors[index]:SendMessage("Minimax", tbl)
             return tbl

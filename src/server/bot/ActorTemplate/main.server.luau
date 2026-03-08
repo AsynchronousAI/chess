@@ -18,8 +18,7 @@ actor:BindToMessageParallel("Minimax", function(tbl: SharedTable)
         tbl.maxDepth,
         tbl.depth,
         -math.huge,
-        math.huge,
-        tbl.timeLimitMs
+        math.huge
     )
 
     tbl.score = score

@@ -1,7 +1,6 @@
 --!native
 --!optimize 2
 
-local Move = require("./move").Move
 local bitboard = require("./bitboard").BitBoard
 local eval = require("./eval").eval
 local moveOrdering = require("./moveOrdering")
@@ -15,11 +14,11 @@ local LOWERBOUND = 1
 local UPPERBOUND = 2
 
 local NULL_MOVE_REDUCTION = 2
-local QUIESCENCE_MAX_DEPTH = 6
+local QUIESCENCE_MAX_DEPTH = 15
 local FUTILITY_DEPTH = 2
 local FUTILITY_MARGIN = 150
 local ASPIRATION_WINDOW = 100
-local LMR_DEPTH = 3
+local LMR_DEPTH = 5
 local LMR_MOVE_THRESHOLD = 3
 local LMR_REDUCTION = 1
 
