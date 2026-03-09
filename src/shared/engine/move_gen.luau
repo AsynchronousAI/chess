@@ -23,17 +23,12 @@ local NOT_FILE_GH_LO, NOT_FILE_GH_HI = Utils.NOT_FILE_GH_LO, Utils.NOT_FILE_GH_H
 
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
 
-local BIT_LO  = Utils.BIT_LO
-local BIT_HI  = Utils.BIT_HI
-local NBIT_LO = Utils.NBIT_LO
-local NBIT_HI = Utils.NBIT_HI
 
 local bb_lshift_lo = Utils.bb_lshift_lo
 local bb_lshift_hi = Utils.bb_lshift_hi
 local bb_rshift_lo = Utils.bb_rshift_lo
 local bb_rshift_hi = Utils.bb_rshift_hi
-local bb_countrz   = Utils.bb_countrz
-local bb_countlz   = Utils.bb_countlz
+
 local bb_sub_lo    = Utils.bb_sub_lo
 local bb_sub_hi    = Utils.bb_sub_hi
 
@@ -53,8 +48,8 @@ function MoveGen.attacked_occupancy(board: Board, by_color: number)
 end
 
 local function pawn_attackers_to_square(square: number, enemy_color: number): (number, number)
-	local k_lo = BIT_LO[square]
-	local k_hi = BIT_HI[square]
+	local k_lo = if square < 32 then bit32.lshift(1, square) else 0
+	local k_hi = if square < 32 then 0 else bit32.lshift(1, square - 32)
 	if enemy_color == WHITE then
 		local r_lo = bit32.bor(
 			bit32.band(bit32.bor(bit32.rshift(k_lo, 7), bit32.lshift(k_hi, 25)), NOT_FILE_H_LO),
@@ -331,8 +326,8 @@ local function generate_pawn_moves(board: Board, moves: {number}, n: number, col
 
 	if board.en_passant_square and board.en_passant_square > 0 then
 		local ep = board.en_passant_square
-		local ep_blo = BIT_LO[ep]
-		local ep_bhi = BIT_HI[ep]
+		local ep_blo = if ep < 32 then bit32.lshift(1, ep) else 0
+		local ep_bhi = if ep < 32 then 0 else bit32.lshift(1, ep - 32)
 
 		local el_lo: number
 		local el_hi: number
@@ -413,12 +408,13 @@ local function is_square_attacked_with_occupancy(board: Board, square: number, b
 	return false
 end
 
+local pin_lo = table.create(64)
+local pin_hi = table.create(64)
 local function scan_sliders_for_pins_and_checks(
 	board: Board, enemy: number, king_square: number,
 	pieceType: number,
 	occ_hi: number, occ_lo: number,
 	own_hi: number, own_lo: number,
-	pin_masks_lo: {[number]: number}, pin_masks_hi: {[number]: number},
 	chk_lo: number, chk_hi: number
 ): (number, number)
 	local LINE_LO = Attacks.LINE_LO
@@ -436,18 +432,26 @@ local function scan_sliders_for_pins_and_checks(
 		local line_lo = LINE_LO[slider_sq][king_square]
 		local line_hi = LINE_HI[slider_sq][king_square]
 		if line_lo ~= 0 or line_hi ~= 0 then
-			local btwn_lo = bit32.band(line_lo or 0, bit32.band(NBIT_LO[slider_sq], NBIT_LO[king_square]))
-			local btwn_hi = bit32.band(line_hi or 0, bit32.band(NBIT_HI[slider_sq], NBIT_HI[king_square]))
+			local btwn_lo = bit32.band(line_lo or 0, bit32.band(if slider_sq < 32 then bit32.bnot(bit32.lshift(1, slider_sq)) else 0xFFFFFFFF, if king_square < 32 then bit32.bnot(bit32.lshift(1, king_square)) else 0xFFFFFFFF))
+			local btwn_hi = bit32.band(line_hi or 0, bit32.band(if slider_sq < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, slider_sq - 32)), if king_square < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, king_square - 32))))
 			local bo_lo = bit32.band(occ_lo, btwn_lo)
 			local bo_hi = bit32.band(occ_hi, btwn_hi)
+
+			-- Some cool binary math to remove the looped popcount, in favor of O(1) math variant.
+			-- popcount(bo_hi, bo_lo) == 1
+			-- popcount(bo_hi) + popcount(bo_lo) = 1
+			-- (bo_hi == 0 && popcount(bo_lo) == 1) or (bo_lo == 0 && popcount(bo_hi) == 1)
+			-- and popcount(x) == 1 means x is a power of 2, can be simplified to (x != 0 && x & (x - 1) == 0)
+			local hasOne = (bo_lo == 0 and bo_hi ~= 0 and bit32.band(bo_hi, bo_hi-1) == 0) or
+			               (bo_hi == 0 and bo_lo ~= 0 and bit32.band(bo_lo, bo_lo-1) == 0);
+
 			if bo_lo == 0 and bo_hi == 0 then
-				chk_lo = bit32.bor(chk_lo, BIT_LO[slider_sq])
-				chk_hi = bit32.bor(chk_hi, BIT_HI[slider_sq])
-			elseif popcount(bo_hi, bo_lo) == 1
-				and bit32.bor(bit32.band(bo_lo, own_lo), bit32.band(bo_hi, own_hi)) ~= 0 then
+				chk_lo = bit32.bor(chk_lo, if slider_sq < 32 then bit32.lshift(1, slider_sq) else 0)
+				chk_hi = bit32.bor(chk_hi, if slider_sq < 32 then 0 else bit32.lshift(1, slider_sq - 32))
+			elseif hasOne and bit32.bor(bit32.band(bo_lo, own_lo), bit32.band(bo_hi, own_hi)) ~= 0 then
 				local pinned_sq = if bo_lo == 0 then bit32.countrz(bo_hi) + 32 else bit32.countrz(bo_lo)
-				pin_masks_lo[pinned_sq] = line_lo
-				pin_masks_hi[pinned_sq] = line_hi
+				pin_lo[pinned_sq] = line_lo
+				pin_hi[pinned_sq] = line_hi
 			end
 		end
 	end
@@ -460,8 +464,8 @@ local function compute_check_and_pins(board: Board, color: number, king_square: 
 	local occ_hi   = board.occupied_hi[ALL]
 	local own_lo   = board.occupied_lo[color]
 	local own_hi   = board.occupied_hi[color]
-	local pin_lo: {[number]: number} = {}
-	local pin_hi: {[number]: number} = {}
+	table.clear(pin_lo)
+	table.clear(pin_hi)
 
 	local pat_hi, pat_lo = pawn_attackers_to_square(king_square, enemy)
 	local chk_lo = bit32.bor(
@@ -473,21 +477,21 @@ local function compute_check_and_pins(board: Board, color: number, king_square: 
 		bit32.band(board.pieces_hi[enemy][KNIGHT], Attacks.knight_attacks_hi(king_square))
 	)
 
-	chk_hi, chk_lo = scan_sliders_for_pins_and_checks(board, enemy, king_square, ROOK,   occ_hi, occ_lo, own_hi, own_lo, pin_lo, pin_hi, chk_lo, chk_hi)
-	chk_hi, chk_lo = scan_sliders_for_pins_and_checks(board, enemy, king_square, BISHOP, occ_hi, occ_lo, own_hi, own_lo, pin_lo, pin_hi, chk_lo, chk_hi)
-	chk_hi, chk_lo = scan_sliders_for_pins_and_checks(board, enemy, king_square, QUEEN,  occ_hi, occ_lo, own_hi, own_lo, pin_lo, pin_hi, chk_lo, chk_hi)
+	chk_hi, chk_lo = scan_sliders_for_pins_and_checks(board, enemy, king_square, ROOK,   occ_hi, occ_lo, own_hi, own_lo, chk_lo, chk_hi)
+	chk_hi, chk_lo = scan_sliders_for_pins_and_checks(board, enemy, king_square, BISHOP, occ_hi, occ_lo, own_hi, own_lo, chk_lo, chk_hi)
+	chk_hi, chk_lo = scan_sliders_for_pins_and_checks(board, enemy, king_square, QUEEN,  occ_hi, occ_lo, own_hi, own_lo, chk_lo, chk_hi)
 
 	local num_checkers = popcount(chk_hi, chk_lo)
 
 	if num_checkers >= 2 then
-		return pin_lo, pin_hi, 0, 0, num_checkers, chk_lo, chk_hi
+		return 0, 0, num_checkers, chk_lo, chk_hi
 	elseif num_checkers == 0 then
-		return pin_lo, pin_hi, 0xFFFFFFFF, 0xFFFFFFFF, num_checkers, chk_lo, chk_hi
+		return 0xFFFFFFFF, 0xFFFFFFFF, num_checkers, chk_lo, chk_hi
 	end
 
-	local checker_sq  = bb_countrz(chk_hi, chk_lo)
-	local checker_bit_lo = BIT_LO[checker_sq]
-	local checker_bit_hi = BIT_HI[checker_sq]
+	local checker_sq  = if chk_lo == 0 then bit32.countrz(chk_hi) + 32 else bit32.countrz(chk_lo)
+	local checker_bit_lo = if checker_sq < 32 then bit32.lshift(1, checker_sq) else 0
+	local checker_bit_hi = if checker_sq < 32 then 0 else bit32.lshift(1, checker_sq - 32)
 	local checker_val    = board.pieceTable[checker_sq]
 	local cm_lo: number
 	local cm_hi: number
@@ -497,8 +501,8 @@ local function compute_check_and_pins(board: Board, color: number, king_square: 
 		if checker_type == BISHOP or checker_type == ROOK or checker_type == QUEEN then
 			local line_lo = Attacks.LINE_LO[king_square][checker_sq]
 			local line_hi = Attacks.LINE_HI[king_square][checker_sq]
-			local btwn_lo = bit32.band(line_lo, bit32.band(NBIT_LO[king_square], NBIT_LO[checker_sq]))
-			local btwn_hi = bit32.band(line_hi, bit32.band(NBIT_HI[king_square], NBIT_HI[checker_sq]))
+			local btwn_lo = bit32.band(line_lo, bit32.band(if king_square < 32 then bit32.bnot(bit32.lshift(1, king_square)) else 0xFFFFFFFF, if checker_sq < 32 then bit32.bnot(bit32.lshift(1, checker_sq)) else 0xFFFFFFFF))
+			local btwn_hi = bit32.band(line_hi, bit32.band(if king_square < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, king_square - 32)), if checker_sq < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, checker_sq - 32))))
 			cm_lo = bit32.bor(btwn_lo, checker_bit_lo)
 			cm_hi = bit32.bor(btwn_hi, checker_bit_hi)
 		else
@@ -510,20 +514,20 @@ local function compute_check_and_pins(board: Board, color: number, king_square: 
 		cm_hi = checker_bit_hi
 	end
 
-	return pin_lo, pin_hi, cm_hi, cm_lo, num_checkers, chk_lo, chk_hi
+	return cm_hi, cm_lo, num_checkers, chk_lo, chk_hi
 end
 
 local function is_en_passant_legal(board: Board, color: number, from: number, to: number, king_square: number): boolean
 	local enemy = 1 - color
 	local cap_sq = to - (if color == WHITE then 8 else -8)
 
-	local own_lo = bit32.bor(bit32.band(board.occupied_lo[color], NBIT_LO[from]), BIT_LO[to])
-	local own_hi = bit32.bor(bit32.band(board.occupied_hi[color], NBIT_HI[from]), BIT_HI[to])
-	local enemy_lo = bit32.band(board.occupied_lo[enemy], NBIT_LO[cap_sq])
-	local enemy_hi = bit32.band(board.occupied_hi[enemy], NBIT_HI[cap_sq])
+	local own_lo = bit32.bor(bit32.band(board.occupied_lo[color], if from < 32 then bit32.bnot(bit32.lshift(1, from)) else 0xFFFFFFFF), if to < 32 then bit32.lshift(1, to) else 0)
+	local own_hi = bit32.bor(bit32.band(board.occupied_hi[color], if from < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, from - 32))), if to < 32 then 0 else bit32.lshift(1, to - 32))
+	local enemy_lo = bit32.band(board.occupied_lo[enemy], if cap_sq < 32 then bit32.bnot(bit32.lshift(1, cap_sq)) else 0xFFFFFFFF)
+	local enemy_hi = bit32.band(board.occupied_hi[enemy], if cap_sq < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, cap_sq - 32)))
 
-	local cap_inv_lo = NBIT_LO[cap_sq]
-	local cap_inv_hi = NBIT_HI[cap_sq]
+	local cap_inv_lo = if cap_sq < 32 then bit32.bnot(bit32.lshift(1, cap_sq)) else 0xFFFFFFFF
+	local cap_inv_hi = if cap_sq < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, cap_sq - 32))
 	local pat_hi, pat_lo = pawn_attackers_to_square(king_square, enemy)
 	if bit32.bor(
 		bit32.band(board.pieces_lo[enemy][PAWN], bit32.band(cap_inv_lo, pat_lo)),
@@ -559,7 +563,6 @@ end
 local function add_pawn_moves_masked(
 	moves: {number}, n: number,
 	promo_lo: number, promo_hi: number,
-	pin_lo: {[number]: number}, pin_hi: {[number]: number},
 	tgt_lo: number, tgt_hi: number,
 	from_offset: number, is_capture: boolean
 ): number
@@ -686,8 +689,7 @@ local function add_knight_moves(
 	board: Board, moves: {number}, n: number, color: number,
 	own_hi: number, own_lo: number,
 	enemy_hi: number, enemy_lo: number,
-	cm_hi: number, cm_lo: number,
-	pin_lo: {[number]: number}, pin_hi: {[number]: number}
+	cm_hi: number, cm_lo: number
 ): number
 	local bb_lo = board.pieces_lo[color][KNIGHT]
 	local bb_hi = board.pieces_hi[color][KNIGHT]
@@ -710,8 +712,7 @@ local function add_bishop_moves(
 	board: Board, moves: {number}, n: number, color: number,
 	own_hi: number, own_lo: number,
 	enemy_hi: number, enemy_lo: number,
-	cm_hi: number, cm_lo: number,
-	pin_lo: {[number]: number}, pin_hi: {[number]: number}
+	cm_hi: number, cm_lo: number
 ): number
 	local bb_lo = board.pieces_lo[color][BISHOP]
 	local bb_hi = board.pieces_hi[color][BISHOP]
@@ -740,8 +741,7 @@ local function add_rook_moves(
 	board: Board, moves: {number}, n: number, color: number,
 	own_hi: number, own_lo: number,
 	enemy_hi: number, enemy_lo: number,
-	cm_hi: number, cm_lo: number,
-	pin_lo: {[number]: number}, pin_hi: {[number]: number}
+	cm_hi: number, cm_lo: number
 ): number
 	local bb_lo = board.pieces_lo[color][ROOK]
 	local bb_hi = board.pieces_hi[color][ROOK]
@@ -770,8 +770,7 @@ local function add_queen_moves(
 	board: Board, moves: {number}, n: number, color: number,
 	own_hi: number, own_lo: number,
 	enemy_hi: number, enemy_lo: number,
-	cm_hi: number, cm_lo: number,
-	pin_lo: {[number]: number}, pin_hi: {[number]: number}
+	cm_hi: number, cm_lo: number
 ): number
 	local bb_lo = board.pieces_lo[color][QUEEN]
 	local bb_hi = board.pieces_hi[color][QUEEN]
@@ -800,7 +799,6 @@ end
 local function try_ep_helper(
 	board: Board, moves: {number}, n: number,
 	from: number,
-	pin_lo: {[number]: number}, pin_hi: {[number]: number},
 	num_checkers: number, checker_type: number?, checker_sq: number,
 	color: number, king_square: number
 ): number
@@ -857,7 +855,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		return moves
 	end
 
-	local pin_lo, pin_hi, cm_hi, cm_lo, num_checkers, chk_lo, chk_hi =
+	local cm_hi, cm_lo, num_checkers, chk_lo, chk_hi =
 		compute_check_and_pins(board, color, king_square)
 	local king_only = num_checkers >= 2
 
@@ -914,15 +912,15 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 			rc_hi = bit32.band(bit32.band(bit32.band(bit32.rshift(pawns_hi, 9), NOT_FILE_H_HI), enemy_hi), cm_hi)
 		end
 
-		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, pin_lo, pin_hi, push_lo, push_hi, push_dir, false)
-		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, pin_lo, pin_hi, dbl_lo,  dbl_hi,  push_dir * 2, false)
-		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, pin_lo, pin_hi, lc_lo, lc_hi, if color == WHITE then 7 else -7, true)
-		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, pin_lo, pin_hi, rc_lo, rc_hi, if color == WHITE then 9 else -9, true)
+		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, push_lo, push_hi, push_dir, false)
+		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, dbl_lo,  dbl_hi,  push_dir * 2, false)
+		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, lc_lo, lc_hi, if color == WHITE then 7 else -7, true)
+		n = add_pawn_moves_masked(moves, n, promo_lo, promo_hi, rc_lo, rc_hi, if color == WHITE then 9 else -9, true)
 
 		if board.en_passant_square and board.en_passant_square > 0 then
 			local ep = board.en_passant_square
-			local ep_blo = BIT_LO[ep]
-			local ep_bhi = BIT_HI[ep]
+			local ep_blo = if ep < 32 then bit32.lshift(1, ep) else 0
+			local ep_bhi = if ep < 32 then 0 else bit32.lshift(1, ep - 32)
 
 			local el_lo: number
 			local el_hi: number
@@ -945,7 +943,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 				local from_rank = bit32.rshift(from, 3)
 				local valid_rank = if color == WHITE then 4 else 3
 				if from_rank == valid_rank then
-					n = try_ep_helper(board, moves, n, from, pin_lo, pin_hi, num_checkers, checker_type, checker_sq, color, king_square)
+					n = try_ep_helper(board, moves, n, from, num_checkers, checker_type, checker_sq, color, king_square)
 				end
 			end
 			if bit32.bor(bit32.band(pawns_lo, er_lo), bit32.band(pawns_hi, er_hi)) ~= 0 then
@@ -953,15 +951,15 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 				local from_rank = bit32.rshift(from, 3)
 				local valid_rank = if color == WHITE then 4 else 3
 				if from_rank == valid_rank then
-					n = try_ep_helper(board, moves, n, from, pin_lo, pin_hi, num_checkers, checker_type, checker_sq, color, king_square)
+					n = try_ep_helper(board, moves, n, from, num_checkers, checker_type, checker_sq, color, king_square)
 				end
 			end
 		end
 
-		n = add_knight_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
-		n = add_bishop_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
-		n = add_rook_moves  (board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
-		n = add_queen_moves (board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo, pin_lo, pin_hi)
+		n = add_knight_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo)
+		n = add_bishop_moves(board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo)
+		n = add_rook_moves  (board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo)
+		n = add_queen_moves (board, moves, n, color, own_hi, own_lo, enemy_hi, enemy_lo, cm_hi, cm_lo)
 	end
 
 	-- King moves
@@ -977,13 +975,13 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 			bb_lo = bit32.band(bb_lo, nlo)
 			bb_hi = bit32.band(bb_hi, nhi)
 
-			local to_blo = BIT_LO[to]
-			local to_bhi = BIT_HI[to]
-			local new_own_lo = bit32.bor(bit32.band(own_lo, NBIT_LO[king_square]), to_blo)
-			local new_own_hi = bit32.bor(bit32.band(own_hi, NBIT_HI[king_square]), to_bhi)
+			local to_blo = if to < 32 then bit32.lshift(1, to) else 0
+			local to_bhi = if to < 32 then 0 else bit32.lshift(1, to - 32)
+			local new_own_lo = bit32.bor(bit32.band(own_lo, if king_square < 32 then bit32.bnot(bit32.lshift(1, king_square)) else 0xFFFFFFFF), to_blo)
+			local new_own_hi = bit32.bor(bit32.band(own_hi, if king_square < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, king_square - 32))), to_bhi)
 			local captures = get_bit(enemy_hi, enemy_lo, to)
-			local new_enemy_lo = if captures then bit32.band(enemy_lo, NBIT_LO[to]) else enemy_lo
-			local new_enemy_hi = if captures then bit32.band(enemy_hi, NBIT_HI[to]) else enemy_hi
+			local new_enemy_lo = if captures then bit32.band(enemy_lo, if to < 32 then bit32.bnot(bit32.lshift(1, to)) else 0xFFFFFFFF) else enemy_lo
+			local new_enemy_hi = if captures then bit32.band(enemy_hi, if to < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, to - 32))) else enemy_hi
 
 			if not is_square_attacked_with_occupancy(board, to, enemy,
 				new_own_hi, new_own_lo, new_enemy_hi, new_enemy_lo) then

@@ -2,13 +2,6 @@
 --!optimize 2
 local Utils = require("./utils")
 
-local bb_countrz    = Utils.bb_countrz
-local bb_countlz    = Utils.bb_countlz
-local bb_sub_lo     = Utils.bb_sub_lo
-local bb_sub_hi     = Utils.bb_sub_hi
-local BIT_LO        = Utils.BIT_LO
-local BIT_HI        = Utils.BIT_HI
-
 -- Magic index (Uses Grant Osborne optimization: https://www.chessprogramming.org/Magic_Bitboards#32-bit_Magics)
 local function rook_magic_index(occ_hi: number, occ_lo: number, magic_hi: number, magic_lo: number, shift: number): number
     local lo = occ_lo * magic_lo
@@ -38,16 +31,16 @@ local function apply_ray(ray_lo, ray_hi, occ_lo, occ_hi, positive, result_lo, re
 
 	local blocker_sq
 	if positive then
-		blocker_sq = bb_countrz(blk_hi, blk_lo)
+		blocker_sq = if blk_lo == 0 then bit32.countrz(blk_hi) + 32 else bit32.countrz(blk_lo)
 	else
-		blocker_sq = 63 - bb_countlz(blk_hi, blk_lo)
+		blocker_sq = 63 - (if blk_hi == 0 then bit32.countlz(blk_lo) + 32 else bit32.countlz(blk_hi))
 	end
 
-	local blo = BIT_LO[blocker_sq]
-	local bhi = BIT_HI[blocker_sq]
+	local blo = if blocker_sq < 32 then bit32.lshift(1, blocker_sq) else 0
+	local bhi = if blocker_sq < 32 then 0 else bit32.lshift(1, blocker_sq - 32)
 
-	local s_lo = bb_sub_lo(blo, 1)
-	local s_hi = bb_sub_hi(bhi, 0, blo, 1)
+	local s_lo = bit32.bor(blo - 1, 0)
+	local s_hi = bit32.bor(bhi - (if blo == 0 then 1 else 0), 0)
 
 	local m_lo, m_hi
 	if positive then
@@ -102,8 +95,8 @@ local function enumerate_subsets(mask_hi, mask_lo)
 		local ret_lo = sub_lo
 		local ret_hi = sub_hi
 
-		local new_lo = bb_sub_lo(sub_lo, mask_lo)
-		local new_hi = bb_sub_hi(sub_hi, mask_hi, sub_lo, mask_lo)
+		local new_lo = bit32.bor(sub_lo - mask_lo, 0)
+		local new_hi = bit32.bor(sub_hi - mask_hi - (if sub_lo < mask_lo then 1 else 0), 0)
 
 		sub_lo = bit32.band(new_lo, mask_lo)
 		sub_hi = bit32.band(new_hi, mask_hi)
@@ -120,23 +113,23 @@ local function make_rook_mask(square: number): (number, number)
 	local hi = 0
 	for r = rank + 1, 6 do
 		local s = r * 8 + file
-		lo = bit32.bor(lo, BIT_LO[s])
-		hi = bit32.bor(hi, BIT_HI[s])
+		lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0)
+		hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32))
 	end
 	for r = rank - 1, 1, -1 do
 		local s = r * 8 + file
-		lo = bit32.bor(lo, BIT_LO[s])
-		hi = bit32.bor(hi, BIT_HI[s])
+		lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0)
+		hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32))
 	end
 	for f = file + 1, 6 do
 		local s = rank * 8 + f
-		lo = bit32.bor(lo, BIT_LO[s])
-		hi = bit32.bor(hi, BIT_HI[s])
+		lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0)
+		hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32))
 	end
 	for f = file - 1, 1, -1 do
 		local s = rank * 8 + f
-		lo = bit32.bor(lo, BIT_LO[s])
-		hi = bit32.bor(hi, BIT_HI[s])
+		lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0)
+		hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32))
 	end
 	return hi, lo
 end
@@ -146,10 +139,10 @@ local function make_bishop_mask(square: number): (number, number)
 	local lo = 0
 	local hi = 0
 	local r, f
-	r, f = rank + 1, file + 1; while r <= 6 and f <= 6 do local s = r*8+f; lo = bit32.bor(lo, BIT_LO[s]); hi = bit32.bor(hi, BIT_HI[s]); r+=1; f+=1 end
-	r, f = rank + 1, file - 1; while r <= 6 and f >= 1 do local s = r*8+f; lo = bit32.bor(lo, BIT_LO[s]); hi = bit32.bor(hi, BIT_HI[s]); r+=1; f-=1 end
-	r, f = rank - 1, file + 1; while r >= 1 and f <= 6 do local s = r*8+f; lo = bit32.bor(lo, BIT_LO[s]); hi = bit32.bor(hi, BIT_HI[s]); r-=1; f+=1 end
-	r, f = rank - 1, file - 1; while r >= 1 and f >= 1 do local s = r*8+f; lo = bit32.bor(lo, BIT_LO[s]); hi = bit32.bor(hi, BIT_HI[s]); r-=1; f-=1 end
+	r, f = rank + 1, file + 1; while r <= 6 and f <= 6 do local s = r*8+f; lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0); hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32)); r+=1; f+=1 end
+	r, f = rank + 1, file - 1; while r <= 6 and f >= 1 do local s = r*8+f; lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0); hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32)); r+=1; f-=1 end
+	r, f = rank - 1, file + 1; while r >= 1 and f <= 6 do local s = r*8+f; lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0); hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32)); r-=1; f+=1 end
+	r, f = rank - 1, file - 1; while r >= 1 and f >= 1 do local s = r*8+f; lo = bit32.bor(lo, if s < 32 then bit32.lshift(1, s) else 0); hi = bit32.bor(hi, if s < 32 then 0 else bit32.lshift(1, s - 32)); r-=1; f-=1 end
 	return hi, lo
 end
 

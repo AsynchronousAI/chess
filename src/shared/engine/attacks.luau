@@ -4,11 +4,7 @@ local Magics = require("./magics")
 local Utils  = require("./utils")
 local attacks_init = require("./attacks_init")
 
-local bb_lshift_lo, bb_lshift_hi = Utils.bb_lshift_lo, Utils.bb_lshift_hi
-local bb_rshift_lo, bb_rshift_hi = Utils.bb_rshift_lo, Utils.bb_rshift_hi
-local bb_countrz = Utils.bb_countrz
-local bb_sub_lo, bb_sub_hi = Utils.bb_sub_lo, Utils.bb_sub_hi
-local BIT_LO, BIT_HI, WHITE = Utils.BIT_LO, Utils.BIT_HI, Utils.WHITE
+local WHITE = Utils.WHITE
 local get_bit = Utils.get_bit
 local set_bit_lo, set_bit_hi = Utils.set_bit_lo, Utils.set_bit_hi
 
@@ -36,26 +32,26 @@ local Attacks = {}
 function Attacks.bulk_pawn_attacks_lo(bb_hi: number, bb_lo: number, color: number): number
 	if color == WHITE then
 		return bit32.bor(
-			bit32.band(bb_lshift_lo(bb_lo, 7), NOT_FILE_H_LO),
-			bit32.band(bb_lshift_lo(bb_lo, 9), NOT_FILE_A_LO)
+			bit32.band(bit32.lshift(bb_lo, 7), NOT_FILE_H_LO),
+			bit32.band(bit32.lshift(bb_lo, 9), NOT_FILE_A_LO)
 		)
 	else
 		return bit32.bor(
-			bit32.band(bb_rshift_lo(bb_hi, bb_lo, 7), NOT_FILE_A_LO),
-			bit32.band(bb_rshift_lo(bb_hi, bb_lo, 9), NOT_FILE_H_LO)
+			bit32.band(bit32.bor(bit32.rshift(bb_lo, 7), bit32.lshift(bb_hi, 25)), NOT_FILE_A_LO),
+			bit32.band(bit32.bor(bit32.rshift(bb_lo, 9), bit32.lshift(bb_hi, 23)), NOT_FILE_H_LO)
 		)
 	end
 end
 function Attacks.bulk_pawn_attacks_hi(bb_hi: number, bb_lo: number, color: number): number
 	if color == WHITE then
 		return bit32.bor(
-			bit32.band(bb_lshift_hi(bb_hi, bb_lo, 7), NOT_FILE_H_HI),
-			bit32.band(bb_lshift_hi(bb_hi, bb_lo, 9), NOT_FILE_A_HI)
+			bit32.band(bit32.bor(bit32.lshift(bb_hi, 7), bit32.rshift(bb_lo, 25)), NOT_FILE_H_HI),
+			bit32.band(bit32.bor(bit32.lshift(bb_hi, 9), bit32.rshift(bb_lo, 23)), NOT_FILE_A_HI)
 		)
 	else
 		return bit32.bor(
-			bit32.band(bb_rshift_hi(bb_hi, 7), NOT_FILE_A_HI),
-			bit32.band(bb_rshift_hi(bb_hi, 9), NOT_FILE_H_HI)
+			bit32.band(bit32.rshift(bb_hi, 7), NOT_FILE_A_HI),
+			bit32.band(bit32.rshift(bb_hi, 9), NOT_FILE_H_HI)
 		)
 	end
 end
@@ -63,60 +59,60 @@ end
 -- Knight attacks
 function Attacks.bulk_knight_attacks_lo(bb_hi: number, bb_lo: number): number
 	return bit32.bor(
-		bit32.band(bb_lshift_lo(bb_lo, 17), NOT_FILE_A_LO),
-		bit32.band(bb_lshift_lo(bb_lo, 15), NOT_FILE_H_LO),
-		bit32.band(bb_lshift_lo(bb_lo, 10), NOT_FILE_AB_LO),
-		bit32.band(bb_lshift_lo(bb_lo, 6),  NOT_FILE_GH_LO),
-		bit32.band(bb_rshift_lo(bb_hi, bb_lo, 17), NOT_FILE_H_LO),
-		bit32.band(bb_rshift_lo(bb_hi, bb_lo, 15), NOT_FILE_A_LO),
-		bit32.band(bb_rshift_lo(bb_hi, bb_lo, 10), NOT_FILE_GH_LO),
-		bit32.band(bb_rshift_lo(bb_hi, bb_lo, 6),  NOT_FILE_AB_LO)
+		bit32.band(bit32.lshift(bb_lo, 17),                                           NOT_FILE_A_LO),
+		bit32.band(bit32.lshift(bb_lo, 15),                                           NOT_FILE_H_LO),
+		bit32.band(bit32.lshift(bb_lo, 10),                                           NOT_FILE_AB_LO),
+		bit32.band(bit32.lshift(bb_lo, 6),                                            NOT_FILE_GH_LO),
+		bit32.band(bit32.bor(bit32.rshift(bb_lo, 17), bit32.lshift(bb_hi, 15)),       NOT_FILE_H_LO),
+		bit32.band(bit32.bor(bit32.rshift(bb_lo, 15), bit32.lshift(bb_hi, 17)),       NOT_FILE_A_LO),
+		bit32.band(bit32.bor(bit32.rshift(bb_lo, 10), bit32.lshift(bb_hi, 22)),       NOT_FILE_GH_LO),
+		bit32.band(bit32.bor(bit32.rshift(bb_lo, 6),  bit32.lshift(bb_hi, 26)),       NOT_FILE_AB_LO)
 	)
 end
 function Attacks.bulk_knight_attacks_hi(bb_hi: number, bb_lo: number): number
 	return bit32.bor(
-		bit32.band(bb_lshift_hi(bb_hi, bb_lo, 17), NOT_FILE_A_HI),
-		bit32.band(bb_lshift_hi(bb_hi, bb_lo, 15), NOT_FILE_H_HI),
-		bit32.band(bb_lshift_hi(bb_hi, bb_lo, 10), NOT_FILE_AB_HI),
-		bit32.band(bb_lshift_hi(bb_hi, bb_lo, 6),  NOT_FILE_GH_HI),
-		bit32.band(bb_rshift_hi(bb_hi, 17), NOT_FILE_H_HI),
-		bit32.band(bb_rshift_hi(bb_hi, 15), NOT_FILE_A_HI),
-		bit32.band(bb_rshift_hi(bb_hi, 10), NOT_FILE_GH_HI),
-		bit32.band(bb_rshift_hi(bb_hi, 6),  NOT_FILE_AB_HI)
+		bit32.band(bit32.bor(bit32.lshift(bb_hi, 17), bit32.rshift(bb_lo, 15)),       NOT_FILE_A_HI),
+		bit32.band(bit32.bor(bit32.lshift(bb_hi, 15), bit32.rshift(bb_lo, 17)),       NOT_FILE_H_HI),
+		bit32.band(bit32.bor(bit32.lshift(bb_hi, 10), bit32.rshift(bb_lo, 22)),       NOT_FILE_AB_HI),
+		bit32.band(bit32.bor(bit32.lshift(bb_hi, 6),  bit32.rshift(bb_lo, 26)),       NOT_FILE_GH_HI),
+		bit32.band(bit32.rshift(bb_hi, 17),                                            NOT_FILE_H_HI),
+		bit32.band(bit32.rshift(bb_hi, 15),                                            NOT_FILE_A_HI),
+		bit32.band(bit32.rshift(bb_hi, 10),                                            NOT_FILE_GH_HI),
+		bit32.band(bit32.rshift(bb_hi, 6),                                             NOT_FILE_AB_HI)
 	)
 end
 
 -- King attacks
 function Attacks.bulk_king_attacks_lo(bb_hi: number, bb_lo: number): number
 	return bit32.bor(
-		bit32.band(bb_lshift_lo(bb_lo, 1), NOT_FILE_A_LO),
-		bit32.band(bb_rshift_lo(bb_hi, bb_lo, 1), NOT_FILE_H_LO),
-		bb_lshift_lo(bb_lo, 8),
-		bb_rshift_lo(bb_hi, bb_lo, 8),
-		bit32.band(bb_lshift_lo(bb_lo, 9), NOT_FILE_A_LO),
-		bit32.band(bb_lshift_lo(bb_lo, 7), NOT_FILE_H_LO),
-		bit32.band(bb_rshift_lo(bb_hi, bb_lo, 9), NOT_FILE_H_LO),
-		bit32.band(bb_rshift_lo(bb_hi, bb_lo, 7), NOT_FILE_A_LO)
+		bit32.band(bit32.lshift(bb_lo, 1),                                            NOT_FILE_A_LO),
+		bit32.band(bit32.bor(bit32.rshift(bb_lo, 1),  bit32.lshift(bb_hi, 31)),       NOT_FILE_H_LO),
+		bit32.lshift(bb_lo, 8),
+		bit32.bor(bit32.rshift(bb_lo, 8), bit32.lshift(bb_hi, 24)),
+		bit32.band(bit32.lshift(bb_lo, 9),                                            NOT_FILE_A_LO),
+		bit32.band(bit32.lshift(bb_lo, 7),                                            NOT_FILE_H_LO),
+		bit32.band(bit32.bor(bit32.rshift(bb_lo, 9),  bit32.lshift(bb_hi, 23)),       NOT_FILE_H_LO),
+		bit32.band(bit32.bor(bit32.rshift(bb_lo, 7),  bit32.lshift(bb_hi, 25)),       NOT_FILE_A_LO)
 	)
 end
 function Attacks.bulk_king_attacks_hi(bb_hi: number, bb_lo: number): number
 	return bit32.bor(
-		bit32.band(bb_lshift_hi(bb_hi, bb_lo, 1), NOT_FILE_A_HI),
-		bit32.band(bb_rshift_hi(bb_hi, 1), NOT_FILE_H_HI),
-		bb_lshift_hi(bb_hi, bb_lo, 8),
-		bb_rshift_hi(bb_hi, 8),
-		bit32.band(bb_lshift_hi(bb_hi, bb_lo, 9), NOT_FILE_A_HI),
-		bit32.band(bb_lshift_hi(bb_hi, bb_lo, 7), NOT_FILE_H_HI),
-		bit32.band(bb_rshift_hi(bb_hi, 9), NOT_FILE_H_HI),
-		bit32.band(bb_rshift_hi(bb_hi, 7), NOT_FILE_A_HI)
+		bit32.band(bit32.bor(bit32.lshift(bb_hi, 1),  bit32.rshift(bb_lo, 31)),       NOT_FILE_A_HI),
+		bit32.band(bit32.rshift(bb_hi, 1),                                             NOT_FILE_H_HI),
+		bit32.bor(bit32.lshift(bb_hi, 8), bit32.rshift(bb_lo, 24)),
+		bit32.rshift(bb_hi, 8),
+		bit32.band(bit32.bor(bit32.lshift(bb_hi, 9),  bit32.rshift(bb_lo, 23)),       NOT_FILE_A_HI),
+		bit32.band(bit32.bor(bit32.lshift(bb_hi, 7),  bit32.rshift(bb_lo, 25)),       NOT_FILE_H_HI),
+		bit32.band(bit32.rshift(bb_hi, 9),                                             NOT_FILE_H_HI),
+		bit32.band(bit32.rshift(bb_hi, 7),                                             NOT_FILE_A_HI)
 	)
 end
 
 -- Generate rays, and precompute individual piece attacks
 do
 	for square = 0, 63 do
-		local blo = BIT_LO[square]
-		local bhi = BIT_HI[square]
+		local blo = if square < 32 then bit32.lshift(1, square) else 0
+		local bhi = if square < 32 then 0 else bit32.lshift(1, square - 32)
 
 		KNIGHT_MOVES_LO[square] = Attacks.bulk_knight_attacks_lo(bhi, blo)
 		KNIGHT_MOVES_HI[square] = Attacks.bulk_knight_attacks_hi(bhi, blo)
@@ -281,8 +277,8 @@ do
 	}
 
 	for a = 0, 63 do
-		local a_blo = BIT_LO[a]
-		local a_bhi = BIT_HI[a]
+		local a_blo = if a < 32 then bit32.lshift(1, a) else 0
+		local a_bhi = if a < 32 then 0 else bit32.lshift(1, a - 32)
 		for _, pair in ray_pairs do
 			local fwd_lo_t = pair[1]
 			local fwd_hi_t = pair[2]
@@ -291,10 +287,10 @@ do
 			local bb_lo = fwd_lo_t[a]
 			local bb_hi = fwd_hi_t[a]
 			while bb_lo ~= 0 or bb_hi ~= 0 do
-				local b = bb_countrz(bb_hi, bb_lo)
+				local b = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
 				-- clear LSB: bb & (bb - 1)
-				local new_lo = bb_sub_lo(bb_lo, 1)
-				local new_hi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+				local new_lo = bit32.bor(bb_lo - 1, 0)
+				local new_hi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 				bb_lo = bit32.band(bb_lo, new_lo)
 				bb_hi = bit32.band(bb_hi, new_hi)
 

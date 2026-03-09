@@ -15,10 +15,6 @@ local ALL         = Utils.ALL
 local ATTACKED_ALL = Utils.ATTACKED_ALL
 
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
-local bb_countlz = Utils.bb_countlz
-local bb_countrz = Utils.bb_countrz
-local bb_sub_lo  = Utils.bb_sub_lo
-local bb_sub_hi  = Utils.bb_sub_hi
 
 export type Board = Utils.Board
 
@@ -134,10 +130,10 @@ function Board.set_start_position(board: Board)
 			local bb_lo = board.pieces_lo[color][pieceType]
 			local bb_hi = board.pieces_hi[color][pieceType]
 			while bb_lo ~= 0 or bb_hi ~= 0 do
-				local bitIndex = bb_countrz(bb_hi, bb_lo)
+				local bitIndex = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
 				board.pieceTable[bitIndex] = make_pair(pieceType, color)
-				local nlo = bb_sub_lo(bb_lo, 1)
-				local nhi = bb_sub_hi(bb_hi, 0, bb_lo, 1)
+				local nlo = bit32.bor(bb_lo - 1, 0)
+				local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 				bb_lo = bit32.band(bb_lo, nlo)
 				bb_hi = bit32.band(bb_hi, nhi)
 			end
@@ -193,7 +189,7 @@ end
 function Board.find_piece(board: Board, piece_type: number, color: number): number?
 	local hi = board.pieces_hi[color][piece_type]
 	local lo = board.pieces_lo[color][piece_type]
-	local square = 63 - bb_countlz(hi, lo)
+	local square = 63 - (if hi == 0 then bit32.countlz(lo) + 32 else bit32.countlz(hi))
 	if square == -1 then return nil end
 	return square
 end
