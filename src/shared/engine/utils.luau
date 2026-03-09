@@ -92,14 +92,19 @@ local WHITE = 0
 local BLACK = 1
 local ALL   = 2
 
+-- pieces_lo/hi  flat index: color * PIECE_STRIDE + piece   (PIECE_STRIDE = 6, size = 12)
+-- attacked_lo/hi flat index: color * ATK_STRIDE   + piece   (ATK_STRIDE   = 7, size = 14, slot 6 = ATTACKED_ALL)
+local PIECE_STRIDE = 6
+local ATK_STRIDE   = 7
+
 export type Board = {
 	pieceTable: {number},
-	pieces_lo: {{number}},
-	pieces_hi: {{number}},
+	pieces_lo: {number},
+	pieces_hi: {number},
 	occupied_lo: {number},
 	occupied_hi: {number},
-	attacked_lo: {{number}},
-	attacked_hi: {{number}},
+	attacked_lo: {number},
+	attacked_hi: {number},
 	side_to_move: number,
 	castling_rights: number,
 	en_passant_square: number,
@@ -254,6 +259,10 @@ return {
 	WHITE = WHITE,
 	BLACK = BLACK,
 	ALL   = ALL,
+
+	-- Piece strides for flat pieces_lo/hi and attacked_lo/hi arrays
+	PIECE_STRIDE = PIECE_STRIDE,
+	ATK_STRIDE   = ATK_STRIDE,
 
 	-- Pieces
 	NONE   = NONE,

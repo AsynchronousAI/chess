@@ -7,6 +7,8 @@ local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 
 local ATTACKED_ALL = Utils.ATTACKED_ALL
+local PIECE_STRIDE = Utils.PIECE_STRIDE  -- 6
+local ATK_STRIDE   = Utils.ATK_STRIDE    -- 7
 
 local BIT_LO  = Utils.BIT_LO
 local BIT_HI  = Utils.BIT_HI
@@ -50,8 +52,8 @@ function FEN.from_fen(board, fen)
 	board.pieceTable = {}
 	for _, color in {WHITE, BLACK} do
 		for _, typ in {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING} do
-			board.pieces_lo[color][typ] = 0
-			board.pieces_hi[color][typ] = 0
+			board.pieces_lo[color * PIECE_STRIDE + typ] = 0
+			board.pieces_hi[color * PIECE_STRIDE + typ] = 0
 		end
 		board.occupied_lo[color] = 0
 		board.occupied_hi[color] = 0
@@ -71,8 +73,8 @@ function FEN.from_fen(board, fen)
 					local square = (8 - rank) * 8 + file
 					local blo = BIT_LO[square]
 					local bhi = BIT_HI[square]
-					board.pieces_lo[info.color][info.type] = bit32.bor(board.pieces_lo[info.color][info.type], blo)
-					board.pieces_hi[info.color][info.type] = bit32.bor(board.pieces_hi[info.color][info.type], bhi)
+					board.pieces_lo[info.color * PIECE_STRIDE + info.type] = bit32.bor(board.pieces_lo[info.color * PIECE_STRIDE + info.type], blo)
+					board.pieces_hi[info.color * PIECE_STRIDE + info.type] = bit32.bor(board.pieces_hi[info.color * PIECE_STRIDE + info.type], bhi)
 					board.occupied_lo[info.color] = bit32.bor(board.occupied_lo[info.color], blo)
 					board.occupied_hi[info.color] = bit32.bor(board.occupied_hi[info.color], bhi)
 					board.occupied_lo[Utils.ALL] = bit32.bor(board.occupied_lo[Utils.ALL], blo)
@@ -107,11 +109,11 @@ function FEN.from_fen(board, fen)
 	-- Reset attacked tables (will be regenerated on first generate_legal_moves call)
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
-			board.attacked_lo[color][piece] = 0
-			board.attacked_hi[color][piece] = 0
+			board.attacked_lo[color * ATK_STRIDE + piece] = 0
+			board.attacked_hi[color * ATK_STRIDE + piece] = 0
 		end
-		board.attacked_lo[color][Utils.ATTACKED_ALL] = 0
-		board.attacked_hi[color][Utils.ATTACKED_ALL] = 0
+		board.attacked_lo[color * ATK_STRIDE + Utils.ATTACKED_ALL] = 0
+		board.attacked_hi[color * ATK_STRIDE + Utils.ATTACKED_ALL] = 0
 	end
 
 	-- Reset eval and hash (will be recomputed lazily)
@@ -128,7 +130,7 @@ function FEN.to_fen(self)
 			local piece_found = false
 			for color = WHITE, BLACK do
 				for typ = PAWN, KING do
-					if get_bit(self.pieces_hi[color][typ], self.pieces_lo[color][typ], square) then
+					if get_bit(self.pieces_hi[color * PIECE_STRIDE + typ], self.pieces_lo[color * PIECE_STRIDE + typ], square) then
 						if empty > 0 then
 							table.insert(fen, tostring(empty))
 							empty = 0

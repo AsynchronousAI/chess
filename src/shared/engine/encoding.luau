@@ -3,6 +3,8 @@
 local Utils = require("./utils")
 local WHITE, BLACK, PAWN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KING
 local ALL, ATTACKED_ALL = Utils.ALL, Utils.ATTACKED_ALL
+local PIECE_STRIDE = Utils.PIECE_STRIDE  -- 6
+local ATK_STRIDE   = Utils.ATK_STRIDE    -- 7
 local split_pair, make_pair = Utils.split_pair, Utils.make_pair
 local Encoding = {}
 local EN_PASSANT_NONE = 67
@@ -24,7 +26,7 @@ function Encoding.to_buffer(self)
 	local off = 0
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
-			off = writeBB(buf, off, self.pieces_lo[color][piece], self.pieces_hi[color][piece])
+			off = writeBB(buf, off, self.pieces_lo[color * PIECE_STRIDE + piece], self.pieces_hi[color * PIECE_STRIDE + piece])
 		end
 	end
 	for square = 0, 63 do
@@ -39,9 +41,9 @@ function Encoding.to_buffer(self)
 	end
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
-			off = writeBB(buf, off, self.attacked_lo[color][piece], self.attacked_hi[color][piece])
+			off = writeBB(buf, off, self.attacked_lo[color * ATK_STRIDE + piece], self.attacked_hi[color * ATK_STRIDE + piece])
 		end
-		off = writeBB(buf, off, self.attacked_lo[color][ATTACKED_ALL], self.attacked_hi[color][ATTACKED_ALL])
+		off = writeBB(buf, off, self.attacked_lo[color * ATK_STRIDE + ATTACKED_ALL], self.attacked_hi[color * ATK_STRIDE + ATTACKED_ALL])
 	end
 	off = writeBB(buf, off, self.occupied_lo[WHITE], self.occupied_hi[WHITE])
 	off = writeBB(buf, off, self.occupied_lo[BLACK], self.occupied_hi[BLACK])
@@ -62,8 +64,8 @@ function Encoding.from_buffer(self, buf)
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
 			lo, hi, off = readBB(buf, off)
-			self.pieces_lo[color][piece] = lo
-			self.pieces_hi[color][piece] = hi
+			self.pieces_lo[color * PIECE_STRIDE + piece] = lo
+			self.pieces_hi[color * PIECE_STRIDE + piece] = hi
 		end
 	end
 	for square = 0, 63 do
@@ -79,12 +81,12 @@ function Encoding.from_buffer(self, buf)
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
 			lo, hi, off = readBB(buf, off)
-			self.attacked_lo[color][piece] = lo
-			self.attacked_hi[color][piece] = hi
+			self.attacked_lo[color * ATK_STRIDE + piece] = lo
+			self.attacked_hi[color * ATK_STRIDE + piece] = hi
 		end
 		lo, hi, off = readBB(buf, off)
-		self.attacked_lo[color][ATTACKED_ALL] = lo
-		self.attacked_hi[color][ATTACKED_ALL] = hi
+		self.attacked_lo[color * ATK_STRIDE + ATTACKED_ALL] = lo
+		self.attacked_hi[color * ATK_STRIDE + ATTACKED_ALL] = hi
 	end
 	lo, hi, off = readBB(buf, off); self.occupied_lo[WHITE] = lo; self.occupied_hi[WHITE] = hi
 	lo, hi, off = readBB(buf, off); self.occupied_lo[BLACK] = lo; self.occupied_hi[BLACK] = hi

@@ -14,6 +14,9 @@ local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
 local ALL         = Utils.ALL
 local ATTACKED_ALL = Utils.ATTACKED_ALL
 
+local PIECE_STRIDE = Utils.PIECE_STRIDE  -- 6
+local ATK_STRIDE   = Utils.ATK_STRIDE    -- 7
+
 local make_pair, split_pair = Utils.make_pair, Utils.split_pair
 
 export type Board = Utils.Board
@@ -35,22 +38,10 @@ function Board.create(blank: boolean?): Board
 	local board: Board = {
 		pieceTable = table.create(64),
 
-		pieces_lo = {
-			[WHITE] = table.create(6, 0),
-			[BLACK] = table.create(6, 0),
-		},
-		pieces_hi = {
-			[WHITE] = table.create(6, 0),
-			[BLACK] = table.create(6, 0),
-		},
-		attacked_lo = {
-			[WHITE] = table.create(7, 0),
-			[BLACK] = table.create(7, 0),
-		},
-		attacked_hi = {
-			[WHITE] = table.create(7, 0),
-			[BLACK] = table.create(7, 0),
-		},
+		pieces_lo  = table.create(PIECE_STRIDE * 2, 0),  -- [color*6 + piece]
+		pieces_hi  = table.create(PIECE_STRIDE * 2, 0),
+		attacked_lo = table.create(ATK_STRIDE * 2, 0),   -- [color*7 + piece], slot 6 = ATTACKED_ALL
+		attacked_hi = table.create(ATK_STRIDE * 2, 0),
 		occupied_lo = table.create(3, 0),
 		occupied_hi = table.create(3, 0),
 
@@ -64,27 +55,6 @@ function Board.create(blank: boolean?): Board
 		hash = 0,
 	}
 
-	for piece = PAWN, KING do
-		board.pieces_lo[WHITE][piece] = 0
-		board.pieces_hi[WHITE][piece] = 0
-		board.pieces_lo[BLACK][piece] = 0
-		board.pieces_hi[BLACK][piece] = 0
-		board.attacked_lo[WHITE][piece] = 0
-		board.attacked_hi[WHITE][piece] = 0
-		board.attacked_lo[BLACK][piece] = 0
-		board.attacked_hi[BLACK][piece] = 0
-	end
-	board.attacked_lo[WHITE][ATTACKED_ALL] = 0
-	board.attacked_hi[WHITE][ATTACKED_ALL] = 0
-	board.attacked_lo[BLACK][ATTACKED_ALL] = 0
-	board.attacked_hi[BLACK][ATTACKED_ALL] = 0
-	board.occupied_lo[WHITE] = 0
-	board.occupied_hi[WHITE] = 0
-	board.occupied_lo[BLACK] = 0
-	board.occupied_hi[BLACK] = 0
-	board.occupied_lo[ALL]   = 0
-	board.occupied_hi[ALL]   = 0
-
 	if not blank then Board.set_start_position(board) end
 	return board
 end
@@ -92,10 +62,10 @@ end
 function Board.clone(board: Board): Board
 	return {
 		pieceTable      = table.clone(board.pieceTable),
-		pieces_lo       = { [WHITE]=table.clone(board.pieces_lo[WHITE]), [BLACK]=table.clone(board.pieces_lo[BLACK]) },
-		pieces_hi       = { [WHITE]=table.clone(board.pieces_hi[WHITE]), [BLACK]=table.clone(board.pieces_hi[BLACK]) },
-		attacked_lo     = { [WHITE]=table.clone(board.attacked_lo[WHITE]), [BLACK]=table.clone(board.attacked_lo[BLACK]) },
-		attacked_hi     = { [WHITE]=table.clone(board.attacked_hi[WHITE]), [BLACK]=table.clone(board.attacked_hi[BLACK]) },
+		pieces_lo       = table.clone(board.pieces_lo),
+		pieces_hi       = table.clone(board.pieces_hi),
+		attacked_lo     = table.clone(board.attacked_lo),
+		attacked_hi     = table.clone(board.attacked_hi),
 		occupied_lo     = table.clone(board.occupied_lo),
 		occupied_hi     = table.clone(board.occupied_hi),
 		en_passant_square = board.en_passant_square,
@@ -109,26 +79,29 @@ function Board.clone(board: Board): Board
 end
 
 function Board.set_start_position(board: Board)
-	board.pieces_lo[WHITE][PAWN]   = 0x0000FF00; board.pieces_hi[WHITE][PAWN]   = 0x00000000
-	board.pieces_lo[WHITE][KNIGHT] = 0x00000042; board.pieces_hi[WHITE][KNIGHT] = 0x00000000
-	board.pieces_lo[WHITE][BISHOP] = 0x00000024; board.pieces_hi[WHITE][BISHOP] = 0x00000000
-	board.pieces_lo[WHITE][ROOK]   = 0x00000081; board.pieces_hi[WHITE][ROOK]   = 0x00000000
-	board.pieces_lo[WHITE][QUEEN]  = 0x00000008; board.pieces_hi[WHITE][QUEEN]  = 0x00000000
-	board.pieces_lo[WHITE][KING]   = 0x00000010; board.pieces_hi[WHITE][KING]   = 0x00000000
+	local W = WHITE * PIECE_STRIDE
+	local B = BLACK * PIECE_STRIDE
+	board.pieces_lo[W+PAWN]   = 0x0000FF00; board.pieces_hi[W+PAWN]   = 0x00000000
+	board.pieces_lo[W+KNIGHT] = 0x00000042; board.pieces_hi[W+KNIGHT] = 0x00000000
+	board.pieces_lo[W+BISHOP] = 0x00000024; board.pieces_hi[W+BISHOP] = 0x00000000
+	board.pieces_lo[W+ROOK]   = 0x00000081; board.pieces_hi[W+ROOK]   = 0x00000000
+	board.pieces_lo[W+QUEEN]  = 0x00000008; board.pieces_hi[W+QUEEN]  = 0x00000000
+	board.pieces_lo[W+KING]   = 0x00000010; board.pieces_hi[W+KING]   = 0x00000000
 
-	board.pieces_lo[BLACK][PAWN]   = 0x00000000; board.pieces_hi[BLACK][PAWN]   = 0x00FF0000
-	board.pieces_lo[BLACK][KNIGHT] = 0x00000000; board.pieces_hi[BLACK][KNIGHT] = 0x42000000
-	board.pieces_lo[BLACK][BISHOP] = 0x00000000; board.pieces_hi[BLACK][BISHOP] = 0x24000000
-	board.pieces_lo[BLACK][ROOK]   = 0x00000000; board.pieces_hi[BLACK][ROOK]   = 0x81000000
-	board.pieces_lo[BLACK][QUEEN]  = 0x00000000; board.pieces_hi[BLACK][QUEEN]  = 0x08000000
-	board.pieces_lo[BLACK][KING]   = 0x00000000; board.pieces_hi[BLACK][KING]   = 0x10000000
+	board.pieces_lo[B+PAWN]   = 0x00000000; board.pieces_hi[B+PAWN]   = 0x00FF0000
+	board.pieces_lo[B+KNIGHT] = 0x00000000; board.pieces_hi[B+KNIGHT] = 0x42000000
+	board.pieces_lo[B+BISHOP] = 0x00000000; board.pieces_hi[B+BISHOP] = 0x24000000
+	board.pieces_lo[B+ROOK]   = 0x00000000; board.pieces_hi[B+ROOK]   = 0x81000000
+	board.pieces_lo[B+QUEEN]  = 0x00000000; board.pieces_hi[B+QUEEN]  = 0x08000000
+	board.pieces_lo[B+KING]   = 0x00000000; board.pieces_hi[B+KING]   = 0x10000000
 
 	Board.update_occupied(board)
 
 	for color = WHITE, BLACK do
+		local base = color * PIECE_STRIDE
 		for pieceType = PAWN, KING do
-			local bb_lo = board.pieces_lo[color][pieceType]
-			local bb_hi = board.pieces_hi[color][pieceType]
+			local bb_lo = board.pieces_lo[base + pieceType]
+			local bb_hi = board.pieces_hi[base + pieceType]
 			while bb_lo ~= 0 or bb_hi ~= 0 do
 				local bitIndex = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
 				board.pieceTable[bitIndex] = make_pair(pieceType, color)
@@ -142,15 +115,15 @@ function Board.set_start_position(board: Board)
 end
 
 function Board.update_occupied(board: Board)
-	local wp = board.pieces_lo[WHITE]
-	local bp = board.pieces_lo[BLACK]
-	local wph = board.pieces_hi[WHITE]
-	local bph = board.pieces_hi[BLACK]
+	local W = WHITE * PIECE_STRIDE
+	local B = BLACK * PIECE_STRIDE
+	local pl = board.pieces_lo
+	local ph = board.pieces_hi
 
-	local w_lo = bit32.bor(wp[PAWN], wp[KNIGHT], wp[BISHOP], wp[ROOK], wp[QUEEN], wp[KING])
-	local w_hi = bit32.bor(wph[PAWN], wph[KNIGHT], wph[BISHOP], wph[ROOK], wph[QUEEN], wph[KING])
-	local b_lo = bit32.bor(bp[PAWN], bp[KNIGHT], bp[BISHOP], bp[ROOK], bp[QUEEN], bp[KING])
-	local b_hi = bit32.bor(bph[PAWN], bph[KNIGHT], bph[BISHOP], bph[ROOK], bph[QUEEN], bph[KING])
+	local w_lo = bit32.bor(pl[W+PAWN], pl[W+KNIGHT], pl[W+BISHOP], pl[W+ROOK], pl[W+QUEEN], pl[W+KING])
+	local w_hi = bit32.bor(ph[W+PAWN], ph[W+KNIGHT], ph[W+BISHOP], ph[W+ROOK], ph[W+QUEEN], ph[W+KING])
+	local b_lo = bit32.bor(pl[B+PAWN], pl[B+KNIGHT], pl[B+BISHOP], pl[B+ROOK], pl[B+QUEEN], pl[B+KING])
+	local b_hi = bit32.bor(ph[B+PAWN], ph[B+KNIGHT], ph[B+BISHOP], ph[B+ROOK], ph[B+QUEEN], ph[B+KING])
 
 	board.occupied_lo[WHITE] = w_lo; board.occupied_hi[WHITE] = w_hi
 	board.occupied_lo[BLACK] = b_lo; board.occupied_hi[BLACK] = b_hi
@@ -158,8 +131,6 @@ function Board.update_occupied(board: Board)
 	board.occupied_hi[ALL]   = bit32.bor(w_hi, b_hi)
 end
 
--- UndoRecord is now a 5-tuple (r_state, captured_piece, rook_pair_packed, eval, hash)
--- returned directly from make_move; no stack is maintained.
 export type UndoRecord = MoveOps.UndoRecord
 
 Board.make_move            = MoveOps.make_move
@@ -189,8 +160,9 @@ function Board.get_all_pieces(board: Board)
 end
 
 function Board.find_piece(board: Board, piece_type: number, color: number): number?
-	local hi = board.pieces_hi[color][piece_type]
-	local lo = board.pieces_lo[color][piece_type]
+	local base = color * PIECE_STRIDE
+	local hi = board.pieces_hi[base + piece_type]
+	local lo = board.pieces_lo[base + piece_type]
 	local square = 63 - (if hi == 0 then bit32.countlz(lo) + 32 else bit32.countlz(hi))
 	if square == -1 then return nil end
 	return square

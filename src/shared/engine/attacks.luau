@@ -257,13 +257,10 @@ function Attacks.between_squares_bishop(a: number, b: number): (number, number)
 	return 0, 0
 end
 
--- Line precomputation to get a ray from LINE[start][end]
-local LINE_LO = table.create(64)
-local LINE_HI = table.create(64)
-for a = 0, 63 do
-	LINE_LO[a] = table.create(64, 0)
-	LINE_HI[a] = table.create(64, 0)
-end
+-- Line precomputation: LINE_LO[a * 64 + b] / LINE_HI[a * 64 + b]
+-- gives the full ray through squares a and b (includes both endpoints), or 0 if not collinear.
+local LINE_LO = table.create(64 * 64, 0)
+local LINE_HI = table.create(64 * 64, 0)
 do
 	local ray_pairs = {
 		{ RAY_NORTH_LO, RAY_NORTH_HI, RAY_SOUTH_LO, RAY_SOUTH_HI },
@@ -279,6 +276,7 @@ do
 	for a = 0, 63 do
 		local a_blo = if a < 32 then bit32.lshift(1, a) else 0
 		local a_bhi = if a < 32 then 0 else bit32.lshift(1, a - 32)
+		local a_base = a * 64
 		for _, pair in ray_pairs do
 			local fwd_lo_t = pair[1]
 			local fwd_hi_t = pair[2]
@@ -288,14 +286,13 @@ do
 			local bb_hi = fwd_hi_t[a]
 			while bb_lo ~= 0 or bb_hi ~= 0 do
 				local b = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
-				-- clear LSB: bb & (bb - 1)
 				local new_lo = bit32.bor(bb_lo - 1, 0)
 				local new_hi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
 				bb_lo = bit32.band(bb_lo, new_lo)
 				bb_hi = bit32.band(bb_hi, new_hi)
 
-				LINE_LO[a][b] = bit32.bor(fwd_lo_t[a], bit32.bor(bwd_lo_t[b], a_blo))
-				LINE_HI[a][b] = bit32.bor(fwd_hi_t[a], bit32.bor(bwd_hi_t[b], a_bhi))
+				LINE_LO[a_base + b] = bit32.bor(fwd_lo_t[a], bit32.bor(bwd_lo_t[b], a_blo))
+				LINE_HI[a_base + b] = bit32.bor(fwd_hi_t[a], bit32.bor(bwd_hi_t[b], a_bhi))
 			end
 		end
 	end
