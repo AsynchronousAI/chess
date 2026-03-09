@@ -6,8 +6,8 @@ local Utils   = require("./utils")
 local Attacks = require("./attacks")
 local Move    = require("./move").Move
 
-local WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
-	Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
+local WHITE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING =
+	Utils.WHITE, Utils.PAWN, Utils.KNIGHT, Utils.BISHOP, Utils.ROOK, Utils.QUEEN, Utils.KING
 
 local ALL          = Utils.ALL
 local ATTACKED_ALL = Utils.ATTACKED_ALL
@@ -22,15 +22,6 @@ local NOT_FILE_AB_LO, NOT_FILE_AB_HI = Utils.NOT_FILE_AB_LO, Utils.NOT_FILE_AB_H
 local NOT_FILE_GH_LO, NOT_FILE_GH_HI = Utils.NOT_FILE_GH_LO, Utils.NOT_FILE_GH_HI
 
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
-
-
-local bb_lshift_lo = Utils.bb_lshift_lo
-local bb_lshift_hi = Utils.bb_lshift_hi
-local bb_rshift_lo = Utils.bb_rshift_lo
-local bb_rshift_hi = Utils.bb_rshift_hi
-
-local bb_sub_lo    = Utils.bb_sub_lo
-local bb_sub_hi    = Utils.bb_sub_hi
 
 local get_bit    = Utils.get_bit
 local get_bit32  = Utils.get_bit32

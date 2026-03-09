@@ -158,6 +158,8 @@ function Board.update_occupied(board: Board)
 	board.occupied_hi[ALL]   = bit32.bor(w_hi, b_hi)
 end
 
+-- UndoRecord is now a 5-tuple (r_state, captured_piece, rook_pair_packed, eval, hash)
+-- returned directly from make_move; no stack is maintained.
 export type UndoRecord = MoveOps.UndoRecord
 
 Board.make_move            = MoveOps.make_move

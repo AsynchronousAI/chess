@@ -157,12 +157,12 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
             continue
         end
 
-        local record = bitboard.make_move(board, move)
+        local r_state, captured_piece, rook_pair, saved_eval, saved_hash = bitboard.make_move(board, move)
         nodes += 1
 
         local score = quiescence(board, not isMaximizing, alpha, beta, depth - 1)
 
-        bitboard.undo_move(board, move, record)
+        bitboard.undo_move(board, move, r_state, captured_piece, rook_pair, saved_eval, saved_hash)
 
         if isMaximizing then
             standPat = math.max(standPat, score)
@@ -282,7 +282,7 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
             reduction = LMR_REDUCTION
         end
 
-        local record = bitboard.make_move(board, move)
+        local r_state, captured_piece, rook_pair, saved_eval, saved_hash = bitboard.make_move(board, move)
         nodes += 1
 
         local score
@@ -303,7 +303,7 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
             score = alphaBeta(board, not isMaximizing, depthRemaining - 1, alpha, beta, true)
         end
 
-        bitboard.undo_move(board, move, record)
+        bitboard.undo_move(board, move, r_state, captured_piece, rook_pair, saved_eval, saved_hash)
 
         if stopSearch then
             return score, bestMove

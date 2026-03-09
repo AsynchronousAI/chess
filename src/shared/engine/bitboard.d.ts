@@ -1,6 +1,12 @@
 import { Color, Piece, Square } from "shared/board";
 
-export type UndoRecord = number;
+/**
+ * - r_state        – castling rights (4 b), en-passant+1 (7 b), halfmove (7 b), fullmove (16 b)
+ * - captured_piece – packed capture info, or CAPTURED_SENTINEL (0x3FF) if no capture
+ * - rook_pair_packed – packed rook from/to for castling, or ROOK_PAIR_SENTINEL (0xFFF) if none
+ * - saved_eval / saved_hash – snapshot values restored verbatim
+ */
+export type UndoRecord = LuaTuple<[number, number, number, number, number]>;
 
 export type BitBoard = {
   side_to_move: Color;
@@ -38,10 +44,20 @@ export namespace BitBoard {
   export function undo_move(
     board: BitBoard,
     move: Move,
-    record?: UndoRecord,
+    r_state: number,
+    captured_piece: number,
+    rook_pair_packed: number,
+    saved_eval: number,
+    saved_hash: number,
   ): void;
 
-  export function get_undo_record_data(record: UndoRecord): {
+  export function get_undo_record_data(
+    r_state: number,
+    captured_piece: number,
+    rook_pair_packed: number,
+    saved_eval: number,
+    saved_hash: number,
+  ): {
     captured_piece?: number;
     castling_rights: number;
     en_passant_square?: Square;
