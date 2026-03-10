@@ -41,7 +41,7 @@ function Encoding.to_buffer(self)
 	end
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
-			off = writeBB(buf, off, self.attacked_lo[color * ATK_STRIDE + piece], self.attacked_hi[color * ATK_STRIDE + piece])
+			off = writeBB(buf, off, self.attacked_lo[color * ATK_STRIDE + piece + 1], self.attacked_hi[color * ATK_STRIDE + piece + 1])
 		end
 		off = writeBB(buf, off, self.attacked_lo[color * ATK_STRIDE + ATTACKED_ALL], self.attacked_hi[color * ATK_STRIDE + ATTACKED_ALL])
 	end
