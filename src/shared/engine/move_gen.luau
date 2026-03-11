@@ -370,41 +370,55 @@ local function generate_pawn_moves(board: Board, moves: {number}, n: number, col
 	end
 	return n
 end
-local function is_square_attacked_with_occupancy(board: Board, square: number, by_color: number, own_hi: number, own_lo: number, enemy_hi: number, enemy_lo: number): boolean
+
+local function is_square_attacked_with_occupancy(
+	board: Board, square: number, by_color: number,
+	own_hi: number, own_lo: number,
+	enemy_hi: number, enemy_lo: number,
+	captured_sq: number?
+): boolean
+	local cap_inv_lo = 0xFFFFFFFF
+	local cap_inv_hi = 0xFFFFFFFF
+	if captured_sq then
+		cap_inv_lo = if captured_sq < 32 then bit32.bnot(bit32.lshift(1, captured_sq))    else 0xFFFFFFFF
+		cap_inv_hi = if captured_sq < 32 then 0xFFFFFFFF                                   else bit32.bnot(bit32.lshift(1, captured_sq - 32))
+	end
+
 	-- Pawn attacks
 	local pat_hi, pat_lo = pawn_attackers_to_square(square, by_color)
-	if bit32.band(board.pieces_lo[by_color * PIECE_STRIDE + PAWN], pat_lo) ~= 0 or bit32.band(board.pieces_hi[by_color * PIECE_STRIDE + PAWN], pat_hi) ~= 0 then
+	if bit32.band(board.pieces_lo[by_color * PIECE_STRIDE + PAWN], bit32.band(pat_lo, cap_inv_lo)) ~= 0 or
+	   bit32.band(board.pieces_hi[by_color * PIECE_STRIDE + PAWN], bit32.band(pat_hi, cap_inv_hi)) ~= 0 then
 		return true
 	end
 
 	-- Knight attacks
-	if bit32.band(board.pieces_lo[by_color * PIECE_STRIDE + KNIGHT], Attacks.knight_attacks_lo(square)) ~= 0 or
-	   bit32.band(board.pieces_hi[by_color * PIECE_STRIDE + KNIGHT], Attacks.knight_attacks_hi(square)) ~= 0 then
+	if bit32.band(board.pieces_lo[by_color * PIECE_STRIDE + KNIGHT], bit32.band(Attacks.knight_attacks_lo(square), cap_inv_lo)) ~= 0 or
+	   bit32.band(board.pieces_hi[by_color * PIECE_STRIDE + KNIGHT], bit32.band(Attacks.knight_attacks_hi(square), cap_inv_hi)) ~= 0 then
 		return true
 	end
 
-	-- King attacks
+	-- King attacks (the enemy king can never be the captured piece, no masking needed)
 	if bit32.band(board.pieces_lo[by_color * PIECE_STRIDE + KING], Attacks.king_attacks_lo(square)) ~= 0 or
 	   bit32.band(board.pieces_hi[by_color * PIECE_STRIDE + KING], Attacks.king_attacks_hi(square)) ~= 0 then
 		return true
 	end
 
-	-- Combined occupancy
+	-- Combined occupancy (captured piece already removed from enemy_lo/hi by caller)
 	local occ_lo = bit32.bor(own_lo, enemy_lo)
 	local occ_hi = bit32.bor(own_hi, enemy_hi)
 
 	-- Rook + Queen attacks
-	local ra_lo, ra_hi = Attacks.rook_attacks(square, 0, 0, occ_hi, occ_lo)
-	local rq_lo = bit32.bor(board.pieces_lo[by_color * PIECE_STRIDE + ROOK], board.pieces_lo[by_color * PIECE_STRIDE + QUEEN])
-	local rq_hi = bit32.bor(board.pieces_hi[by_color * PIECE_STRIDE + ROOK], board.pieces_hi[by_color * PIECE_STRIDE + QUEEN])
+	local ra_hi, ra_lo = Attacks.rook_attacks(square, 0, 0, occ_hi, occ_lo)
+	local rq_lo = bit32.band(bit32.bor(board.pieces_lo[by_color * PIECE_STRIDE + ROOK], board.pieces_lo[by_color * PIECE_STRIDE + QUEEN]), cap_inv_lo)
+	local rq_hi = bit32.band(bit32.bor(board.pieces_hi[by_color * PIECE_STRIDE + ROOK], board.pieces_hi[by_color * PIECE_STRIDE + QUEEN]), cap_inv_hi)
 	if bit32.band(ra_lo, rq_lo) ~= 0 or bit32.band(ra_hi, rq_hi) ~= 0 then
 		return true
 	end
 
 	-- Bishop + Queen attacks
-	local ba_lo, ba_hi = Attacks.bishop_attacks(square, 0, 0, occ_hi, occ_lo)
-	local bq_lo = bit32.bor(board.pieces_lo[by_color * PIECE_STRIDE + BISHOP], board.pieces_lo[by_color * PIECE_STRIDE + QUEEN])
-	local bq_hi = bit32.bor(board.pieces_hi[by_color * PIECE_STRIDE + BISHOP], board.pieces_hi[by_color * PIECE_STRIDE + QUEEN])
+	local ba_hi, ba_lo = Attacks.bishop_attacks(square, 0, 0, occ_hi, occ_lo)
+	local bq_lo = bit32.band(bit32.bor(board.pieces_lo[by_color * PIECE_STRIDE + BISHOP], board.pieces_lo[by_color * PIECE_STRIDE + QUEEN]), cap_inv_lo)
+	local bq_hi = bit32.band(bit32.bor(board.pieces_hi[by_color * PIECE_STRIDE + BISHOP], board.pieces_hi[by_color * PIECE_STRIDE + QUEEN]), cap_inv_hi)
 	if bit32.band(ba_lo, bq_lo) ~= 0 or bit32.band(ba_hi, bq_hi) ~= 0 then
 		return true
 	end
@@ -985,8 +999,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 			local new_enemy_lo = if captures then bit32.band(enemy_lo, if to < 32 then bit32.bnot(bit32.lshift(1, to)) else 0xFFFFFFFF) else enemy_lo
 			local new_enemy_hi = if captures then bit32.band(enemy_hi, if to < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, to - 32))) else enemy_hi
 
-			if not is_square_attacked_with_occupancy(board, to, enemy,
-				new_own_hi, new_own_lo, new_enemy_hi, new_enemy_lo) then
+			if not is_square_attacked_with_occupancy(board, to, enemy, new_own_hi, new_own_lo, new_enemy_hi, new_enemy_lo, if captures then to else nil) then
 				n += 1
 				moves[n] = Move.create(king_square, to, KING, captures)
 			end
