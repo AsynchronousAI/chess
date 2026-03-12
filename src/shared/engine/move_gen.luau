@@ -445,11 +445,36 @@ local function scan_sliders_for_pins_and_checks(
 		sl_lo = bit32.band(sl_lo, nlo)
 		sl_hi = bit32.band(sl_hi, nhi)
 
-		local line_lo = LINE_LO[slider_sq*64 + king_square]
-		local line_hi = LINE_HI[slider_sq*64 + king_square]
-		if line_lo ~= 0 or line_hi ~= 0 then
-			local btwn_lo = bit32.band(line_lo or 0, bit32.band(if slider_sq < 32 then bit32.bnot(bit32.lshift(1, slider_sq)) else 0xFFFFFFFF, if king_square < 32 then bit32.bnot(bit32.lshift(1, king_square)) else 0xFFFFFFFF))
-			local btwn_hi = bit32.band(line_hi or 0, bit32.band(if slider_sq < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, slider_sq - 32)), if king_square < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, king_square - 32))))
+		local king_file = bit32.band(king_square, 7)
+		local king_rank = bit32.rshift(king_square, 3)
+		local slider_file = bit32.band(slider_sq, 7)
+		local slider_rank = bit32.rshift(slider_sq, 3)
+
+		local aligned = false
+		if pieceType == ROOK then
+			aligned = (king_file == slider_file) or (king_rank == slider_rank)
+		elseif pieceType == BISHOP then
+			aligned = (king_rank - king_file == slider_rank - slider_file)
+				or (king_rank + king_file == slider_rank + slider_file)
+		else
+			aligned = (king_file == slider_file) or (king_rank == slider_rank)
+				or (king_rank - king_file == slider_rank - slider_file)
+				or (king_rank + king_file == slider_rank + slider_file)
+		end
+
+		if aligned then
+			local btwn_hi: number
+			local btwn_lo: number
+			if pieceType == ROOK then
+				btwn_hi, btwn_lo = Attacks.between_squares_rook(king_square, slider_sq)
+			elseif pieceType == BISHOP then
+				btwn_hi, btwn_lo = Attacks.between_squares_bishop(king_square, slider_sq)
+			else
+				btwn_hi, btwn_lo = Attacks.between_squares_rook(king_square, slider_sq)
+				if btwn_hi == 0 and btwn_lo == 0 then
+					btwn_hi, btwn_lo = Attacks.between_squares_bishop(king_square, slider_sq)
+				end
+			end
 			local bo_lo = bit32.band(occ_lo, btwn_lo)
 			local bo_hi = bit32.band(occ_hi, btwn_hi)
 
@@ -466,8 +491,24 @@ local function scan_sliders_for_pins_and_checks(
 				chk_hi = bit32.bor(chk_hi, if slider_sq < 32 then 0 else bit32.lshift(1, slider_sq - 32))
 			elseif hasOne and bit32.bor(bit32.band(bo_lo, own_lo), bit32.band(bo_hi, own_hi)) ~= 0 then
 				local pinned_sq = if bo_lo == 0 then bit32.countrz(bo_hi) + 32 else bit32.countrz(bo_lo)
-				pin_lo[pinned_sq] = line_lo
-				pin_hi[pinned_sq] = line_hi
+				local btwn_hi: number
+				local btwn_lo: number
+				if pieceType == ROOK then
+					btwn_hi, btwn_lo = Attacks.between_squares_rook(king_square, slider_sq)
+				elseif pieceType == BISHOP then
+					btwn_hi, btwn_lo = Attacks.between_squares_bishop(king_square, slider_sq)
+				else
+					btwn_hi, btwn_lo = Attacks.between_squares_rook(king_square, slider_sq)
+					if btwn_hi == 0 and btwn_lo == 0 then
+						btwn_hi, btwn_lo = Attacks.between_squares_bishop(king_square, slider_sq)
+					end
+				end
+				local king_blo = if king_square < 32 then bit32.lshift(1, king_square) else 0
+				local king_bhi = if king_square < 32 then 0 else bit32.lshift(1, king_square - 32)
+				local slider_blo = if slider_sq < 32 then bit32.lshift(1, slider_sq) else 0
+				local slider_bhi = if slider_sq < 32 then 0 else bit32.lshift(1, slider_sq - 32)
+				pin_lo[pinned_sq] = bit32.bor(btwn_lo, king_blo, slider_blo)
+				pin_hi[pinned_sq] = bit32.bor(btwn_hi, king_bhi, slider_bhi)
 			end
 		end
 	end
@@ -515,10 +556,19 @@ local function compute_check_and_pins(board: Board, color: number, king_square: 
 	if checker_val then
 		local checker_type = bit32.rshift(checker_val, 6)
 		if checker_type == BISHOP or checker_type == ROOK or checker_type == QUEEN then
-			local line_lo = LINE_LO[king_square*64 + checker_sq]
-			local line_hi = LINE_HI[king_square*64 + checker_sq]
-			local btwn_lo = bit32.band(line_lo, bit32.band(if king_square < 32 then bit32.bnot(bit32.lshift(1, king_square)) else 0xFFFFFFFF, if checker_sq < 32 then bit32.bnot(bit32.lshift(1, checker_sq)) else 0xFFFFFFFF))
-			local btwn_hi = bit32.band(line_hi, bit32.band(if king_square < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, king_square - 32)), if checker_sq < 32 then 0xFFFFFFFF else bit32.bnot(bit32.lshift(1, checker_sq - 32))))
+			-- Use between-squares masks for ray blocking.
+			local btwn_hi = 0
+			local btwn_lo = 0
+			if checker_type == ROOK then
+				btwn_hi, btwn_lo = Attacks.between_squares_rook(king_square, checker_sq)
+			elseif checker_type == BISHOP then
+				btwn_hi, btwn_lo = Attacks.between_squares_bishop(king_square, checker_sq)
+			else
+				btwn_hi, btwn_lo = Attacks.between_squares_rook(king_square, checker_sq)
+				if btwn_hi == 0 and btwn_lo == 0 then
+					btwn_hi, btwn_lo = Attacks.between_squares_bishop(king_square, checker_sq)
+				end
+			end
 			cm_lo = bit32.bor(btwn_lo, checker_bit_lo)
 			cm_hi = bit32.bor(btwn_hi, checker_bit_hi)
 		else
