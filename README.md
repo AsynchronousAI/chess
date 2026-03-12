@@ -1,5 +1,5 @@
 # Chess
-> **NOTE:** MoveGen has been tested up to depth 6, and achieves perfect accuracy in perft.
+> **NOTE:** MoveGen has been tested up to depth 7, and achieves perfect accuracy in perft.
 
 ## Benchmarking:
 - `luau tests/miniMax.test.luau --codegen` (codegen nearly doubles performance by applying native luau)
