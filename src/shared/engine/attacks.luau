@@ -285,15 +285,16 @@ do
 			local bb_lo = fwd_lo_t[a]
 			local bb_hi = fwd_hi_t[a]
 			while bb_lo ~= 0 or bb_hi ~= 0 do
-				local b = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
-				local new_lo = bit32.bor(bb_lo - 1, 0)
-				local new_hi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
-				bb_lo = bit32.band(bb_lo, new_lo)
-				bb_hi = bit32.band(bb_hi, new_hi)
-
-				LINE_LO[a_base + b] = bit32.bor(fwd_lo_t[a], bit32.bor(bwd_lo_t[b], a_blo))
-				LINE_HI[a_base + b] = bit32.bor(fwd_hi_t[a], bit32.bor(bwd_hi_t[b], a_bhi))
-			end
+                local b = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
+                local new_lo = bit32.bor(bb_lo - 1, 0)
+                local new_hi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
+                bb_lo = bit32.band(bb_lo, new_lo)
+                bb_hi = bit32.band(bb_hi, new_hi)
+                local b_blo = if b < 32 then bit32.lshift(1, b) else 0
+                local b_bhi = if b < 32 then 0 else bit32.lshift(1, b - 32)
+                LINE_LO[a_base + b] = bit32.bor(fwd_lo_t[a], bwd_lo_t[b], a_blo, b_blo)
+                LINE_HI[a_base + b] = bit32.bor(fwd_hi_t[a], bwd_hi_t[b], a_bhi, b_bhi)
+            end
 		end
 	end
 end

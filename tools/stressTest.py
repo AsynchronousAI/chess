@@ -9,7 +9,7 @@ import chess.engine
 def random_fen():
     """Generate a random legal position by making random moves from starting position."""
     board = chess.Board()
-    moves_to_make = random.randint(5, 35)  # random number of half-moves
+    moves_to_make = random.randint(2, 15) * 2  # multiply by 2 so its white's turn
     for _ in range(moves_to_make):
         if board.is_game_over():
             break
