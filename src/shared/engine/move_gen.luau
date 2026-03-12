@@ -66,12 +66,12 @@ local function pawn_attackers_to_square(square: number, enemy_color: number): (n
 		return r_hi, r_lo
 	else
 		local r_lo = bit32.bor(
-			bit32.band(bit32.lshift(k_lo, 7), NOT_FILE_A_LO),
-			bit32.band(bit32.lshift(k_lo, 9), NOT_FILE_H_LO)
+			bit32.band(bit32.lshift(k_lo, 7), NOT_FILE_H_LO),
+			bit32.band(bit32.lshift(k_lo, 9), NOT_FILE_A_LO)
 		)
 		local r_hi = bit32.bor(
-			bit32.band(bit32.bor(bit32.lshift(k_hi, 7), bit32.rshift(k_lo, 25)), NOT_FILE_A_HI),
-			bit32.band(bit32.bor(bit32.lshift(k_hi, 9), bit32.rshift(k_lo, 23)), NOT_FILE_H_HI)
+			bit32.band(bit32.bor(bit32.lshift(k_hi, 7), bit32.rshift(k_lo, 25)), NOT_FILE_H_HI),
+			bit32.band(bit32.bor(bit32.lshift(k_hi, 9), bit32.rshift(k_lo, 23)), NOT_FILE_A_HI)
 		)
 		return r_hi, r_lo
 	end
@@ -197,38 +197,43 @@ local CASTLE_MOVE_BK = Move.create(60, 62, KING, false, nil, false, true, true)
 local CASTLE_MOVE_BQ = Move.create(60, 58, KING, false, nil, false, true, false)
 
 local CM_WK_np_lo, CM_WK_np_hi = 0x60, 0x0
-local CM_WK_nc_lo, CM_WK_nc_hi = 0x70, 0x0
 local CM_WQ_np_lo, CM_WQ_np_hi = 0x0E, 0x0
-local CM_WQ_nc_lo, CM_WQ_nc_hi = 0x1C, 0x0
 local CM_BK_np_lo, CM_BK_np_hi = 0x0, 0x60000000
-local CM_BK_nc_lo, CM_BK_nc_hi = 0x0, 0x70000000
 local CM_BQ_np_lo, CM_BQ_np_hi = 0x0, 0x0E000000
-local CM_BQ_nc_lo, CM_BQ_nc_hi = 0x0, 0x1C000000
 
-local function generate_castle_moves(board: Board, moves: {number}, n: number, color: number,
-	atk_hi: number, atk_lo: number): number
+local function generate_castle_moves(board: Board, moves: {number}, n: number, color: number): number
 	local occ_lo = board.occupied_lo[ALL]
 	local occ_hi = board.occupied_hi[ALL]
+	local enemy = 1 - color
+
 	if color == WHITE then
 		if get_bit32(board.castling_rights, WK)
 			and bit32.bor(bit32.band(occ_lo, CM_WK_np_lo), bit32.band(occ_hi, CM_WK_np_hi)) == 0
-			and bit32.bor(bit32.band(atk_lo, CM_WK_nc_lo), bit32.band(atk_hi, CM_WK_nc_hi)) == 0 then
+			and not MoveGen.is_square_attacked(board, 4, enemy)
+			and not MoveGen.is_square_attacked(board, 5, enemy)
+			and not MoveGen.is_square_attacked(board, 6, enemy) then
 			n += 1; moves[n] = CASTLE_MOVE_WK
 		end
 		if get_bit32(board.castling_rights, WQ)
 			and bit32.bor(bit32.band(occ_lo, CM_WQ_np_lo), bit32.band(occ_hi, CM_WQ_np_hi)) == 0
-			and bit32.bor(bit32.band(atk_lo, CM_WQ_nc_lo), bit32.band(atk_hi, CM_WQ_nc_hi)) == 0 then
+			and not MoveGen.is_square_attacked(board, 4, enemy)
+			and not MoveGen.is_square_attacked(board, 3, enemy)
+			and not MoveGen.is_square_attacked(board, 2, enemy) then
 			n += 1; moves[n] = CASTLE_MOVE_WQ
 		end
 	else
 		if get_bit32(board.castling_rights, BK)
 			and bit32.bor(bit32.band(occ_lo, CM_BK_np_lo), bit32.band(occ_hi, CM_BK_np_hi)) == 0
-			and bit32.bor(bit32.band(atk_lo, CM_BK_nc_lo), bit32.band(atk_hi, CM_BK_nc_hi)) == 0 then
+			and not MoveGen.is_square_attacked(board, 60, enemy)
+			and not MoveGen.is_square_attacked(board, 61, enemy)
+			and not MoveGen.is_square_attacked(board, 62, enemy) then
 			n += 1; moves[n] = CASTLE_MOVE_BK
 		end
 		if get_bit32(board.castling_rights, BQ)
 			and bit32.bor(bit32.band(occ_lo, CM_BQ_np_lo), bit32.band(occ_hi, CM_BQ_np_hi)) == 0
-			and bit32.bor(bit32.band(atk_lo, CM_BQ_nc_lo), bit32.band(atk_hi, CM_BQ_nc_hi)) == 0 then
+			and not MoveGen.is_square_attacked(board, 60, enemy)
+			and not MoveGen.is_square_attacked(board, 59, enemy)
+			and not MoveGen.is_square_attacked(board, 58, enemy) then
 			n += 1; moves[n] = CASTLE_MOVE_BQ
 		end
 	end
@@ -897,8 +902,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 	local king_square = 63 - (if king_hi == 0 then bit32.countlz(king_lo) + 32 else bit32.countlz(king_hi))
 	if king_square == -1 then return {} end
 
-	-- Compute enemy non-slider attacks inline — no board mutation, no stale data.
-	local enemy_atk_hi, enemy_atk_lo = compute_non_slider_attacks(board, enemy)
+
 
 	if filePseudoLegal then
 		local own_hi   = board.occupied_hi[color]
@@ -917,7 +921,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 		n = generate_piece_moves(board, moves, n, color, own_hi, own_lo, other_hi, other_lo, ROOK,   Attacks.rook_attacks)
 		n = generate_piece_moves(board, moves, n, color, own_hi, own_lo, other_hi, other_lo, QUEEN,  Attacks.queen_attacks)
 		n = generate_piece_moves(board, moves, n, color, own_hi, own_lo, other_hi, other_lo, KING,   king_attack_fn)
-		n = generate_castle_moves(board, moves, n, color, enemy_atk_hi, enemy_atk_lo)
+		n = generate_castle_moves(board, moves, n, color)
 		return moves
 	end
 
@@ -1057,7 +1061,7 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 	end
 
 	if num_checkers == 0 then
-		n = generate_castle_moves(board, moves, n, color, enemy_atk_hi, enemy_atk_lo)
+		n = generate_castle_moves(board, moves, n, color)
 	end
 
 	return moves

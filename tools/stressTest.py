@@ -6,10 +6,9 @@ import chess
 import chess.engine
 
 
-def random_fen():
+def random_fen(moves_to_make):
     """Generate a random legal position by making random moves from starting position."""
     board = chess.Board()
-    moves_to_make = random.randint(2, 15) * 2  # multiply by 2 so its white's turn
     for _ in range(moves_to_make):
         if board.is_game_over():
             break
@@ -33,7 +32,7 @@ def count_legal_moves_cli(fen):
 
 def main():
     for i in range(1, 1000):
-        fen, board = random_fen()
+        fen, board = random_fen(i // 10)
         python_count = count_legal_moves_python(board)
 
         try:

@@ -95,6 +95,7 @@ function Board.set_start_position(board: Board)
 	board.pieces_lo[B+QUEEN]  = 0x00000000; board.pieces_hi[B+QUEEN]  = 0x08000000
 	board.pieces_lo[B+KING]   = 0x00000000; board.pieces_hi[B+KING]   = 0x10000000
 
+	-- Board.from_fen(board, "rnb3n1/1p2bk1r/3p2pp/p1p1pp2/1P3P2/2PP2PK/P3P2P/RNBQ1BNR w - - 0 13")
 	Board.update_occupied(board)
 
 	for color = WHITE, BLACK do
