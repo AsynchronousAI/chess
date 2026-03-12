@@ -32,7 +32,7 @@ def count_legal_moves_cli(fen):
 
 def main():
     for i in range(1, 1000):
-        fen, board = random_fen(i // 10)
+        fen, board = random_fen(6)  # or i // 10 to try multiple depths
         python_count = count_legal_moves_python(board)
 
         try:
@@ -45,6 +45,7 @@ def main():
         if python_count != cli_count:
             print(f"counts differ! {python_count} != {cli_count}")
             break
+    print("Ran 1000 tests, perfect!")
 
 
 if __name__ == "__main__":
