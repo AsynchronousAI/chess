@@ -8,7 +8,8 @@
 		"chess:out/client/controllers/gameplay@Gameplay": "client/controllers/gameplay@Gameplay",
 		"chess:out/client/controllers/GuiController@GuiController": "client/controllers/GuiController@GuiController",
 		"chess:out/shared/network@GlobalEvents": "shared/network@GlobalEvents",
-		"chess:out/shared/network@GlobalFunctions": "shared/network@GlobalFunctions"
+		"chess:out/shared/network@GlobalFunctions": "shared/network@GlobalFunctions",
+		"chess:out/server/services/botAnalysis@BotAnalysisService": "server/services/botAnalysis@BotAnalysisService"
 	},
 	"metadata": {}
 }

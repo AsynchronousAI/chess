@@ -1,8 +1,6 @@
 import { atom } from "@rbxts/charm";
 import { Square } from "shared/board";
 
-import { EndgamePopupProps } from "./endgamePopup";
-import { ConfirmationPopupProps } from "./confirmationPopup";
 import { Move } from "shared/engine/bitboard";
 
 const Atoms = {
@@ -12,21 +10,6 @@ const Atoms = {
   HoldingPiece: atom<Square | undefined>(undefined),
   PossibleMoves: atom<Move[]>([]),
   ViewingPlayer: atom<number>(0) /* userid */,
-  EndgamePopup: atom<EndgamePopupProps>({
-    title: "",
-    rating: 0,
-    ratingChange: 0,
-    description: "",
-    open: false,
-    onBackToMenu: () => {},
-    onRematch: () => {},
-  }),
-  ConfirmationPopup: atom<ConfirmationPopupProps>({
-    title: "",
-    description: "",
-    open: false,
-    onConfirm: () => {},
-  }),
 };
 
 export default Atoms;

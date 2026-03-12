@@ -15,7 +15,7 @@ import { FullMove } from "shared/network";
 import { Move } from "shared/engine/move";
 
 @Controller()
-export class Gameplay implements OnStart {
+export class Gameplay {
   private takenPieces: [Piece[], Piece[]][] = [[[], []]];
   /* [
     0: [ [pawn, knight], [rook] ] // move 1, player 1 has a pawn + knight, while player 2 has a rook
@@ -136,7 +136,6 @@ export class Gameplay implements OnStart {
     this.takenPieces = [];
     this.moveHistory.clear();
 
-    Atoms.EndgamePopup((x) => ({ ...x, open: false }));
     Atoms.CheckedSquare(-1);
   }
   private playSFX(sfx: keyof typeof SoundEffects) {
@@ -159,9 +158,6 @@ export class Gameplay implements OnStart {
 
     const partial = await Functions.RequestGame(gameId);
     this.activeGame = partial;
-
-    this.activeGame.player1time = -1;
-    this.activeGame.player2time = -1;
 
     for (const [index, move] of pairs(partial.moves)) {
       this.movePiece(move, false, index % 2);
@@ -230,34 +226,8 @@ export class Gameplay implements OnStart {
     if (!overrideBoard)
       this.pushMove(moveData, moved[1] as [Square, Square?], sfx, myMove);
   }
-  public resign() {
-    Atoms.ConfirmationPopup({
-      title: "Resign?",
-      description: "",
-      onConfirm: () => Events.Resign.fire(this.gameId),
-      open: true,
-    });
-  }
-  public draw() {
-    Atoms.ConfirmationPopup({
-      title: "Draw?",
-      description: "",
-      onConfirm: () => Events.Draw.fire(this.gameId, true),
-      open: true,
-    });
-  }
 
   /* Events */
-  @Event(Events.DrawOffered)
-  drawOffered() {
-    Atoms.ConfirmationPopup({
-      title: "Draw?",
-      description: "Opponent offered a draw",
-      onConfirm: () => Events.Draw.fire(this.gameId, true),
-      onCancel: () => Events.Draw.fire(this.gameId, false),
-      open: true,
-    });
-  }
   @Event(Events.AssignedGame)
   assignedGame(gameId: string) {
     this.gameId = gameId;
@@ -279,32 +249,11 @@ export class Gameplay implements OnStart {
       else if (newGame.winner === 1 && newGame.color === this.playingAs)
         title = "You Win!";
       else title = "You Lose!";
-
-      Atoms.EndgamePopup({
-        title,
-        description: this.getAnalysisDescription(newGame.analysis),
-        rating:
-          (newGame.color === this.playingAs
-            ? newGame.player1elo
-            : newGame.player2elo) ?? 0,
-        ratingChange:
-          (newGame.color === this.playingAs
-            ? newGame.player1eloDiff
-            : newGame.player2eloDiff) ?? 0,
-        open: true,
-        onBackToMenu: () => {
-          this.clearGame();
-        },
-        onRematch: () => {},
-      });
     }
 
     /* Assign this.playingAs */
-    if (newGame.color !== undefined && newGame.player1 !== undefined) {
-      this.playingAs =
-        newGame.player1 === Players.LocalPlayer.UserId
-          ? newGame.color
-          : 1 - newGame.color;
+    if (newGame.color !== undefined) {
+      this.playingAs = newGame.color;
     }
   }
   @Event(Events.MoveMade)
@@ -365,27 +314,5 @@ export class Gameplay implements OnStart {
       setActiveGame({ ...this.activeGame });
     }, 0.1);
     return activeGameState;
-  }
-
-  /* Timer emulator */
-  onStart() {
-    while (task.wait(0.1)) {
-      /* local time counter */
-      if (this.activeGame.analysis !== "") continue;
-
-      if (
-        this.moveHistory.size() === 0
-          ? this.activeGame.color === Color.white
-          : Atoms.CurrentMove() % 2 !== this.activeGame.color
-      ) {
-        if (this.activeGame.player1time !== undefined) {
-          this.activeGame.player1time -= 0.1;
-        }
-      } else {
-        if (this.activeGame.player2time !== undefined) {
-          this.activeGame.player2time -= 0.1;
-        }
-      }
-    }
   }
 }
