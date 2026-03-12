@@ -13,14 +13,15 @@ local EXACT = 0
 local LOWERBOUND = 1
 local UPPERBOUND = 2
 
-local NULL_MOVE_REDUCTION = 2
+local NULL_MOVE_REDUCTION = 0
 local QUIESCENCE_MAX_DEPTH = 15
-local FUTILITY_DEPTH = 2
-local FUTILITY_MARGIN = 150
-local ASPIRATION_WINDOW = 100
-local LMR_DEPTH = 5
-local LMR_MOVE_THRESHOLD = 3
-local LMR_REDUCTION = 1
+local FUTILITY_DEPTH = 1
+local FUTILITY_MARGIN = 80
+local ASPIRATION_WINDOW = 300
+local MATE_SCORE = 100000
+local LMR_DEPTH = 99
+local LMR_MOVE_THRESHOLD = 99
+local LMR_REDUCTION = 0
 
 local nodes = 0
 local startTime = 0
@@ -108,6 +109,7 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
     end
 
     local standPat = eval(board)
+    local inCheck = isInCheck(board, board.side_to_move)
 
     local qUsed = QUIESCENCE_MAX_DEPTH - depth
     local plyReached = currentRootDepth + qUsed
@@ -115,22 +117,31 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
         maxPlyReached = plyReached
     end
 
-    if isMaximizing then
-        if standPat > alpha then alpha = standPat end
-        if alpha >= beta then return standPat end
-    else
-        if standPat < beta then beta = standPat end
-        if beta <= alpha then return standPat end
-    end
+    if not inCheck then
+        if isMaximizing then
+            if standPat > alpha then alpha = standPat end
+            if alpha >= beta then return standPat end
+        else
+            if standPat < beta then beta = standPat end
+            if beta <= alpha then return standPat end
+        end
 
-    if depth <= 0 then
-        return standPat
+        if depth <= 0 then
+            return standPat
+        end
     end
 
     local allLegalMoves = bitboard.generate_legal_moves(board, false, board.side_to_move)
     moveOrdering(board, allLegalMoves)
 
     local n = #allLegalMoves
+    if n == 0 then
+        if inCheck then
+            local mateScore = MATE_SCORE - plyReached
+            return isMaximizing and -mateScore or mateScore
+        end
+        return 0
+    end
 
     for i = 1, n do
         -- Selection sort for move ordering
@@ -153,7 +164,7 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
         local move = allLegalMoves[i]
         local isCapture = (bit32.band(bit32.rshift(move, 20), 0x3) ~= 0) or (bit32.band(bit32.rshift(move, 19), 0x1) == 1) -- inline: Move.getCaptured(move) or Move.getEnPassant(move)
         local isPromotion = bit32.band(bit32.rshift(move, 16), 0x7) ~= 5 -- inline: Move.getPromotion(move) ~= nil
-        if not isCapture and not isPromotion then
+        if not inCheck and not isCapture and not isPromotion then
             continue
         end
 
@@ -229,7 +240,7 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
         end
     end
 
-    if allowNull and depthRemaining >= 3 and not inCheck then
+    if allowNull and NULL_MOVE_REDUCTION > 0 and depthRemaining >= 3 and not inCheck then
         local old = doNullMove(board)
         local score = alphaBeta(board, not isMaximizing, depthRemaining - 1 - NULL_MOVE_REDUCTION, alpha, beta, false)
         undoNullMove(board, old)
@@ -250,7 +261,11 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
     moveOrdering(board, allLegalMoves)
 
     if #allLegalMoves == 0 then
-        return eval(board), nil
+        if inCheck then
+            local mateScore = MATE_SCORE - plyReached
+            return (isMaximizing and -mateScore or mateScore), nil
+        end
+        return 0, nil
     end
 
     local n = #allLegalMoves
@@ -393,9 +408,9 @@ local function minimax(board, isMaximizing, maxDepth, depth, alpha, beta, timeLi
             searchBeta = bestScore + ASPIRATION_WINDOW
         end
 
-        local score, move = alphaBeta(board, isMaximizing, d, searchAlpha, searchBeta, true)
+        local score, move = alphaBeta(board, isMaximizing, d, searchAlpha, searchBeta, false)
         if not stopSearch and bestScore ~= nil and (score <= searchAlpha or score >= searchBeta) then
-            score, move = alphaBeta(board, isMaximizing, d, alphaRoot, betaRoot, true)
+            score, move = alphaBeta(board, isMaximizing, d, alphaRoot, betaRoot, false)
         end
         if stopSearch then
             break
