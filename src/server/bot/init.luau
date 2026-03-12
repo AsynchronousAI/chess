@@ -3,7 +3,7 @@
 
 local libs = require(script.import)
 
-local DEPTH = 6
+local DEPTH = 5
 local TIME_LIMIT_MS = 1500
 
 return {
