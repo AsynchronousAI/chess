@@ -117,8 +117,8 @@ function FEN.from_fen(board, fen)
 	end
 
 	-- Reset eval and hash (will be recomputed lazily)
-	board.eval = nil
-	board.hash = nil
+	board.eval = 0
+	board.hash = 0
 end
 
 function FEN.to_fen(self)

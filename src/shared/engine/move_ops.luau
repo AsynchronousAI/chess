@@ -78,8 +78,6 @@ local function make_move(board: Board, move: number): UndoRecord
 	local color    = board.side_to_move
 	local opponent = 1 - color
 
-	if board.eval == nil then board.eval = Eval.evaluate(board) end
-	if board.hash == nil then board.hash = Zobrist.hash(board) end
 	local hash         = board.hash :: number
 	local old_castling = board.castling_rights
 	local old_ep       = board.en_passant_square
