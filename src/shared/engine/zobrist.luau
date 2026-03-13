@@ -16,7 +16,7 @@ Zobrist.side_to_move = 0
 do
     math.randomseed(2124644030)
     local function random()
-        return math.random(0, 0xFFFFFFFF)
+        return math.random(0, 0xFFFFFF)
     end
 
 	for color = Utils.WHITE, Utils.BLACK do
