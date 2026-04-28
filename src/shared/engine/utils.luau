@@ -3,13 +3,17 @@
 --!strict
 
 -- Rank constants as 64-bit integers
-local RANK_1 = 0x0000_0000_0000_00FFi
-local RANK_2 = 0x0000_0000_0000_FF00i
-local RANK_7 = 0x0000_0000_00FF_0000i
-local RANK_8 = 0x0000_0000_FF00_0000i
+local RANK_1 = 0x00000000000000FFi
+local RANK_2 = 0x000000000000FF00i
+local RANK_3 = 0x0000000000FF0000i
+local RANK_4 = 0x00000000FF000000i
+local RANK_5 = 0x000000FF00000000i
+local RANK_6 = 0x0000FF0000000000i
+local RANK_7 = 0x00FF000000000000i
+local RANK_8 = 0xFF00000000000000i
 
-local FILE_A = 0x0101_0101_0101_0101i
-local FILE_H = 0x8080_8080_8080_8080i
+local FILE_A = 0x0101010101010101i
+local FILE_H = 0x8080808080808080i
 
 local NOT_FILE_A = integer.bnot(FILE_A)
 local NOT_FILE_H = integer.bnot(FILE_H)
@@ -36,8 +40,6 @@ local WHITE = 0
 local BLACK = 1
 local ALL   = 2
 
--- pieces flat index: color * PIECE_STRIDE + piece   (PIECE_STRIDE = 6, size = 12)
--- attacked flat index: color * ATK_STRIDE   + piece   (ATK_STRIDE   = 7, size = 14, slot 6 = ATTACKED_ALL)
 local PIECE_STRIDE = 6
 local ATK_STRIDE   = 7
 
@@ -138,6 +140,10 @@ local ATTACKED_ALL = 6
 return {
 	RANK_1 = RANK_1,
 	RANK_2 = RANK_2,
+	RANK_3 = RANK_3,
+	RANK_4 = RANK_4,
+	RANK_5 = RANK_5,
+	RANK_6 = RANK_6,
 	RANK_7 = RANK_7,
 	RANK_8 = RANK_8,
 

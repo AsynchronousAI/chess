@@ -17,6 +17,10 @@ local ATK_STRIDE   = Utils.ATK_STRIDE    -- 7: flat index = color * 7 + piece_or
 
 local RANK_1 = Utils.RANK_1
 local RANK_2 = Utils.RANK_2
+local RANK_3 = Utils.RANK_3
+local RANK_4 = Utils.RANK_4
+local RANK_5 = Utils.RANK_5
+local RANK_6 = Utils.RANK_6
 local RANK_7 = Utils.RANK_7
 local RANK_8 = Utils.RANK_8
 local NOT_FILE_A  = Utils.NOT_FILE_A
@@ -753,9 +757,9 @@ function MoveGen.generate_legal_moves(board: Board, filePseudoLegal: boolean?, g
 
 		local dbl: integer
 		if color == WHITE then
-			dbl = integer.band(integer.lshift(raw_push, 8i), empty, integer.lshift(start, 16i))
+			dbl = integer.band(integer.lshift(raw_push, 8i), empty, RANK_4)
 		else
-			dbl = integer.band(integer.rshift(raw_push, 8i), empty, integer.rshift(start, 16i))
+			dbl = integer.band(integer.rshift(raw_push, 8i), empty, RANK_5)
 		end
 		dbl = integer.band(dbl, cm)
 
