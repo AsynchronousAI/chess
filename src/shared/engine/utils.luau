@@ -114,10 +114,10 @@ end
 local function get_square_index(file: number, rank: number): number
 	return bit32.bor(bit32.lshift(rank, 3), file)
 end
-local function make_pair(a: number, b: number): number
+local function make_pair_32(a: number, b: number): number
 	return bit32.bor(bit32.lshift(a, 6), bit32.band(b, 63))
 end
-local function split_pair(pair: number): (number, number)
+local function split_pair_32(pair: number): (number, number)
 	return bit32.rshift(pair, 6), bit32.band(pair, 63)
 end
 local function print_matrix(bb: integer)
@@ -132,19 +132,6 @@ local function print_matrix(bb: integer)
         table.insert(cols, table.concat(row, " "))
     end
     print(table.concat(cols, "\n"))
-end
-
-local function make_pair_int(lo: number, hi: number): integer
-    return integer.bor(
-        integer.create(bit32.bor(lo, 0)) :: integer,
-        integer.lshift(integer.create(bit32.bor(hi, 0)) :: integer, 32i)
-    )
-end
-
-local function split_pair_int(bb: integer): (number, number)
-    local lo = integer.tonumber(integer.extract(bb, 0i, 32i))
-    local hi = integer.tonumber(integer.extract(bb, 32i, 32i))
-    return lo, hi
 end
 
 local ATTACKED_ALL = 6
@@ -191,8 +178,6 @@ return {
 	popcount      = popcount,
 	unit_board    = unit_board,
 	print_matrix  = print_matrix,
-    make_pair     = make_pair_int,
-    split_pair    = split_pair_int,
 
 	-- 32-bit helpers
 	set_bit32   = set_bit32,
@@ -200,8 +185,8 @@ return {
 	clear_bit32 = clear_bit32,
 
 	-- Pair helpers (for pieceTable)
-	make_pair_32  = make_pair,
-	split_pair_32 = split_pair,
+	make_pair_32  = make_pair_32,
+	split_pair_32 = split_pair_32,
 
 	-- Square helpers
 	separate_square_index = separate_square_index,
