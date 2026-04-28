@@ -25,7 +25,7 @@ def count_legal_moves_cli(fen):
     """Uses Stockfish CLI to get perft 1 move count"""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     luau_file = os.path.join(base_dir, "tests", "search.test.luau")
-    cmd = ["luau", luau_file, "-a", fen]
+    cmd = ["luau-int", luau_file, "-a", fen]
     result = subprocess.run(cmd, capture_output=True, text=True)
     return int(result.stdout.strip())
 
@@ -44,7 +44,7 @@ def main():
         print(f"{fen}")
         if python_count != cli_count:
             print(f"counts differ! {python_count} != {cli_count}")
-            break
+            return
     print("Ran 1000 tests, perfect!")
 
 

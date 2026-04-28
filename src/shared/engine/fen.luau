@@ -10,8 +10,6 @@ local ATTACKED_ALL = Utils.ATTACKED_ALL
 local PIECE_STRIDE = Utils.PIECE_STRIDE  -- 6
 local ATK_STRIDE   = Utils.ATK_STRIDE    -- 7
 
-local BIT_LO  = Utils.BIT_LO
-local BIT_HI  = Utils.BIT_HI
 local get_bit = Utils.get_bit
 
 local WK, WQ, BK, BQ = Utils.WK, Utils.WQ, Utils.BK, Utils.BQ
@@ -37,7 +35,7 @@ local piece_char = {
 	[BLACK] = { [PAWN]="p", [KNIGHT]="n", [BISHOP]="b", [ROOK]="r", [QUEEN]="q", [KING]="k" },
 }
 
-function FEN.from_fen(board, fen)
+function FEN.from_fen(board: Utils.Board, fen: string)
 	local parts = {}
 	for part in string.gmatch(fen, "[^ ]+") do
 		table.insert(parts, part)
@@ -50,16 +48,13 @@ function FEN.from_fen(board, fen)
 
 	-- Clear
 	board.pieceTable = {}
-	for _, color in {WHITE, BLACK} do
-		for _, typ in {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING} do
-			board.pieces_lo[color * PIECE_STRIDE + typ] = 0
-			board.pieces_hi[color * PIECE_STRIDE + typ] = 0
+	for color = WHITE, BLACK do
+		for typ = PAWN, KING do
+			board.pieces[color * PIECE_STRIDE + typ] = 0i
 		end
-		board.occupied_lo[color] = 0
-		board.occupied_hi[color] = 0
+		board.occupied[color] = 0i
 	end
-	board.occupied_lo[Utils.ALL] = 0
-	board.occupied_hi[Utils.ALL] = 0
+	board.occupied[Utils.ALL] = 0i
 
 	for rank = 1, 8 do
 		local file = 0
@@ -71,15 +66,11 @@ function FEN.from_fen(board, fen)
 				local info = piece_map[c]
 				if info then
 					local square = (8 - rank) * 8 + file
-					local blo = BIT_LO[square]
-					local bhi = BIT_HI[square]
-					board.pieces_lo[info.color * PIECE_STRIDE + info.type] = bit32.bor(board.pieces_lo[info.color * PIECE_STRIDE + info.type], blo)
-					board.pieces_hi[info.color * PIECE_STRIDE + info.type] = bit32.bor(board.pieces_hi[info.color * PIECE_STRIDE + info.type], bhi)
-					board.occupied_lo[info.color] = bit32.bor(board.occupied_lo[info.color], blo)
-					board.occupied_hi[info.color] = bit32.bor(board.occupied_hi[info.color], bhi)
-					board.occupied_lo[Utils.ALL] = bit32.bor(board.occupied_lo[Utils.ALL], blo)
-					board.occupied_hi[Utils.ALL] = bit32.bor(board.occupied_hi[Utils.ALL], bhi)
-					board.pieceTable[square] = Utils.make_pair(info.type, info.color)
+					local b = Utils.unit_board(square)
+					board.pieces[info.color * PIECE_STRIDE + info.type] = integer.bor(board.pieces[info.color * PIECE_STRIDE + info.type], b)
+					board.occupied[info.color] = integer.bor(board.occupied[info.color], b)
+					board.occupied[Utils.ALL] = integer.bor(board.occupied[Utils.ALL], b)
+					board.pieceTable[square] = Utils.make_pair_32(info.type, info.color)
 				end
 				file = file + 1
 			end
@@ -106,22 +97,20 @@ function FEN.from_fen(board, fen)
 	board.halfmove_clock    = tonumber(parts[5]) or 0
 	board.fullmove_number   = tonumber(parts[6]) or 1
 
-	-- Reset attacked tables (will be regenerated on first generate_legal_moves call)
+	-- Reset attacked tables
 	for color = WHITE, BLACK do
 		for piece = PAWN, KING do
-			board.attacked_lo[color * ATK_STRIDE + piece] = 0
-			board.attacked_hi[color * ATK_STRIDE + piece] = 0
+			board.attacked[color * ATK_STRIDE + piece] = 0i
 		end
-		board.attacked_lo[color * ATK_STRIDE + Utils.ATTACKED_ALL] = 0
-		board.attacked_hi[color * ATK_STRIDE + Utils.ATTACKED_ALL] = 0
+		board.attacked[color * ATK_STRIDE + Utils.ATTACKED_ALL] = 0i
 	end
 
-	-- Reset eval and hash (will be recomputed lazily)
+	-- Reset eval and hash
 	board.eval = 0
 	board.hash = 0
 end
 
-function FEN.to_fen(self)
+function FEN.to_fen(self: Utils.Board)
 	local fen = {}
 	for rank = 8, 1, -1 do
 		local empty = 0
@@ -130,7 +119,7 @@ function FEN.to_fen(self)
 			local piece_found = false
 			for color = WHITE, BLACK do
 				for typ = PAWN, KING do
-					if get_bit(self.pieces_hi[color * PIECE_STRIDE + typ], self.pieces_lo[color * PIECE_STRIDE + typ], square) then
+					if get_bit(self.pieces[color * PIECE_STRIDE + typ], square) then
 						if empty > 0 then
 							table.insert(fen, tostring(empty))
 							empty = 0
@@ -158,7 +147,12 @@ function FEN.to_fen(self)
 	if Utils.get_bit32(self.castling_rights, BQ) then castling = castling.."q" end
 	if castling == "" then castling = "-" end
 
-	local ep = self.en_passant_square or "-"
+	local ep = "-"
+    if self.en_passant_square then
+        local f = string.char(string.byte("a") + (self.en_passant_square % 8))
+        local r = tostring(math.floor(self.en_passant_square / 8) + 1)
+        ep = f .. r
+    end
 
 	return table.concat(fen)..(" "..stm.." "..castling.." "..ep.." "..self.halfmove_clock.." "..self.fullmove_number)
 end

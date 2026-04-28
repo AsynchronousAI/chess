@@ -1,79 +1,26 @@
 --!native
 --!optimize 2
+--!strict
 
-local function bb_lshift_lo(lo: number, n: number): number
-	if n == 0 then return lo
-	elseif n < 32 then return bit32.lshift(lo, n)
-	else return 0
-	end
-end
-local function bb_lshift_hi(hi: number, lo: number, n: number): number
-	if n == 0 then return hi
-	elseif n < 32 then return bit32.bor(bit32.lshift(hi, n), bit32.rshift(lo, 32 - n))
-	elseif n < 64 then return bit32.lshift(lo, n - 32)
-	else return 0
-	end
-end
-local function bb_rshift_hi(hi: number, n: number): number
-	if n == 0 then return hi
-	elseif n < 32 then return bit32.rshift(hi, n)
-	else return 0
-	end
-end
-local function bb_rshift_lo(hi: number, lo: number, n: number): number
-	if n == 0 then return lo
-	elseif n < 32 then return bit32.bor(bit32.rshift(lo, n), bit32.lshift(hi, 32 - n))
-	elseif n < 64 then return bit32.rshift(hi, n - 32)
-	else return 0
-	end
-end
-local function bb_countrz(hi: number, lo: number): number
-	if lo == 0 then
-		return bit32.countrz(hi) + 32
-	else
-		return bit32.countrz(lo)
-	end
-end
-local function bb_countlz(hi: number, lo: number): number
-	if hi == 0 then
-		return bit32.countlz(lo) + 32
-	else
-		return bit32.countlz(hi)
-	end
-end
-local function bb_sub_lo(alo: number, blo: number): number
-	return bit32.bor(alo - blo, 0)
-end
-local function bb_sub_hi(ahi: number, bhi: number, alo: number, blo: number): number
-	local borrow = if alo < blo then 1 else 0
-	return bit32.bor(ahi - bhi - borrow, 0)
-end
+-- Rank constants as 64-bit integers
+local RANK_1 = 0x0000_0000_0000_00FFi
+local RANK_2 = 0x0000_0000_0000_FF00i
+local RANK_7 = 0x0000_0000_00FF_0000i
+local RANK_8 = 0x0000_0000_FF00_0000i
 
--- Rank / file constants as (hi, lo) pairs
-local RANK_1_LO, RANK_1_HI = 0x000000FF, 0x00000000
-local RANK_2_LO, RANK_2_HI = 0x0000FF00, 0x00000000
-local RANK_7_LO, RANK_7_HI = 0x00000000, 0x00FF0000
-local RANK_8_LO, RANK_8_HI = 0x00000000, 0xFF000000
+local FILE_A = 0x0101_0101_0101_0101i
+local FILE_H = 0x8080_8080_8080_8080i
 
-local FILE_A_LO, FILE_A_HI = 0x01010101, 0x01010101
-local FILE_H_LO, FILE_H_HI = 0x80808080, 0x80808080
-
-local NOT_FILE_A_LO  = bit32.bnot(FILE_A_LO)
-local NOT_FILE_A_HI  = bit32.bnot(FILE_A_HI)
-local NOT_FILE_H_LO  = bit32.bnot(FILE_H_LO)
-local NOT_FILE_H_HI  = bit32.bnot(FILE_H_HI)
+local NOT_FILE_A = integer.bnot(FILE_A)
+local NOT_FILE_H = integer.bnot(FILE_H)
 
 -- FILE_AB = FILE_A | (FILE_A << 1)
-local FILE_AB_LO = bit32.bor(FILE_A_LO, bb_lshift_lo(FILE_A_LO, 1))
-local FILE_AB_HI = bit32.bor(FILE_A_HI, bb_lshift_hi(FILE_A_HI, FILE_A_LO, 1))
-local NOT_FILE_AB_LO = bit32.bnot(FILE_AB_LO)
-local NOT_FILE_AB_HI = bit32.bnot(FILE_AB_HI)
+local FILE_AB = integer.bor(FILE_A, integer.lshift(FILE_A, 1i))
+local NOT_FILE_AB = integer.bnot(FILE_AB)
 
 -- FILE_GH = FILE_H | (FILE_H >> 1)
-local FILE_GH_LO = bit32.bor(FILE_H_LO, bb_rshift_lo(FILE_H_HI, FILE_H_LO, 1))
-local FILE_GH_HI = bit32.bor(FILE_H_HI, bb_rshift_hi(FILE_H_HI, 1))
-local NOT_FILE_GH_LO = bit32.bnot(FILE_GH_LO)
-local NOT_FILE_GH_HI = bit32.bnot(FILE_GH_HI)
+local FILE_GH = integer.bor(FILE_H, integer.rshift(FILE_H, 1i))
+local NOT_FILE_GH = integer.bnot(FILE_GH)
 
 -- Piece constants
 local NONE   = -1
@@ -85,29 +32,23 @@ local QUEEN  = 4
 local KING   = 5
 
 -- Color constants
--- ALL = 2 is used as the integer key for the combined-occupancy slot,
--- replacing the former string key "all". This lets occupied_lo/hi and
--- attacked_lo/hi be created with table.create and treated as arrays.
 local WHITE = 0
 local BLACK = 1
 local ALL   = 2
 
--- pieces_lo/hi  flat index: color * PIECE_STRIDE + piece   (PIECE_STRIDE = 6, size = 12)
--- attacked_lo/hi flat index: color * ATK_STRIDE   + piece   (ATK_STRIDE   = 7, size = 14, slot 6 = ATTACKED_ALL)
+-- pieces flat index: color * PIECE_STRIDE + piece   (PIECE_STRIDE = 6, size = 12)
+-- attacked flat index: color * ATK_STRIDE   + piece   (ATK_STRIDE   = 7, size = 14, slot 6 = ATTACKED_ALL)
 local PIECE_STRIDE = 6
 local ATK_STRIDE   = 7
 
 export type Board = {
 	pieceTable: {number},
-	pieces_lo: {number},
-	pieces_hi: {number},
-	occupied_lo: {number},
-	occupied_hi: {number},
-	attacked_lo: {number},
-	attacked_hi: {number},
+	pieces: {integer},
+	occupied: {integer},
+	attacked: {integer},
 	side_to_move: number,
 	castling_rights: number,
-	en_passant_square: number,
+	en_passant_square: number?,
 	halfmove_clock: number,
 	fullmove_number: number,
 	eval: number,
@@ -115,21 +56,12 @@ export type Board = {
 }
 
 -- Precomputed single-bit masks
-local BIT_LO  = table.create(64)
-local BIT_HI  = table.create(64)
-local NBIT_LO = table.create(64)
-local NBIT_HI = table.create(64)
+local BIT = table.create(64)
+local NBIT = table.create(64)
 
 for i = 0, 63 do
-	if i < 32 then
-		BIT_LO[i]  = bit32.lshift(1, i)
-		BIT_HI[i]  = 0
-	else
-		BIT_LO[i]  = 0
-		BIT_HI[i]  = bit32.lshift(1, i - 32)
-	end
-	NBIT_LO[i] = bit32.bnot(BIT_LO[i])
-	NBIT_HI[i] = bit32.bnot(BIT_HI[i])
+	BIT[i] = integer.lshift(1i, integer.create(i) :: integer)
+	NBIT[i] = integer.bnot(BIT[i])
 end
 
 local BIT_MASKS32 = table.create(32)
@@ -141,45 +73,26 @@ for i = 0, 31 do
 	NOT_BIT_MASKS32[i] = bit32.bnot(BIT_MASKS32[i])
 end
 
-local function unit_board_lo(square: number): number
-	return BIT_LO[square]
-end
-local function unit_board_hi(square: number): number
-	return BIT_HI[square]
-end
-local function unit_board(square: number): number
-	return BIT_LO[square]
+local function unit_board(square: number): integer
+	return BIT[square]
 end
 
-local function get_bit(hi: number, lo: number, square: number): boolean
-	return bit32.bor(
-		bit32.band(lo, BIT_LO[square]),
-		bit32.band(hi, BIT_HI[square])
-	) ~= 0
+local function get_bit(bb: integer, square: number): boolean
+	return integer.band(bb, BIT[square]) ~= 0i
 end
 
-local function set_bit_lo(lo: number, square: number): number
-	return bit32.bor(lo, BIT_LO[square])
-end
-local function set_bit_hi(hi: number, square: number): number
-	return bit32.bor(hi, BIT_HI[square])
+local function set_bit(bb: integer, square: number): integer
+	return integer.bor(bb, BIT[square])
 end
 
-local function clear_bit_lo(lo: number, square: number): number
-	return bit32.band(lo, NBIT_LO[square])
-end
-local function clear_bit_hi(hi: number, square: number): number
-	return bit32.band(hi, NBIT_HI[square])
+local function clear_bit(bb: integer, square: number): integer
+	return integer.band(bb, NBIT[square])
 end
 
-local function popcount(hi: number, lo: number): number
+local function popcount(bb: integer): number
 	local count = 0
-	while lo ~= 0 do
-		lo = bit32.band(lo, lo - 1)
-		count += 1
-	end
-	while hi ~= 0 do
-		hi = bit32.band(hi, hi - 1)
+	while bb ~= 0i do
+		bb = integer.band(bb, integer.sub(bb, 1i))
 		count += 1
 	end
 	return count
@@ -207,15 +120,13 @@ end
 local function split_pair(pair: number): (number, number)
 	return bit32.rshift(pair, 6), bit32.band(pair, 63)
 end
-local function print_matrix(hi: number, lo: number)
+local function print_matrix(bb: integer)
     local cols = {}
     for r = 0, 7 do
         local row = {}
         for c = 0, 7 do
             local i = 63 - (r * 8 + c)
-            local v = (i >= 32)
-                and bit32.band(bit32.rshift(hi, i - 32), 1)
-                or  bit32.band(bit32.rshift(lo, i), 1)
+            local v = if integer.band(integer.rshift(bb, integer.create(i) :: integer), 1i) ~= 0i then 1 else 0
             row[#row+1] = v
         end
         table.insert(cols, table.concat(row, " "))
@@ -223,34 +134,33 @@ local function print_matrix(hi: number, lo: number)
     print(table.concat(cols, "\n"))
 end
 
+local function make_pair_int(lo: number, hi: number): integer
+    return integer.bor(
+        integer.create(bit32.bor(lo, 0)) :: integer,
+        integer.lshift(integer.create(bit32.bor(hi, 0)) :: integer, 32i)
+    )
+end
+
+local function split_pair_int(bb: integer): (number, number)
+    local lo = integer.tonumber(integer.extract(bb, 0i, 32i))
+    local hi = integer.tonumber(integer.extract(bb, 32i, 32i))
+    return lo, hi
+end
+
 local ATTACKED_ALL = 6
 return {
-	bb_lshift_lo  = bb_lshift_lo,
-	bb_lshift_hi  = bb_lshift_hi,
-	bb_rshift_lo  = bb_rshift_lo,
-	bb_rshift_hi  = bb_rshift_hi,
-	bb_countrz    = bb_countrz,
-	bb_countlz    = bb_countlz,
-	bb_sub_lo     = bb_sub_lo,
-	bb_sub_hi     = bb_sub_hi,
+	RANK_1 = RANK_1,
+	RANK_2 = RANK_2,
+	RANK_7 = RANK_7,
+	RANK_8 = RANK_8,
 
-	BIT_LO  = BIT_LO,
-	BIT_HI  = BIT_HI,
-	NBIT_LO = NBIT_LO,
-	NBIT_HI = NBIT_HI,
+	FILE_A = FILE_A,
+	FILE_H = FILE_H,
 
-	RANK_1_LO = RANK_1_LO, RANK_1_HI = RANK_1_HI,
-	RANK_2_LO = RANK_2_LO, RANK_2_HI = RANK_2_HI,
-	RANK_7_LO = RANK_7_LO, RANK_7_HI = RANK_7_HI,
-	RANK_8_LO = RANK_8_LO, RANK_8_HI = RANK_8_HI,
-
-	FILE_A_LO = FILE_A_LO, FILE_A_HI = FILE_A_HI,
-	FILE_H_LO = FILE_H_LO, FILE_H_HI = FILE_H_HI,
-
-	NOT_FILE_A_LO  = NOT_FILE_A_LO,  NOT_FILE_A_HI  = NOT_FILE_A_HI,
-	NOT_FILE_H_LO  = NOT_FILE_H_LO,  NOT_FILE_H_HI  = NOT_FILE_H_HI,
-	NOT_FILE_AB_LO = NOT_FILE_AB_LO, NOT_FILE_AB_HI = NOT_FILE_AB_HI,
-	NOT_FILE_GH_LO = NOT_FILE_GH_LO, NOT_FILE_GH_HI = NOT_FILE_GH_HI,
+	NOT_FILE_A  = NOT_FILE_A,
+	NOT_FILE_H  = NOT_FILE_H,
+	NOT_FILE_AB = NOT_FILE_AB,
+	NOT_FILE_GH = NOT_FILE_GH,
 
 	-- Castling flags
 	WK = 0, WQ = 1, BK = 2, BQ = 3,
@@ -260,7 +170,7 @@ return {
 	BLACK = BLACK,
 	ALL   = ALL,
 
-	-- Piece strides for flat pieces_lo/hi and attacked_lo/hi arrays
+	-- Piece strides for flat pieces and attacked arrays
 	PIECE_STRIDE = PIECE_STRIDE,
 	ATK_STRIDE   = ATK_STRIDE,
 
@@ -276,24 +186,22 @@ return {
 
 	-- 64-bit helpers
 	get_bit       = get_bit,
-	set_bit_lo    = set_bit_lo,
-	set_bit_hi    = set_bit_hi,
-	clear_bit_lo  = clear_bit_lo,
-	clear_bit_hi  = clear_bit_hi,
+	set_bit       = set_bit,
+	clear_bit     = clear_bit,
 	popcount      = popcount,
 	unit_board    = unit_board,
-	unit_board_lo = unit_board_lo,
-	unit_board_hi = unit_board_hi,
-	print_matrix = print_matrix,
+	print_matrix  = print_matrix,
+    make_pair     = make_pair_int,
+    split_pair    = split_pair_int,
 
 	-- 32-bit helpers
 	set_bit32   = set_bit32,
 	get_bit32   = get_bit32,
 	clear_bit32 = clear_bit32,
 
-	-- Pair helpers
-	make_pair  = make_pair,
-	split_pair = split_pair,
+	-- Pair helpers (for pieceTable)
+	make_pair_32  = make_pair,
+	split_pair_32 = split_pair,
 
 	-- Square helpers
 	separate_square_index = separate_square_index,

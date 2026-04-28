@@ -17,7 +17,7 @@ local ATTACKED_ALL = Utils.ATTACKED_ALL
 local PIECE_STRIDE = Utils.PIECE_STRIDE  -- 6
 local ATK_STRIDE   = Utils.ATK_STRIDE    -- 7
 
-local make_pair, split_pair = Utils.make_pair, Utils.split_pair
+local make_pair_32, split_pair_32 = Utils.make_pair_32, Utils.split_pair_32
 
 export type Board = Utils.Board
 
@@ -38,12 +38,9 @@ function Board.create(blank: boolean?): Board
 	local board: Board = {
 		pieceTable = table.create(64),
 
-		pieces_lo  = table.create(PIECE_STRIDE * 2, 0),  -- [color*6 + piece]
-		pieces_hi  = table.create(PIECE_STRIDE * 2, 0),
-		attacked_lo = table.create(ATK_STRIDE * 2, 0),   -- [color*7 + piece], slot 6 = ATTACKED_ALL
-		attacked_hi = table.create(ATK_STRIDE * 2, 0),
-		occupied_lo = table.create(3, 0),
-		occupied_hi = table.create(3, 0),
+		pieces  = table.create(PIECE_STRIDE * 2, 0i),  -- [color*6 + piece]
+		attacked = table.create(ATK_STRIDE * 2, 0i),   -- [color*7 + piece], slot 6 = ATTACKED_ALL
+		occupied = table.create(3, 0i),
 
 		side_to_move    = WHITE,
 		castling_rights = 0b1111,
@@ -62,12 +59,9 @@ end
 function Board.clone(board: Board): Board
 	return {
 		pieceTable      = table.clone(board.pieceTable),
-		pieces_lo       = table.clone(board.pieces_lo),
-		pieces_hi       = table.clone(board.pieces_hi),
-		attacked_lo     = table.clone(board.attacked_lo),
-		attacked_hi     = table.clone(board.attacked_hi),
-		occupied_lo     = table.clone(board.occupied_lo),
-		occupied_hi     = table.clone(board.occupied_hi),
+		pieces          = table.clone(board.pieces),
+		attacked        = table.clone(board.attacked),
+		occupied        = table.clone(board.occupied),
 		en_passant_square = board.en_passant_square,
 		halfmove_clock  = board.halfmove_clock,
 		fullmove_number = board.fullmove_number,
@@ -81,34 +75,30 @@ end
 function Board.set_start_position(board: Board)
 	local W = WHITE * PIECE_STRIDE
 	local B = BLACK * PIECE_STRIDE
-	board.pieces_lo[W+PAWN]   = 0x0000FF00; board.pieces_hi[W+PAWN]   = 0x00000000
-	board.pieces_lo[W+KNIGHT] = 0x00000042; board.pieces_hi[W+KNIGHT] = 0x00000000
-	board.pieces_lo[W+BISHOP] = 0x00000024; board.pieces_hi[W+BISHOP] = 0x00000000
-	board.pieces_lo[W+ROOK]   = 0x00000081; board.pieces_hi[W+ROOK]   = 0x00000000
-	board.pieces_lo[W+QUEEN]  = 0x00000008; board.pieces_hi[W+QUEEN]  = 0x00000000
-	board.pieces_lo[W+KING]   = 0x00000010; board.pieces_hi[W+KING]   = 0x00000000
+	board.pieces[W+PAWN]   = 0x0000_0000_0000_FF00i
+	board.pieces[W+KNIGHT] = 0x0000_0000_0000_0042i
+	board.pieces[W+BISHOP] = 0x0000_0000_0000_0024i
+	board.pieces[W+ROOK]   = 0x0000_0000_0000_0081i
+	board.pieces[W+QUEEN]  = 0x0000_0000_0000_0008i
+	board.pieces[W+KING]   = 0x0000_0000_0000_0010i
 
-	board.pieces_lo[B+PAWN]   = 0x00000000; board.pieces_hi[B+PAWN]   = 0x00FF0000
-	board.pieces_lo[B+KNIGHT] = 0x00000000; board.pieces_hi[B+KNIGHT] = 0x42000000
-	board.pieces_lo[B+BISHOP] = 0x00000000; board.pieces_hi[B+BISHOP] = 0x24000000
-	board.pieces_lo[B+ROOK]   = 0x00000000; board.pieces_hi[B+ROOK]   = 0x81000000
-	board.pieces_lo[B+QUEEN]  = 0x00000000; board.pieces_hi[B+QUEEN]  = 0x08000000
-	board.pieces_lo[B+KING]   = 0x00000000; board.pieces_hi[B+KING]   = 0x10000000
+	board.pieces[B+PAWN]   = 0x00FF_0000_0000_0000i
+	board.pieces[B+KNIGHT] = 0x4200_0000_0000_0000i
+	board.pieces[B+BISHOP] = 0x2400_0000_0000_0000i
+	board.pieces[B+ROOK]   = 0x8100_0000_0000_0000i
+	board.pieces[B+QUEEN]  = 0x0800_0000_0000_0000i
+	board.pieces[B+KING]   = 0x1000_0000_0000_0000i
 
 	Board.update_occupied(board)
 
 	for color = WHITE, BLACK do
 		local base = color * PIECE_STRIDE
 		for pieceType = PAWN, KING do
-			local bb_lo = board.pieces_lo[base + pieceType]
-			local bb_hi = board.pieces_hi[base + pieceType]
-			while bb_lo ~= 0 or bb_hi ~= 0 do
-				local bitIndex = if bb_lo == 0 then bit32.countrz(bb_hi) + 32 else bit32.countrz(bb_lo)
-				board.pieceTable[bitIndex] = make_pair(pieceType, color)
-				local nlo = bit32.bor(bb_lo - 1, 0)
-				local nhi = bit32.bor(bb_hi - (if bb_lo == 0 then 1 else 0), 0)
-				bb_lo = bit32.band(bb_lo, nlo)
-				bb_hi = bit32.band(bb_hi, nhi)
+			local bb = board.pieces[base + pieceType]
+			while bb ~= 0i do
+				local bitIndex = integer.tonumber(integer.countrz(bb))
+				board.pieceTable[bitIndex] = make_pair_32(pieceType, color)
+				bb = integer.band(bb, integer.sub(bb, 1i))
 			end
 		end
 	end
@@ -117,18 +107,14 @@ end
 function Board.update_occupied(board: Board)
 	local W = WHITE * PIECE_STRIDE
 	local B = BLACK * PIECE_STRIDE
-	local pl = board.pieces_lo
-	local ph = board.pieces_hi
+	local p = board.pieces
 
-	local w_lo = bit32.bor(pl[W+PAWN], pl[W+KNIGHT], pl[W+BISHOP], pl[W+ROOK], pl[W+QUEEN], pl[W+KING])
-	local w_hi = bit32.bor(ph[W+PAWN], ph[W+KNIGHT], ph[W+BISHOP], ph[W+ROOK], ph[W+QUEEN], ph[W+KING])
-	local b_lo = bit32.bor(pl[B+PAWN], pl[B+KNIGHT], pl[B+BISHOP], pl[B+ROOK], pl[B+QUEEN], pl[B+KING])
-	local b_hi = bit32.bor(ph[B+PAWN], ph[B+KNIGHT], ph[B+BISHOP], ph[B+ROOK], ph[B+QUEEN], ph[B+KING])
+	local w = integer.bor(p[W+PAWN], p[W+KNIGHT], p[W+BISHOP], p[W+ROOK], p[W+QUEEN], p[W+KING])
+	local b = integer.bor(p[B+PAWN], p[B+KNIGHT], p[B+BISHOP], p[B+ROOK], p[B+QUEEN], p[B+KING])
 
-	board.occupied_lo[WHITE] = w_lo; board.occupied_hi[WHITE] = w_hi
-	board.occupied_lo[BLACK] = b_lo; board.occupied_hi[BLACK] = b_hi
-	board.occupied_lo[ALL]   = bit32.bor(w_lo, b_lo)
-	board.occupied_hi[ALL]   = bit32.bor(w_hi, b_hi)
+	board.occupied[WHITE] = w
+	board.occupied[BLACK] = b
+	board.occupied[ALL]   = integer.bor(w, b)
 end
 
 export type UndoRecord = MoveOps.UndoRecord
@@ -152,7 +138,7 @@ function Board.get_all_pieces(board: Board)
 	for pos = 0, 63 do
 		local piece = board.pieceTable[pos]
 		if piece then
-			local a, b = split_pair(piece)
+			local a, b = split_pair_32(piece)
 			table.insert(pieces_list, { a, b, pos })
 		end
 	end
@@ -161,10 +147,9 @@ end
 
 function Board.find_piece(board: Board, piece_type: number, color: number): number?
 	local base = color * PIECE_STRIDE
-	local hi = board.pieces_hi[base + piece_type]
-	local lo = board.pieces_lo[base + piece_type]
-	local square = 63 - (if hi == 0 then bit32.countlz(lo) + 32 else bit32.countlz(hi))
-	if square == -1 then return nil end
+	local bb = board.pieces[base + piece_type]
+	if bb == 0i then return nil end
+	local square = 63 - integer.tonumber(integer.countlz(bb))
 	return square
 end
 

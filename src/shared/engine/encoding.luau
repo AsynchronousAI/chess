@@ -1,105 +1,102 @@
---!optimize 2
 --!native
+--!optimize 2
+--!strict
 local Utils = require("./utils")
+
+local PIECE_STRIDE = Utils.PIECE_STRIDE
+local ATK_STRIDE   = Utils.ATK_STRIDE
+
 local WHITE, BLACK, PAWN, KING = Utils.WHITE, Utils.BLACK, Utils.PAWN, Utils.KING
-local ALL, ATTACKED_ALL = Utils.ALL, Utils.ATTACKED_ALL
-local PIECE_STRIDE = Utils.PIECE_STRIDE  -- 6
-local ATK_STRIDE   = Utils.ATK_STRIDE    -- 7
-local split_pair, make_pair = Utils.split_pair, Utils.make_pair
+
 local Encoding = {}
-local EN_PASSANT_NONE = 67
-local U8_MAX = 255
 
-local function writeBB(buf, off, lo, hi)
-	buffer.writeu32(buf, off,     lo)
-	buffer.writeu32(buf, off + 4, hi)
-	return off + 8
-end
-local function readBB(buf, off)
-	local lo = buffer.readu32(buf, off)
-	local hi = buffer.readu32(buf, off + 4)
-	return lo, hi, off + 8
-end
+function Encoding.to_buffer(board: Utils.Board): buffer
+	local b = buffer.create(512) -- Increased size just in case
+	local offset = 0
 
-function Encoding.to_buffer(self)
-	local buf = buffer.create(402)
-	local off = 0
-	for color = WHITE, BLACK do
-		for piece = PAWN, KING do
-			off = writeBB(buf, off, self.pieces_lo[color * PIECE_STRIDE + piece], self.pieces_hi[color * PIECE_STRIDE + piece])
-		end
+	for i = 0, PIECE_STRIDE * 2 - 1 do
+		buffer.writeinteger(b, offset, board.pieces[i])
+		offset += 8
 	end
-	for square = 0, 63 do
-		local val = self.pieceTable[square]
-		if val then
-			local a, b = split_pair(val)
-			buffer.writeu8(buf, off, bit32.bor(bit32.lshift(a, 4), b))
-		else
-			buffer.writeu8(buf, off, U8_MAX)
-		end
-		off += 1
+	for i = 0, ATK_STRIDE * 2 - 1 do
+		buffer.writeinteger(b, offset, board.attacked[i])
+		offset += 8
 	end
-	for color = WHITE, BLACK do
-		for piece = PAWN, KING do
-			off = writeBB(buf, off, self.attacked_lo[color * ATK_STRIDE + piece + 1], self.attacked_hi[color * ATK_STRIDE + piece + 1])
-		end
-		off = writeBB(buf, off, self.attacked_lo[color * ATK_STRIDE + ATTACKED_ALL], self.attacked_hi[color * ATK_STRIDE + ATTACKED_ALL])
+	for i = 0, 2 do
+		buffer.writeinteger(b, offset, board.occupied[i])
+		offset += 8
 	end
-	off = writeBB(buf, off, self.occupied_lo[WHITE], self.occupied_hi[WHITE])
-	off = writeBB(buf, off, self.occupied_lo[BLACK], self.occupied_hi[BLACK])
-	off = writeBB(buf, off, self.occupied_lo[ALL],   self.occupied_hi[ALL])
-	buffer.writeu8(buf, off, self.side_to_move);     off += 1
-	buffer.writeu8(buf, off, self.castling_rights);  off += 1
-	buffer.writeu8(buf, off, self.en_passant_square or EN_PASSANT_NONE); off += 1
-	buffer.writeu16(buf, off, self.halfmove_clock);  off += 2
-	buffer.writeu16(buf, off, self.fullmove_number); off += 2
-	buffer.writef64(buf, off, self.eval);            off += 8
-	buffer.writei32(buf, off, self.hash);            off += 4
-	return buf
+
+	buffer.writeu8(b, offset, board.side_to_move)
+	offset += 1
+	buffer.writeu8(b, offset, board.castling_rights)
+	offset += 1
+	buffer.writeu8(b, offset, board.en_passant_square or 255)
+	offset += 1
+	buffer.writeu8(b, offset, board.halfmove_clock)
+	offset += 1
+	buffer.writeu16(b, offset, board.fullmove_number)
+	offset += 2
+
+	-- pieceTable
+	for i = 0, 63 do
+		buffer.writeu16(b, offset, board.pieceTable[i] or 0xFFFF)
+		offset += 2
+	end
+
+	return b
 end
 
-function Encoding.from_buffer(self, buf)
-	local off = 0
-	local lo, hi
-	for color = WHITE, BLACK do
-		for piece = PAWN, KING do
-			lo, hi, off = readBB(buf, off)
-			self.pieces_lo[color * PIECE_STRIDE + piece] = lo
-			self.pieces_hi[color * PIECE_STRIDE + piece] = hi
-		end
+function Encoding.from_buffer(b: buffer): Utils.Board
+	local board: Utils.Board = {
+		pieces   = table.create(PIECE_STRIDE * 2, 0i),
+		attacked = table.create(ATK_STRIDE * 2, 0i),
+		occupied = table.create(3, 0i),
+		pieceTable = table.create(64),
+		side_to_move = 0,
+		castling_rights = 0,
+		en_passant_square = nil,
+		halfmove_clock = 0,
+		fullmove_number = 1,
+		eval = 0,
+		hash = 0,
+	}
+
+	local offset = 0
+	for i = 0, PIECE_STRIDE * 2 - 1 do
+		board.pieces[i] = buffer.readinteger(b, offset)
+		offset += 8
 	end
-	for square = 0, 63 do
-		local val = buffer.readu8(buf, off); off += 1
-		if val == U8_MAX then
-			self.pieceTable[square] = nil
-		else
-			local b = bit32.band(val, 0xF)
-			local a = bit32.rshift(val, 4)
-			self.pieceTable[square] = make_pair(a, b)
-		end
+	for i = 0, ATK_STRIDE * 2 - 1 do
+		board.attacked[i] = buffer.readinteger(b, offset)
+		offset += 8
 	end
-	for color = WHITE, BLACK do
-		for piece = PAWN, KING do
-			lo, hi, off = readBB(buf, off)
-			self.attacked_lo[color * ATK_STRIDE + piece] = lo
-			self.attacked_hi[color * ATK_STRIDE + piece] = hi
-		end
-		lo, hi, off = readBB(buf, off)
-		self.attacked_lo[color * ATK_STRIDE + ATTACKED_ALL] = lo
-		self.attacked_hi[color * ATK_STRIDE + ATTACKED_ALL] = hi
+	for i = 0, 2 do
+		board.occupied[i] = buffer.readinteger(b, offset)
+		offset += 8
 	end
-	lo, hi, off = readBB(buf, off); self.occupied_lo[WHITE] = lo; self.occupied_hi[WHITE] = hi
-	lo, hi, off = readBB(buf, off); self.occupied_lo[BLACK] = lo; self.occupied_hi[BLACK] = hi
-	lo, hi, off = readBB(buf, off); self.occupied_lo[ALL]   = lo; self.occupied_hi[ALL]   = hi
-	self.side_to_move    = buffer.readu8(buf, off);  off += 1
-	self.castling_rights = buffer.readu8(buf, off);  off += 1
-	local ep = buffer.readu8(buf, off); off += 1
-	self.en_passant_square = if ep == EN_PASSANT_NONE then nil else ep
-	self.halfmove_clock  = buffer.readu16(buf, off); off += 2
-	self.fullmove_number = buffer.readu16(buf, off); off += 2
-	self.eval            = buffer.readf64(buf, off); off += 8
-	self.hash            = buffer.readi32(buf, off); off += 4
-	return self
+
+	board.side_to_move = buffer.readu8(b, offset)
+	offset += 1
+	board.castling_rights = buffer.readu8(b, offset)
+	offset += 1
+	local ep = buffer.readu8(b, offset)
+	board.en_passant_square = if ep == 255 then nil else ep
+	offset += 1
+	board.halfmove_clock = buffer.readu8(b, offset)
+	offset += 1
+	board.fullmove_number = buffer.readu16(b, offset)
+	offset += 2
+
+	for i = 0, 63 do
+		local val = buffer.readu16(b, offset)
+		if val ~= 0xFFFF then
+			board.pieceTable[i] = val
+		end
+		offset += 2
+	end
+
+	return board
 end
 
 return Encoding

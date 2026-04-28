@@ -12,9 +12,9 @@ local function perft(board, depth)
 
     local nodes = 0
     for _, move in legal_moves do
-        local r_state, captured_piece, rook_pair, saved_eval, saved_hash = bitboard.make_move(board, move)
+        local r_state = bitboard.make_move(board, move)
         nodes += perft(board, depth - 1)
-        bitboard.undo_move(board, move, r_state, captured_piece, rook_pair, saved_eval, saved_hash)
+        bitboard.undo_move(board, move, r_state)
     end
 
     return nodes

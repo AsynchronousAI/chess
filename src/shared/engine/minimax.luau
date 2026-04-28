@@ -2,7 +2,7 @@
 --!optimize 2
 
 local bitboard = require("./bitboard").BitBoard
-local eval = require("./eval").eval
+local eval = require("./eval").evaluate
 local moveOrdering = require("./moveOrdering")
 local Utils = require("./utils")
 local Zobrist = require("./zobrist")
@@ -76,7 +76,7 @@ local function isInCheck(board, color)
 end
 
 local function doNullMove(board)
-    if board.hash == nil then
+    if board.hash == nil or board.hash == 0 then
         board.hash = bitboard.hash(board)
     end
     local old = {
@@ -162,18 +162,18 @@ local function quiescence(board, isMaximizing, alpha, beta, depth)
         allLegalMoves[i], allLegalMoves[bestIndex] = allLegalMoves[bestIndex], allLegalMoves[i]
 
         local move = allLegalMoves[i]
-        local isCapture = (bit32.band(bit32.rshift(move, 20), 0x3) ~= 0) or (bit32.band(bit32.rshift(move, 19), 0x1) == 1) -- inline: Move.getCaptured(move) or Move.getEnPassant(move)
+        local isCapture = (bit32.band(bit32.rshift(move, 15), 0x1) == 1) or (bit32.band(bit32.rshift(move, 19), 0x1) == 1) -- inline: Move.getCaptured(move) or Move.getEnPassant(move)
         local isPromotion = bit32.band(bit32.rshift(move, 16), 0x7) ~= 5 -- inline: Move.getPromotion(move) ~= nil
         if not inCheck and not isCapture and not isPromotion then
             continue
         end
 
-        local r_state, captured_piece, rook_pair, saved_eval, saved_hash = bitboard.make_move(board, move)
+        local r_state = bitboard.make_move(board, move)
         nodes += 1
 
         local score = quiescence(board, not isMaximizing, alpha, beta, depth - 1)
 
-        bitboard.undo_move(board, move, r_state, captured_piece, rook_pair, saved_eval, saved_hash)
+        bitboard.undo_move(board, move, r_state)
 
         if isMaximizing then
             standPat = math.max(standPat, score)
@@ -297,7 +297,7 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
             reduction = LMR_REDUCTION
         end
 
-        local r_state, captured_piece, rook_pair, saved_eval, saved_hash = bitboard.make_move(board, move)
+        local r_state = bitboard.make_move(board, move)
         nodes += 1
 
         local score
@@ -318,7 +318,7 @@ local function alphaBeta(board, isMaximizing, depthRemaining, alpha, beta, allow
             score = alphaBeta(board, not isMaximizing, depthRemaining - 1, alpha, beta, true)
         end
 
-        bitboard.undo_move(board, move, r_state, captured_piece, rook_pair, saved_eval, saved_hash)
+        bitboard.undo_move(board, move, r_state)
 
         if stopSearch then
             return score, bestMove
