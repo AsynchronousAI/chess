@@ -82,7 +82,7 @@ export class Gameplay {
       activeGame.winner = 3;
     } else if (activeGame.analysis === "checkmate") {
       activeGame.winner = turn === activeGame.color ? 1 : 2;
-    } else if (activeGame.analysis === "insufficent") {
+    } else if (false) {
       /* TODO: draw by timeout vs insufficient */
       activeGame.winner = 3;
     }

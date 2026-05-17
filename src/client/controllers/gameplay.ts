@@ -118,10 +118,10 @@ export class Gameplay {
   ) {
     if (analysis === "checkmate") return "by checkmate";
     else if (analysis === "stalemate") return "by stalemate";
-    else if (analysis === "insufficent") return "by insufficient material";
-    else if (analysis === "timeout") return "on time";
-    else if (analysis === "resign") return "by resignation";
-    else if (analysis === "draw") return "draw by agreement";
+    // else if (analysis === "insufficent") return "by insufficient material";
+    // else if (analysis === "timeout") return "on time";
+    // else if (analysis === "resign") return "by resignation";
+    // else if (analysis === "draw") return "draw by agreement";
 
     return "";
   }
@@ -182,13 +182,7 @@ export class Gameplay {
     if (!overrideBoard) {
       if (promotion) moveData = Move.setPromotion(moveData, promotion);
       const a = BitBoard.make_move(this.board, moveData);
-      const record = BitBoard.get_undo_record_data(
-        a[0],
-        a[1],
-        a[2],
-        a[3],
-        a[4],
-      );
+      const record = BitBoard.get_undo_record_data(a);
       if (record.additionallyMoved)
         moved.push(record.additionallyMoved as [Square, Square?, Piece?]);
     }
